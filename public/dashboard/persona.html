@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Customer Persona — نظام أريج</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',sans-serif;background:#f5f7fa;color:#1a1a1a;min-height:100vh}
+
+.nav{background:#1B5E30;color:#fff;padding:0 20px;display:flex;align-items:center;height:56px;gap:12px;position:sticky;top:0;z-index:100}
+.nav-brand{font-size:17px;font-weight:800}
+.nav-brand span{color:#F5A623}
+.nav-back{color:rgba(255,255,255,.8);text-decoration:none;font-size:14px;font-weight:600}
+.nav-back:hover{color:#fff}
+
+.main{max-width:860px;margin:0 auto;padding:24px 20px}
+
+/* SCREENS */
+.screen{display:none}
+.screen.active{display:block}
+
+/* INTRO */
+.intro-card{background:#fff;border-radius:16px;padding:40px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.intro-card h1{font-size:24px;font-weight:800;color:#1B5E30;margin-bottom:10px}
+.intro-card p{color:#6b7280;font-size:15px;max-width:480px;margin:0 auto 28px}
+.intro-card .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px;text-align:center}
+.step-box{padding:16px;background:#f0fdf4;border-radius:12px}
+.step-num{font-size:24px;font-weight:800;color:#1B5E30;margin-bottom:4px}
+.step-label{font-size:13px;color:#6b7280}
+
+/* BUTTONS */
+.btn{padding:10px 20px;border-radius:10px;border:none;font-family:'Cairo',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:.2s}
+.btn-primary{background:#1B5E30;color:#fff;padding:14px 32px;font-size:16px}
+.btn-primary:hover{background:#145226}
+.btn-outline{background:#fff;color:#1B5E30;border:2px solid #1B5E30}
+.btn-outline:hover{background:#f0fdf4}
+.btn-gold{background:#F5A623;color:#fff}
+.btn-sm{padding:7px 14px;font-size:13px}
+
+/* QUIZ */
+.quiz-header{margin-bottom:24px}
+.progress-bar{height:8px;background:#e5e7eb;border-radius:20px;margin-bottom:8px}
+.progress-fill{height:100%;background:#1B5E30;border-radius:20px;transition:.4s ease}
+.quiz-meta{display:flex;justify-content:space-between;font-size:13px;color:#9ca3af}
+
+.question-card{background:#fff;border-radius:16px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:20px}
+.q-number{font-size:12px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.q-text{font-size:20px;font-weight:700;color:#1a1a1a;margin-bottom:8px;line-height:1.5}
+.q-hint{font-size:13px;color:#9ca3af;margin-bottom:20px}
+
+/* OPTIONS */
+.options-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.option-btn{padding:14px 16px;border:2px solid #e5e7eb;border-radius:12px;background:#fff;font-family:'Cairo',sans-serif;font-size:14px;font-weight:600;cursor:pointer;text-align:right;transition:.2s;color:#374151}
+.option-btn:hover{border-color:#1B5E30;background:#f0fdf4;color:#1B5E30}
+.option-btn.selected{border-color:#1B5E30;background:#1B5E30;color:#fff}
+
+/* TEXT INPUT */
+.q-input{width:100%;padding:14px 16px;border:2px solid #e5e7eb;border-radius:12px;font-family:'Cairo',sans-serif;font-size:15px;outline:none;transition:.2s}
+.q-input:focus{border-color:#1B5E30}
+
+/* NAV BUTTONS */
+.quiz-nav{display:flex;justify-content:space-between;align-items:center;gap:12px}
+
+/* PERSONA CARD */
+.persona-wrap{display:grid;grid-template-columns:280px 1fr;gap:20px}
+.persona-sidebar{background:#1B5E30;border-radius:16px;padding:28px;color:#fff;text-align:center}
+.persona-avatar{width:100px;height:100px;border-radius:50%;border:4px solid rgba(255,255,255,.3);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:48px;background:rgba(255,255,255,.1)}
+.persona-name{font-size:22px;font-weight:800;margin-bottom:4px}
+.persona-title{font-size:13px;opacity:.8;margin-bottom:20px}
+.persona-stat{background:rgba(255,255,255,.1);border-radius:10px;padding:10px;margin-bottom:8px;font-size:13px;text-align:right}
+.persona-stat strong{color:#F5A623;display:block;font-size:16px}
+
+.persona-main{display:flex;flex-direction:column;gap:16px}
+.persona-section{background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.section-title{font-size:13px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.tag-list{display:flex;flex-wrap:wrap;gap:8px}
+.tag{padding:5px 12px;border-radius:20px;font-size:13px;font-weight:600}
+.tag-green{background:#dcfce7;color:#166534}
+.tag-red{background:#fee2e2;color:#991b1b}
+.tag-blue{background:#dbeafe;color:#1e40af}
+.tag-gold{background:#fef9c3;color:#854d0e}
+
+.pain-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;font-size:14px}
+.pain-icon{font-size:18px;flex-shrink:0}
+.quote-box{background:#f0fdf4;border-right:4px solid #1B5E30;padding:14px 16px;border-radius:0 10px 10px 0;font-size:15px;font-style:italic;color:#166534}
+
+/* SAVED PERSONAS */
+.saved-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.saved-card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07);cursor:pointer;border:2px solid transparent;transition:.2s}
+.saved-card:hover{border-color:#1B5E30}
+.saved-card-name{font-size:16px;font-weight:800;color:#1B5E30;margin-bottom:4px}
+.saved-card-sub{font-size:12px;color:#9ca3af}
+
+/* ACTIONS */
+.persona-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+
+@media(max-width:680px){
+  .persona-wrap{grid-template-columns:1fr}
+  .options-grid{grid-template-columns:1fr}
+  .intro-card .steps{grid-template-columns:1fr}
+}
+@media print{
+  .nav,.persona-actions,.no-print{display:none!important}
+  .main{padding:0}
+  body{background:#fff}
+}
+</style>
+
+<script>
+// Hide nav when rendered inside iframe (embedded in system)
+if (window.self !== window.top) {
+  document.addEventListener('DOMContentLoaded', function() {
+    var nav = document.querySelector('.nav');
+    if (nav) nav.style.display = 'none';
+  });
+}
+</script>
+</head>
+<body>
+
+<div class="nav">
+  <a href="/system/" class="nav-back">← نظام أريج</a>
+  <div class="nav-brand">🎯 <span>Persona</span> Generator</div>
+</div>
+
+<div class="main">
+
+<!-- ══════ SCREEN: INTRO ══════ -->
+<div class="screen active" id="screen-intro">
+  <div class="intro-card">
+    <div style="font-size:52px;margin-bottom:16px">🎯</div>
+    <h1>ابني Customer Persona بتاعتك</h1>
+    <p>10 أسئلة سريعة → Persona Card كاملة بتحدد مين عميلك المثالي وإزاي تتكلم معاه</p>
+
+    <div class="steps">
+      <div class="step-box"><div class="step-num">01</div><div class="step-label">جاوب 10 أسئلة</div></div>
+      <div class="step-box"><div class="step-num">02</div><div class="step-label">استلم Persona Card</div></div>
+      <div class="step-box"><div class="step-num">03</div><div class="step-label">احفظ أو اطبع PDF</div></div>
+    </div>
+
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="startQuiz()">🚀 ابدأ الآن</button>
+      <button class="btn btn-outline" onclick="showSaved()">📂 Personas المحفوظة</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SCREEN: QUIZ ══════ -->
+<div class="screen" id="screen-quiz">
+  <div class="quiz-header">
+    <div class="progress-bar"><div class="progress-fill" id="quizFill" style="width:10%"></div></div>
+    <div class="quiz-meta">
+      <span id="qMeta">سؤال 1 من 10</span>
+      <span id="qPct">10%</span>
+    </div>
+  </div>
+
+  <div class="question-card">
+    <div class="q-number" id="qNumber">سؤال 1</div>
+    <div class="q-text" id="qText"></div>
+    <div class="q-hint" id="qHint"></div>
+    <div id="qAnswerArea"></div>
+  </div>
+
+  <div class="quiz-nav">
+    <button class="btn btn-outline btn-sm no-print" id="btnBack" onclick="prevQ()" style="visibility:hidden">← السابق</button>
+    <button class="btn btn-primary no-print" id="btnNext" onclick="nextQ()">التالي ←</button>
+  </div>
+</div>
+
+<!-- ══════ SCREEN: PERSONA RESULT ══════ -->
+<div class="screen" id="screen-result">
+  <div class="persona-actions no-print">
+    <button class="btn btn-primary" onclick="window.print()">🖨️ طباعة / PDF</button>
+    <button class="btn btn-gold" onclick="savePersona()">💾 حفظ Persona</button>
+    <button class="btn btn-outline" onclick="startQuiz()">+ Persona جديدة</button>
+    <button class="btn btn-outline btn-sm" onclick="showSaved()">📂 المحفوظات</button>
+  </div>
+  <div id="personaCard"></div>
+</div>
+
+<!-- ══════ SCREEN: SAVED ══════ -->
+<div class="screen" id="screen-saved">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+    <h2 style="font-size:20px;font-weight:800;color:#1B5E30">📂 Personas المحفوظة</h2>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary btn-sm" onclick="startQuiz()">+ جديدة</button>
+      <button class="btn btn-outline btn-sm" onclick="showIntro()">← رجوع</button>
+    </div>
+  </div>
+  <div class="saved-grid" id="savedGrid">
+    <p style="color:#9ca3af;grid-column:1/-1;text-align:center;padding:40px">لا توجد Personas محفوظة بعد</p>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+const STORAGE_KEY = 'areej_personas_v1';
+
+// ══════════════════════════════════════
+// QUESTIONS
+// ══════════════════════════════════════
+const QUESTIONS = [
+  {
+    id: 'name',
+    text: 'ادي لـ Persona دي اسم',
+    hint: 'خلّيها شخصية حقيقية في دماغك — مش مجرد "عميل"',
+    type: 'text',
+    placeholder: 'مثال: سارة الطالبة / محمد الكابتن'
+  },
+  {
+    id: 'age',
+    text: 'كام عمرها/عمره تقريباً؟',
+    hint: 'العمر بيحدد اللغة والتوقعات والميزانية',
+    type: 'options',
+    options: ['15–20 سنة', '21–27 سنة', '28–35 سنة', '36–45 سنة', '45+ سنة']
+  },
+  {
+    id: 'gender',
+    text: 'إيه جنسها/جنسه؟',
+    hint: '',
+    type: 'options',
+    options: ['بنت / امرأة', 'ولد / رجل', 'الاتنين بالتساوي']
+  },
+  {
+    id: 'location',
+    text: 'فين بيعيش/بتعيش؟',
+    hint: 'التحديد المكاني بيأثر على خيارات الشحن والأسعار',
+    type: 'options',
+    options: ['القاهرة الكبرى', 'الإسكندرية', 'المحافظات الكبيرة', 'المحافظات الصغيرة', 'الخليج / الخارج']
+  },
+  {
+    id: 'income',
+    text: 'إيه مستوى دخله/دخلها؟',
+    hint: 'بيحدد نقطة السعر الصح',
+    type: 'options',
+    options: ['محدود (أقل من 3000 ج.م)', 'متوسط (3000–8000 ج.م)', 'فوق المتوسط (8000–15000)', 'مرتفع (+15000 ج.م)']
+  },
+  {
+    id: 'motivation',
+    text: 'إيه السبب الأساسي اللي خلّاه يشتري منك؟',
+    hint: 'الدافع الحقيقي وراء الشراء',
+    type: 'options',
+    options: ['يبان مختلف وفريد عن غيره', 'يعبّر عن هويته وشخصيته', 'هدية لحد عزيز عليه', 'جودة ومتانة بسعر معقول', 'التميز في الرياضة / الجيم', 'الانتماء لمجموعة / تريند']
+  },
+  {
+    id: 'platform',
+    text: 'بيقضي وقته فين على الإنترنت؟',
+    hint: 'عشان تعرف تلاقيه فين',
+    type: 'options',
+    options: ['إنستجرام أساساً', 'تيك توك', 'فيسبوك', 'يوتيوب', 'تويتر / X', 'مش بياخد من السوشيال']
+  },
+  {
+    id: 'pain',
+    text: 'إيه أكبر مشكلة بتواجهه في الملابس/البراندات؟',
+    hint: 'Pain point = فرصة إنك تكون الحل',
+    type: 'options',
+    options: ['ما يلاقيش حاجة مميزة وبتعبّر عنه', 'الأسعار العالية مقارنة بالجودة', 'الجودة الوحشة والألوان اللي بتبهت', 'مفيش مقاسات مناسبة', 'التوصيل البطيء أو المشاكل في الطلبات', 'مش عارف يلاقي براند يثق فيه']
+  },
+  {
+    id: 'price_range',
+    text: 'كام بيكون مستعد يدفع على قطعة ملابس؟',
+    hint: 'السعر اللي مش هيفكر فيه كتير',
+    type: 'options',
+    options: ['أقل من 150 ج.م', '150–250 ج.م', '250–400 ج.م', '400–650 ج.م', '650+ ج.م']
+  },
+  {
+    id: 'trust',
+    text: 'إيه اللي بيخليه يثق في براند ويشتري منه؟',
+    hint: 'Trust trigger = زرّ الشراء',
+    type: 'options',
+    options: ['آراء عملاء حقيقيين (Reviews)', 'يشوف ناس زيه لابسين المنتج', 'ضمان استرجاع واضح', 'شهرة وانتشار البراند', 'توصية من صاحب أو Influencer', 'جودة الصور والمحتوى الاحترافي']
+  }
+];
+
+let currentQ = 0;
+let answers = {};
+let currentPersona = null;
+
+// ══════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+function showIntro() { showScreen('intro'); }
+function showSaved() { renderSaved(); showScreen('saved'); }
+
+function startQuiz() {
+  currentQ = 0;
+  answers = {};
+  renderQ();
+  showScreen('quiz');
+}
+
+// ══════════════════════════════════════
+// QUIZ
+// ══════════════════════════════════════
+function renderQ() {
+  const q = QUESTIONS[currentQ];
+  const total = QUESTIONS.length;
+  const pct = Math.round((currentQ + 1) / total * 100);
+  document.getElementById('quizFill').style.width = pct + '%';
+  document.getElementById('qMeta').textContent = 'سؤال ' + (currentQ + 1) + ' من ' + total;
+  document.getElementById('qPct').textContent = pct + '%';
+  document.getElementById('qNumber').textContent = 'سؤال ' + (currentQ + 1);
+  document.getElementById('qText').textContent = q.text;
+  document.getElementById('qHint').textContent = q.hint || '';
+  document.getElementById('btnBack').style.visibility = currentQ === 0 ? 'hidden' : 'visible';
+  document.getElementById('btnNext').textContent = currentQ === total - 1 ? '✅ إنشاء Persona' : 'التالي ←';
+
+  const area = document.getElementById('qAnswerArea');
+  const saved = answers[q.id];
+
+  if (q.type === 'text') {
+    area.innerHTML = '<input type="text" class="q-input" id="qTextInput" placeholder="' + (q.placeholder || '') + '" value="' + esc(saved || '') + '">';
+    setTimeout(() => document.getElementById('qTextInput')?.focus(), 100);
+  } else {
+    area.innerHTML = '<div class="options-grid">' +
+      q.options.map(opt =>
+        '<button class="option-btn' + (saved === opt ? ' selected' : '') + '" onclick="selectOpt(this,\'' + esc(opt) + '\')">' + opt + '</button>'
+      ).join('') + '</div>';
+  }
+}
+
+function selectOpt(btn, val) {
+  document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  answers[QUESTIONS[currentQ].id] = val;
+}
+
+function getAnswer() {
+  const q = QUESTIONS[currentQ];
+  if (q.type === 'text') {
+    const v = document.getElementById('qTextInput')?.value.trim();
+    if (v) answers[q.id] = v;
+    return !!v;
+  }
+  return !!answers[q.id];
+}
+
+function nextQ() {
+  if (!getAnswer()) { alert('من فضلك اجاوب السؤال'); return; }
+  if (currentQ < QUESTIONS.length - 1) {
+    currentQ++;
+    renderQ();
+  } else {
+    generatePersona();
+  }
+}
+
+function prevQ() {
+  getAnswer();
+  if (currentQ > 0) { currentQ--; renderQ(); }
+}
+
+// ══════════════════════════════════════
+// GENERATE PERSONA
+// ══════════════════════════════════════
+function generatePersona() {
+  const a = answers;
+
+  // Emoji avatar بناءً على الجنس والعمر
+  const avatarMap = {
+    'بنت / امرأة': { '15–20': '👩‍🎓', '21–27': '👩', '28–35': '👩‍💼', '36–45': '🧑‍💼', '45+': '👩‍🦳' },
+    'ولد / رجل': { '15–20': '👨‍🎓', '21–27': '👨', '28–35': '👨‍💼', '36–45': '🧑‍💼', '45+': '👨‍🦳' },
+    'الاتنين بالتساوي': { default: '🧑' }
+  };
+  const ageKey = (a.age || '').split('–')[0];
+  const genderMap = avatarMap[a.gender] || avatarMap['الاتنين بالتساوي'];
+  const avatar = genderMap[ageKey] || genderMap['default'] || '🧑';
+
+  // الجملة التسويقية الجاهزة
+  const motivationMsgs = {
+    'يبان مختلف وفريد عن غيره': '"مش عايز ألاقي حد لابس نفس اللي أنا لابسه"',
+    'يعبّر عن هويته وشخصيته': '"ملابسي بتعبّر عني قبل ما أفتح بقّي"',
+    'هدية لحد عزيز عليه': '"عايز أديه هدية مميزة تفرّق"',
+    'جودة ومتانة بسعر معقول': '"مش هدفع غالي وآخد وحش"',
+    'التميز في الرياضة / الجيم': '"عايز أبان بشخصيتي حتى في التمرين"',
+    'الانتماء لمجموعة / تريند': '"عايز أكون part of something"'
+  };
+
+  const platformMsg = {
+    'إنستجرام أساساً': 'Instagram Reels + Stories',
+    'تيك توك': 'TikTok Organic Content',
+    'فيسبوك': 'Facebook Groups + Ads',
+    'يوتيوب': 'YouTube Shorts',
+    'تويتر / X': 'Twitter/X Posts',
+    'مش بياخد من السوشيال': 'WhatsApp + Word of Mouth'
+  };
+
+  const trustTips = {
+    'آراء عملاء حقيقيين (Reviews)': 'انشر Reviews بصور حقيقية من عملاء',
+    'يشوف ناس زيه لابسين المنتج': 'Influencer collaborations + UGC',
+    'ضمان استرجاع واضح': 'اعمل سياسة استرجاع واضحة ومرئية',
+    'شهرة وانتشار البراند': 'PR + Press mentions',
+    'توصية من صاحب أو Influencer': 'Referral program + Nano-influencers',
+    'جودة الصور والمحتوى الاحترافي': 'استثمر في تصوير احترافي للمنتجات'
+  };
+
+  currentPersona = {
+    name: a.name || 'Customer',
+    age: a.age || '—',
+    gender: a.gender || '—',
+    location: a.location || '—',
+    income: a.income || '—',
+    motivation: a.motivation || '—',
+    platform: a.platform || '—',
+    pain: a.pain || '—',
+    price_range: a.price_range || '—',
+    trust: a.trust || '—',
+    avatar,
+    quote: motivationMsgs[a.motivation] || '"عميل مميز بيبحث عن قيمة حقيقية"',
+    reach: platformMsg[a.platform] || a.platform,
+    trust_tip: trustTips[a.trust] || a.trust,
+    created_at: new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })
+  };
+
+  renderPersonaCard(currentPersona);
+  showScreen('result');
+}
+
+function renderPersonaCard(p) {
+  document.getElementById('personaCard').innerHTML = `
+    <div class="persona-wrap">
+      <div class="persona-sidebar">
+        <div class="persona-avatar">${p.avatar}</div>
+        <div class="persona-name">${esc(p.name)}</div>
+        <div class="persona-title">${esc(p.gender)} · ${esc(p.age)}</div>
+
+        <div class="persona-stat"><strong>${esc(p.location)}</strong>الموقع</div>
+        <div class="persona-stat"><strong>${esc(p.income)}</strong>مستوى الدخل</div>
+        <div class="persona-stat"><strong>${esc(p.price_range)}</strong>نطاق السعر</div>
+        <div class="persona-stat"><strong>${esc(p.reach)}</strong>أين تجده</div>
+      </div>
+
+      <div class="persona-main">
+        <div class="persona-section">
+          <div class="section-title">الجملة اللي بيفكر فيها</div>
+          <div class="quote-box">${esc(p.quote)}</div>
+        </div>
+
+        <div class="persona-section">
+          <div class="section-title">الدافع الأساسي للشراء</div>
+          <div class="tag-list">
+            <span class="tag tag-green">✅ ${esc(p.motivation)}</span>
+          </div>
+        </div>
+
+        <div class="persona-section">
+          <div class="section-title">🔥 نقطة الألم (Pain Point)</div>
+          <div class="pain-row"><span class="pain-icon">😤</span><span>${esc(p.pain)}</span></div>
+        </div>
+
+        <div class="persona-section">
+          <div class="section-title">🔑 مفتاح الثقة</div>
+          <div class="tag-list">
+            <span class="tag tag-blue">🛡️ ${esc(p.trust)}</span>
+          </div>
+          <div style="margin-top:10px;font-size:13px;color:#6b7280;background:#f9fafb;padding:10px;border-radius:8px">
+            💡 <strong>إزاي تستخدمه:</strong> ${esc(p.trust_tip)}
+          </div>
+        </div>
+
+        <div class="persona-section">
+          <div class="section-title">📣 استراتيجية التواصل معه</div>
+          <div style="font-size:14px;color:#374151;line-height:1.8">
+            <div>🎯 <strong>المنصة:</strong> ${esc(p.reach)}</div>
+            <div style="margin-top:6px">💬 <strong>اللغة:</strong> ${getLangTone(p)}</div>
+            <div style="margin-top:6px">📸 <strong>المحتوى:</strong> ${getContentType(p)}</div>
+          </div>
+        </div>
+
+        <div class="persona-section" style="background:#fffbeb">
+          <div class="section-title">⚡ رسالة تسويقية جاهزة</div>
+          <div style="font-size:15px;font-weight:700;color:#92400e;line-height:1.7">${getMarketingMsg(p)}</div>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:12px;color:#9ca3af;margin-top:16px">
+      أُنشئت بتاريخ ${esc(p.created_at)} — نظام أريج
+    </div>
+  `;
+}
+
+function getLangTone(p) {
+  const age = p.age || '';
+  if (age.includes('15') || age.includes('21')) return 'كلام شبابي، تريندي، memes مناسبة';
+  if (age.includes('28') || age.includes('36')) return 'محترم وودود، قيمة واضحة، مباشر';
+  return 'رسمي ومحترم، تركيز على الجودة';
+}
+
+function getContentType(p) {
+  const platform = p.platform || '';
+  if (platform.includes('إنستجرام')) return 'Reels Behind the Scenes + Product Demos';
+  if (platform.includes('تيك توك')) return 'Trending Audio + Quick Transformations';
+  if (platform.includes('فيسبوك')) return 'Posts بصور + قصص عملاء حقيقية';
+  if (platform.includes('يوتيوب')) return 'Shorts + Reviews مفصّلة';
+  return 'صور عالية الجودة + رسائل شخصية';
+}
+
+function getMarketingMsg(p) {
+  const motivation = p.motivation || '';
+  if (motivation.includes('مختلف')) return '"لو زهقت من اللي كل الناس لابسه — ده مكانك. كل قطعة فريدة، مش هتلاقيها تاني."';
+  if (motivation.includes('يعبّر')) return '"ملابسك بتقول عنك أكتر من أي كلام. عبّر عن نفسك بالصح."';
+  if (motivation.includes('هدية')) return '"أجمل هدية اللي بتدّيها — هي اللي بتقول فيها شايفاك كويس."';
+  if (motivation.includes('جودة')) return '"جودة حقيقية بسعر منطقي — من أول لبسة هتحس بالفرق."';
+  if (motivation.includes('رياضة')) return '"في الجيم أو برّه — خلّي أداءك يبان في كل تفصيلة."';
+  return '"انضم لمجتمع بيلبس بشخصية — مش بس قماش."';
+}
+
+// ══════════════════════════════════════
+// SAVE / LOAD
+// ══════════════════════════════════════
+function savePersona() {
+  if (!currentPersona) return;
+  const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  all.unshift({ ...currentPersona, id: Date.now() });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(all.slice(0, 20)));
+  alert('✅ تم حفظ "' + currentPersona.name + '" في المحفوظات');
+}
+
+function renderSaved() {
+  const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  const grid = document.getElementById('savedGrid');
+  if (!all.length) {
+    grid.innerHTML = '<p style="color:#9ca3af;grid-column:1/-1;text-align:center;padding:40px">لا توجد Personas محفوظة بعد</p>';
+    return;
+  }
+  grid.innerHTML = all.map(p => `
+    <div class="saved-card" onclick="loadSavedPersona(${p.id})">
+      <div style="font-size:36px;margin-bottom:8px">${p.avatar}</div>
+      <div class="saved-card-name">${esc(p.name)}</div>
+      <div class="saved-card-sub">${esc(p.gender)} · ${esc(p.age)}</div>
+      <div class="saved-card-sub" style="margin-top:4px">${esc(p.location)} · ${esc(p.price_range)}</div>
+      <div class="saved-card-sub" style="margin-top:6px;color:#9ca3af">${esc(p.created_at)}</div>
+      <button onclick="event.stopPropagation();deleteSaved(${p.id})" style="margin-top:10px;padding:5px 10px;border:1px solid #fee2e2;background:#fff;color:#ef4444;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif">🗑️ حذف</button>
+    </div>
+  `).join('');
+}
+
+function loadSavedPersona(id) {
+  const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  const p = all.find(x => x.id === id);
+  if (!p) return;
+  currentPersona = p;
+  renderPersonaCard(p);
+  showScreen('result');
+}
+
+function deleteSaved(id) {
+  if (!confirm('حذف هذه Persona؟')) return;
+  const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').filter(x => x.id !== id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+  renderSaved();
+}
+
+// ══════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════
+function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+</script>
+</body>
+</html>

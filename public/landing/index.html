@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>نظام أريج — إدارة شركتك من مكان واحد</title>
+  <meta name="description" content="نظام أريج: فواتير، مبيعات، موظفين، مخزون — كل حاجة في لوحة واحدة بسيطة. جرب مجاناً 14 يوم بدون كريدت كارد." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; scroll-behavior: smooth; }
+    body {
+      font-family: 'Cairo', sans-serif;
+      direction: rtl;
+      text-align: right;
+      color: #1a1a1a;
+      background: #fff;
+      line-height: 1.6;
+    }
+    a { text-decoration: none; color: inherit; }
+    img { max-width: 100%; display: block; }
+
+    /* ── Variables ── */
+    :root {
+      --green:       #1B5E30;
+      --green-light: #2E7D4F;
+      --green-dark:  #134422;
+      --gold:        #F5A623;
+      --gold-light:  #FFB940;
+      --white:       #ffffff;
+      --gray-50:     #f9fafb;
+      --gray-100:    #f3f4f6;
+      --gray-200:    #e5e7eb;
+      --gray-600:    #4b5563;
+      --gray-700:    #374151;
+      --shadow-sm:   0 1px 3px rgba(0,0,0,.10);
+      --shadow-md:   0 4px 16px rgba(0,0,0,.12);
+      --shadow-lg:   0 8px 32px rgba(0,0,0,.16);
+      --radius:      12px;
+      --radius-sm:   8px;
+    }
+
+    /* ── Navbar ── */
+    .navbar {
+      background: var(--green-dark);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    .navbar-brand {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .navbar-brand span { color: var(--gold); }
+    .navbar-cta {
+      background: var(--gold);
+      color: var(--green-dark);
+      font-family: 'Cairo', sans-serif;
+      font-size: .9rem;
+      font-weight: 700;
+      padding: 8px 20px;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      transition: background .2s, transform .15s;
+      white-space: nowrap;
+    }
+    .navbar-cta:hover { background: var(--gold-light); transform: translateY(-1px); }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(145deg, var(--green-dark) 0%, var(--green) 60%, var(--green-light) 100%);
+      color: var(--white);
+      padding: 72px 20px 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -80px; left: -80px;
+      width: 320px; height: 320px;
+      background: rgba(255,255,255,.04);
+      border-radius: 50%;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -60px; right: -60px;
+      width: 240px; height: 240px;
+      background: rgba(245,166,35,.08);
+      border-radius: 50%;
+    }
+    .hero-inner { position: relative; z-index: 1; max-width: 720px; margin: 0 auto; }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(245,166,35,.2);
+      color: var(--gold-light);
+      font-size: .8rem;
+      font-weight: 700;
+      padding: 5px 16px;
+      border-radius: 50px;
+      border: 1px solid rgba(245,166,35,.35);
+      margin-bottom: 24px;
+      letter-spacing: .03em;
+    }
+    .hero h1 {
+      font-size: clamp(1.7rem, 5vw, 2.8rem);
+      font-weight: 900;
+      line-height: 1.3;
+      margin-bottom: 18px;
+    }
+    .hero h1 span { color: var(--gold); }
+    .hero p {
+      font-size: clamp(.95rem, 2.5vw, 1.15rem);
+      color: rgba(255,255,255,.85);
+      margin-bottom: 36px;
+      max-width: 560px;
+      margin-inline: auto;
+    }
+    .btn-primary {
+      display: inline-block;
+      background: var(--gold);
+      color: var(--green-dark);
+      font-family: 'Cairo', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 800;
+      padding: 16px 36px;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      transition: background .2s, transform .15s, box-shadow .2s;
+      box-shadow: 0 4px 20px rgba(245,166,35,.4);
+    }
+    .btn-primary:hover { background: var(--gold-light); transform: translateY(-2px); box-shadow: 0 6px 28px rgba(245,166,35,.5); }
+    .hero-sub {
+      margin-top: 14px;
+      font-size: .82rem;
+      color: rgba(255,255,255,.6);
+    }
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin-top: 52px;
+      flex-wrap: wrap;
+    }
+    .hero-stat { text-align: center; }
+    .hero-stat-num {
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: var(--gold);
+    }
+    .hero-stat-label {
+      font-size: .8rem;
+      color: rgba(255,255,255,.65);
+    }
+
+    /* ── Section Wrapper ── */
+    .section { padding: 64px 20px; }
+    .section-alt { background: var(--gray-50); }
+    .container { max-width: 1040px; margin: 0 auto; }
+    .section-title {
+      font-size: clamp(1.4rem, 4vw, 2rem);
+      font-weight: 800;
+      color: var(--green-dark);
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .section-sub {
+      font-size: .95rem;
+      color: var(--gray-600);
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    /* ── Features ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+    }
+    .feature-card {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      transition: transform .2s, box-shadow .2s, border-color .2s;
+    }
+    .feature-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+      border-color: rgba(27,94,48,.25);
+    }
+    .feature-icon {
+      font-size: 2rem;
+      margin-bottom: 14px;
+      display: block;
+    }
+    .feature-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--green-dark);
+      margin-bottom: 6px;
+    }
+    .feature-desc {
+      font-size: .88rem;
+      color: var(--gray-600);
+      line-height: 1.7;
+    }
+
+    /* ── Pricing ── */
+    .pricing-note {
+      text-align: center;
+      font-size: .88rem;
+      color: var(--gray-600);
+      margin-bottom: 36px;
+    }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      align-items: stretch;
+    }
+    .pricing-card {
+      background: var(--white);
+      border: 2px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 32px 24px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .pricing-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+    .pricing-card.featured {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 4px rgba(245,166,35,.15), var(--shadow-md);
+      position: relative;
+    }
+    .pricing-badge {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--gold);
+      color: var(--green-dark);
+      font-size: .75rem;
+      font-weight: 800;
+      padding: 4px 16px;
+      border-radius: 50px;
+      white-space: nowrap;
+    }
+    .pricing-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gray-700);
+      margin-bottom: 16px;
+    }
+    .pricing-price {
+      font-size: 2.4rem;
+      font-weight: 900;
+      color: var(--green-dark);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .pricing-price span { font-size: 1rem; font-weight: 600; color: var(--gray-600); }
+    .pricing-save {
+      font-size: .8rem;
+      color: var(--gold);
+      font-weight: 700;
+      margin-bottom: 20px;
+      min-height: 1.2em;
+    }
+    .pricing-features {
+      list-style: none;
+      text-align: right;
+      margin-bottom: 28px;
+      flex: 1;
+    }
+    .pricing-features li {
+      font-size: .88rem;
+      color: var(--gray-700);
+      padding: 5px 0;
+      border-bottom: 1px solid var(--gray-100);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .pricing-features li::before {
+      content: '✓';
+      color: var(--green);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .btn-plan {
+      display: block;
+      background: var(--green);
+      color: var(--white);
+      font-family: 'Cairo', sans-serif;
+      font-size: .95rem;
+      font-weight: 700;
+      padding: 13px 20px;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      transition: background .2s, transform .15s;
+      text-align: center;
+    }
+    .btn-plan:hover { background: var(--green-light); transform: translateY(-1px); }
+    .pricing-card.featured .btn-plan {
+      background: var(--gold);
+      color: var(--green-dark);
+    }
+    .pricing-card.featured .btn-plan:hover { background: var(--gold-light); }
+
+    /* ── Social Proof ── */
+    .social-count {
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--green-dark);
+      margin-bottom: 36px;
+    }
+    .social-count strong { color: var(--gold); font-size: 1.5rem; }
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+    }
+    .testimonial-card {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 24px;
+      position: relative;
+    }
+    .testimonial-stars {
+      color: var(--gold);
+      font-size: 1rem;
+      margin-bottom: 12px;
+    }
+    .testimonial-text {
+      font-size: .9rem;
+      color: var(--gray-700);
+      line-height: 1.75;
+      margin-bottom: 16px;
+      font-style: italic;
+    }
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .testimonial-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: var(--green);
+      color: var(--white);
+      font-size: 1rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .testimonial-name { font-size: .9rem; font-weight: 700; color: var(--green-dark); }
+    .testimonial-role { font-size: .78rem; color: var(--gray-600); }
+
+    /* ── Final CTA ── */
+    .cta-section {
+      background: linear-gradient(135deg, var(--green-dark), var(--green));
+      color: var(--white);
+      text-align: center;
+      padding: 72px 20px;
+    }
+    .cta-section h2 {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 900;
+      margin-bottom: 16px;
+    }
+    .cta-section p {
+      font-size: 1rem;
+      color: rgba(255,255,255,.8);
+      margin-bottom: 36px;
+      max-width: 500px;
+      margin-inline: auto;
+    }
+    .btn-cta-white {
+      display: inline-block;
+      background: var(--white);
+      color: var(--green-dark);
+      font-family: 'Cairo', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+      padding: 16px 44px;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      transition: background .2s, transform .15s, box-shadow .2s;
+      box-shadow: 0 4px 20px rgba(0,0,0,.2);
+    }
+    .btn-cta-white:hover { background: var(--gray-100); transform: translateY(-2px); box-shadow: 0 6px 28px rgba(0,0,0,.25); }
+    .cta-sub {
+      margin-top: 14px;
+      font-size: .82rem;
+      color: rgba(255,255,255,.55);
+    }
+
+    /* ── Footer ── */
+    .footer {
+      background: var(--green-dark);
+      color: rgba(255,255,255,.7);
+      text-align: center;
+      padding: 28px 20px;
+      font-size: .85rem;
+    }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .footer-links a {
+      color: rgba(255,255,255,.65);
+      transition: color .15s;
+    }
+    .footer-links a:hover { color: var(--gold); }
+    .footer-copy { color: rgba(255,255,255,.4); font-size: .78rem; margin-top: 8px; }
+
+    /* ── Divider ── */
+    .divider {
+      width: 60px;
+      height: 4px;
+      background: var(--gold);
+      border-radius: 2px;
+      margin: 0 auto 36px;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 600px) {
+      .hero { padding: 52px 16px 60px; }
+      .hero-stats { gap: 20px; }
+      .section { padding: 48px 16px; }
+      .pricing-grid { grid-template-columns: 1fr; max-width: 360px; margin: 0 auto; }
+      .navbar-brand { font-size: 1.1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Navbar ── -->
+  <nav class="navbar">
+    <div class="navbar-brand">🌿 نظام <span>أريج</span></div>
+    <a href="/register/" class="navbar-cta">ابدأ مجاناً</a>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-badge">🚀 تجربة مجانية 14 يوم — بدون كريدت كارد</div>
+      <h1>نظام <span>أريج</span><br />إدارة شركتك من مكان واحد</h1>
+      <p>فواتير، مبيعات، موظفين، مخزون — كل حاجة في لوحة واحدة بسيطة</p>
+      <a href="/register/" class="btn-primary">ابدأ تجربتك المجانية ← 14 يوم مجاناً</a>
+      <p class="hero-sub">بدون كريدت كارد، بدون التزام</p>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-num">50+</div>
+          <div class="hero-stat-label">شركة تثق في أريج</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num">14</div>
+          <div class="hero-stat-label">يوم تجربة مجانية</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num">6</div>
+          <div class="hero-stat-label">أنظمة متكاملة</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Features ── -->
+  <section class="section section-alt">
+    <div class="container">
+      <h2 class="section-title">كل اللي شركتك محتاجه في مكان واحد</h2>
+      <p class="section-sub">مش هتحتاج تاني تتنقل بين برامج كتير — أريج بيجمع كل حاجة ليك</p>
+      <div class="divider"></div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <span class="feature-icon">📄</span>
+          <div class="feature-title">فواتير احترافية</div>
+          <div class="feature-desc">ابعت فواتير branded بالنقرة. PDF جاهز، تصميم احترافي، وتاريخ كامل للمعاملات.</div>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">📦</span>
+          <div class="feature-title">إدارة المخزون</div>
+          <div class="feature-desc">تابع مخزونك في real-time. تنبيهات لما الصنف يوصل لأدنى حد، وتقارير حركة البضاعة.</div>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">👥</span>
+          <div class="feature-title">CRM المبيعات</div>
+          <div class="feature-desc">تابع عملاءك من lead لـ VIP. كل تفاصيل العميل، التاريخ، والصفقات في مكان واحد.</div>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">👷</span>
+          <div class="feature-title">إدارة الموظفين</div>
+          <div class="feature-desc">حضور وانصراف، مرتبات، صلاحيات. كل موظف ليه دور محدد وصلاحيات واضحة.</div>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">💰</span>
+          <div class="feature-title">الخزينة</div>
+          <div class="feature-desc">تابع التدفق النقدي والمحافظ المختلفة. اعرف فين فلوسك في أي وقت.</div>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">📊</span>
+          <div class="feature-title">التقارير</div>
+          <div class="feature-desc">تعرف شركتك ماشية فين. تقارير مبيعات، ربح وخسارة، وأداء الموظفين بالأرقام.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Pricing ── -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">اختار الخطة المناسبة ليك</h2>
+      <p class="section-sub">كل الخطط فيها 14 يوم تجربة مجانية — ابدأ دلوقتي بدون أي مخاطرة</p>
+      <div class="divider"></div>
+      <div class="pricing-grid">
+
+        <!-- Monthly -->
+        <div class="pricing-card">
+          <div class="pricing-name">شهري</div>
+          <div class="pricing-price">99 <span>ج.م / شهر</span></div>
+          <div class="pricing-save">&nbsp;</div>
+          <ul class="pricing-features">
+            <li>كل المميزات مفتوحة</li>
+            <li>دعم فني عبر الشات</li>
+            <li>تحديثات مستمرة</li>
+            <li>14 يوم تجربة مجانية</li>
+          </ul>
+          <a href="/register/" class="btn-plan">ابدأ الآن</a>
+        </div>
+
+        <!-- Annual - Featured -->
+        <div class="pricing-card featured">
+          <div class="pricing-badge">⭐ الأكثر اختياراً</div>
+          <div class="pricing-name">سنوي</div>
+          <div class="pricing-price">799 <span>ج.م / سنة</span></div>
+          <div class="pricing-save">وفّر 32% مقارنة بالشهري</div>
+          <ul class="pricing-features">
+            <li>كل المميزات مفتوحة</li>
+            <li>دعم فني أولوية</li>
+            <li>تحديثات مستمرة</li>
+            <li>14 يوم تجربة مجانية</li>
+          </ul>
+          <a href="/register/" class="btn-plan">ابدأ الآن</a>
+        </div>
+
+        <!-- Lifetime -->
+        <div class="pricing-card">
+          <div class="pricing-name">مدى الحياة</div>
+          <div class="pricing-price">1499 <span>ج.م مرة واحدة</span></div>
+          <div class="pricing-save">ادفع مرة وخلاص للأبد</div>
+          <ul class="pricing-features">
+            <li>كل المميزات للأبد</li>
+            <li>دعم فني VIP</li>
+            <li>كل التحديثات القادمة</li>
+            <li>14 يوم تجربة مجانية</li>
+          </ul>
+          <a href="/register/" class="btn-plan">ابدأ الآن</a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Social Proof ── -->
+  <section class="section section-alt">
+    <div class="container">
+      <h2 class="section-title">بيثقوا فينا</h2>
+      <p class="section-sub">ناس زيك بدأوا رحلتهم مع أريج وما رجعوش</p>
+      <div class="divider"></div>
+      <div class="social-count">
+        انضم لأكتر من <strong>50</strong> شركة بتشتغل على نظام أريج
+      </div>
+      <div class="testimonials-grid">
+
+        <div class="testimonial-card">
+          <div class="testimonial-stars">★★★★★</div>
+          <p class="testimonial-text">"قبل أريج كنت بضيع وقت كتير في الإكسيل وأوراق يدوية. دلوقتي بص على الداشبورد وبعرف حالة شركتي على طول. الفواتير بتتعمل في ثواني وبتوصل للعميل أوتوماتيك."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">م</div>
+            <div>
+              <div class="testimonial-name">محمد الشرقاوي</div>
+              <div class="testimonial-role">صاحب شركة توريدات — القاهرة</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card">
+          <div class="testimonial-stars">★★★★★</div>
+          <p class="testimonial-text">"كنت خايف من أي برنامج جديد إن التعلم هياخد وقت. أريج سهّل عليا جداً — في يوم واحد حطيت كل بيانات موظفيني وبدأت أشتغل. الدعم الفني كمان بيرد بسرعة."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">س</div>
+            <div>
+              <div class="testimonial-name">سارة عبد الرحمن</div>
+              <div class="testimonial-role">مديرة مصنع ملابس — المحلة</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card">
+          <div class="testimonial-stars">★★★★★</div>
+          <p class="testimonial-text">"أحسن قرار اتخذته السنة دي. المخزون بقى تحت السيطرة تماماً، والتقارير بتساعدني آخذ قرارات صح. دفعت الخطة السنوية وبصراحة كانت استثمار ممتاز."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">ك</div>
+            <div>
+              <div class="testimonial-name">كريم منصور</div>
+              <div class="testimonial-role">تاجر جملة — الإسكندرية</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Final CTA ── -->
+  <section class="cta-section">
+    <h2>جاهز تبدأ؟ سجّل دلوقتي — مجاناً</h2>
+    <p>14 يوم كامل بدون كريدت كارد، وبدون أي التزام. لو مش عجبك مش هتتحاسب على حاجة.</p>
+    <a href="/register/" class="btn-cta-white">ابدأ تجربتك المجانية ←</a>
+    <p class="cta-sub">بدون كريدت كارد · بدون التزام · إلغاء في أي وقت</p>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="/privacy/">سياسة الخصوصية</a>
+      <a href="mailto:sales@areejegypt.com">تواصل معنا: sales@areejegypt.com</a>
+    </div>
+    <div class="footer-copy">© 2026 نظام أريج — جميع الحقوق محفوظة</div>
+  </footer>
+
+</body>
+</html>

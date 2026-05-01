@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>تتبع الشحنة</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',sans-serif;background:#f5f7fa;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,.1);padding:32px;max-width:440px;width:100%}
+.logo{font-size:36px;text-align:center;margin-bottom:6px}
+.brand{font-size:18px;font-weight:900;color:#1B5E30;text-align:center;margin-bottom:20px}
+h2{font-size:16px;font-weight:800;color:#374151;margin-bottom:16px;text-align:center}
+.waybill{font-size:22px;font-weight:900;color:#1B5E30;text-align:center;letter-spacing:2px;background:#f0fdf4;border-radius:10px;padding:12px;margin-bottom:20px}
+.step{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.step-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.step-icon.done{background:#1B5E30;color:#fff}
+.step-icon.current{background:#F5A623;color:#fff}
+.step-icon.pending{background:#f3f4f6;color:#9ca3af}
+.step-info h4{font-size:13px;font-weight:700;color:#1a1a1a;margin-bottom:2px}
+.step-info p{font-size:11px;color:#6b7280}
+.status-badge{text-align:center;padding:10px;border-radius:10px;font-weight:700;font-size:14px;margin-bottom:16px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">🌿</div>
+  <div class="brand">أريج أكاديمي — تتبع الشحنة</div>
+  <div id="content"><div style="text-align:center;color:#9ca3af">جاري التحميل...</div></div>
+</div>
+<script>
+const waybill = location.pathname.split('/').pop();
+const STATUS_STEPS = [
+  { key:'pending', label:'تم إنشاء الشحنة', icon:'📋' },
+  { key:'picked',  label:'تم الاستلام من البائع', icon:'📦' },
+  { key:'transit', label:'في الطريق إليك', icon:'🚚' },
+  { key:'out',     label:'مع المندوب', icon:'🏍️' },
+  { key:'delivered',label:'تم التسليم', icon:'✅' },
+];
+const STATUS_ORDER = ['pending','picked','transit','out','delivered'];
+
+async function load() {
+  // Try to find shipment by waybill from public endpoint
+  const r = await fetch('/api/public/track/' + waybill);
+  const d = await r.json();
+  if (!d.ok) {
+    document.getElementById('content').innerHTML = '<div style="text-align:center;color:#CC2200;padding:20px">❌ ' + (d.error||'شحنة غير موجودة') + '</div>';
+    return;
+  }
+  const s = d.shipment;
+  const curIdx = STATUS_ORDER.indexOf(s.status);
+  const statusColors = { pending:'#F5A623', picked:'#3b82f6', transit:'#8b5cf6', out:'#F5A623', delivered:'#16a34a', returned:'#ef4444' };
+  const statusLabels = { pending:'في الانتظار', picked:'تم الاستلام', transit:'في الطريق', out:'مع المندوب', delivered:'تم التسليم', returned:'مرتجع' };
+  const color = statusColors[s.status]||'#9ca3af';
+  const label = statusLabels[s.status]||s.status;
+
+  let html = '<div class="waybill">' + waybill + '</div>';
+  html += '<div class="status-badge" style="background:'+color+'20;color:'+color+'">' + label + '</div>';
+  html += '<h2>مراحل الشحنة</h2>';
+  STATUS_STEPS.forEach((step, i) => {
+    const isDone = curIdx > i;
+    const isCurrent = curIdx === i;
+    const cls = isDone ? 'done' : isCurrent ? 'current' : 'pending';
+    html += '<div class="step"><div class="step-icon '+cls+'">' + step.icon + '</div><div class="step-info"><h4>'+step.label+'</h4></div></div>';
+  });
+  if (s.status === 'returned') {
+    html += '<div style="background:#fee2e2;border-radius:10px;padding:12px;text-align:center;color:#991b1b;font-weight:700;margin-top:8px">↩️ تم الإرجاع</div>';
+  }
+  html += '<div style="margin-top:16px;font-size:11px;color:#9ca3af;text-align:center">شركة الشحن: '+s.company+'</div>';
+  document.getElementById('content').innerHTML = html;
+}
+load();
+</script>
+</body>
+</html>

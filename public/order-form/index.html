@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>فورم الطلب</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',sans-serif;background:#f5f7fa;min-height:100vh;padding:20px}
+.card{background:#fff;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,.08);padding:28px;max-width:520px;margin:0 auto}
+.logo{font-size:32px;text-align:center;margin-bottom:6px}
+.brand{font-size:18px;font-weight:900;color:#1B5E30;text-align:center;margin-bottom:4px}
+h1{font-size:16px;font-weight:800;color:#374151;text-align:center;margin-bottom:20px}
+label{font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px}
+input,textarea,select{width:100%;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:10px;font-family:'Cairo',sans-serif;font-size:13px;margin-bottom:12px;outline:none}
+input:focus,textarea:focus{border-color:#1B5E30}
+.btn{width:100%;padding:14px;background:#1B5E30;color:#fff;border:none;border-radius:12px;font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px}
+.product-item{background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:10px}
+.product-item h4{font-size:13px;font-weight:700;color:#1B5E30;margin-bottom:8px}
+.qty-row{display:flex;align-items:center;gap:8px}
+.qty-row input{margin-bottom:0;width:80px}
+.success{background:#f0fdf4;border:2px solid #16a34a;border-radius:14px;padding:24px;text-align:center}
+.success .icon{font-size:48px}
+.success h3{color:#16a34a;font-size:18px;font-weight:900;margin:10px 0 6px}
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="logo">🌿</div>
+  <div class="brand">أريج أكاديمي</div>
+  <div id="content"><div style="text-align:center;color:#9ca3af;padding:30px">جاري التحميل...</div></div>
+</div>
+<script>
+const token = location.pathname.split('/').pop();
+let formData = null;
+
+async function loadForm() {
+  const r = await fetch('/api/public/order-form/' + token);
+  const d = await r.json();
+  if (!d.ok) {
+    document.getElementById('content').innerHTML = '<div style="text-align:center;color:#CC2200;padding:30px">❌ ' + (d.error||'فورم غير موجود') + '</div>';
+    return;
+  }
+  formData = d.form;
+  renderForm();
+}
+
+function renderForm() {
+  const f = formData;
+  const prods = (f.products||[]).map((p,i) => `
+    <div class="product-item">
+      <h4>${p.name || p}</h4>
+      ${p.price ? '<div style="font-size:12px;color:#6b7280;margin-bottom:6px">السعر: '+p.price+' ج.م</div>' : ''}
+      <div class="qty-row">
+        <label style="margin-bottom:0">الكمية:</label>
+        <input type="number" id="qty-${i}" min="0" value="0" style="width:80px">
+        <input type="text" id="notes-${i}" placeholder="ملاحظة (لون، مقاس...)" style="flex:1;margin-bottom:0">
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('content').innerHTML = `
+    <h1>${f.title}</h1>
+    <label>الاسم الكريم *</label>
+    <input id="c-name" placeholder="اسمك">
+    <label>رقم الهاتف *</label>
+    <input id="c-phone" placeholder="01xxxxxxxxx" type="tel">
+    <label>العنوان</label>
+    <input id="c-address" placeholder="العنوان للتوصيل">
+    ${prods ? '<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:10px;margin-top:4px">📦 اختر المنتجات</div>' + prods : ''}
+    <label style="margin-top:4px">ملاحظات إضافية</label>
+    <textarea id="c-notes" rows="2" placeholder="أي طلبات خاصة..."></textarea>
+    <button class="btn" onclick="submitForm()">📋 إرسال الطلب</button>
+    <div id="form-msg" style="margin-top:10px;font-size:12px;text-align:center"></div>
+  `;
+}
+
+async function submitForm() {
+  const name = document.getElementById('c-name')?.value.trim();
+  const phone = document.getElementById('c-phone')?.value.trim();
+  const address = document.getElementById('c-address')?.value.trim();
+  const notes = document.getElementById('c-notes')?.value.trim();
+  if (!name || !phone) { document.getElementById('form-msg').innerHTML = '<span style="color:#CC2200">الاسم والهاتف مطلوبان</span>'; return; }
+
+  // Collect items
+  const items = (formData.products||[]).map((p,i) => ({
+    product: p.name || p,
+    qty: parseInt(document.getElementById('qty-'+i)?.value)||0,
+    notes: document.getElementById('notes-'+i)?.value||''
+  })).filter(x => x.qty > 0);
+
+  const btn = document.querySelector('.btn');
+  btn.disabled = true; btn.textContent = 'جاري الإرسال...';
+
+  const r = await fetch('/api/public/order-form/' + token + '/submit', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ client_name: name, client_phone: phone, client_address: address, items, notes })
+  });
+  const d = await r.json();
+  if (d.ok) {
+    document.getElementById('content').innerHTML = `
+      <div class="success">
+        <div class="icon">🎉</div>
+        <h3>تم استلام طلبك!</h3>
+        <p style="color:#6b7280;font-size:13px">رقم طلبك: <strong>${d.order_no}</strong></p>
+        <p style="color:#6b7280;font-size:12px;margin-top:6px">هنتواصل معاك قريباً لتأكيد الطلب</p>
+      </div>`;
+  } else {
+    document.getElementById('form-msg').innerHTML = '<span style="color:#CC2200">❌ ' + (d.error||'خطأ') + '</span>';
+    btn.disabled=false; btn.textContent='📋 إرسال الطلب';
+  }
+}
+loadForm();
+</script>
+</body>
+</html>

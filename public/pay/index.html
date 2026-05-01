@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>لينك الدفع</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',sans-serif;background:#f5f7fa;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,.1);padding:32px;max-width:420px;width:100%;text-align:center}
+.logo{font-size:40px;margin-bottom:8px}
+.brand{font-size:20px;font-weight:900;color:#1B5E30;margin-bottom:24px}
+.amount{font-size:48px;font-weight:900;color:#1B5E30;margin:16px 0 4px}
+.currency{font-size:18px;color:#6b7280}
+.desc{font-size:14px;color:#6b7280;margin-bottom:24px}
+.btn{width:100%;padding:14px;background:#1B5E30;color:#fff;border:none;border-radius:12px;font-family:'Cairo',sans-serif;font-size:16px;font-weight:700;cursor:pointer;margin-top:12px}
+.btn:hover{background:#2d7a47}
+.btn.wa{background:#25D366}
+.btn:disabled{background:#9ca3af;cursor:not-allowed}
+.status-paid{background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;padding:20px;margin-top:16px}
+.status-paid .icon{font-size:48px}
+.status-paid h3{color:#16a34a;font-size:18px;font-weight:900;margin:8px 0 4px}
+.err{color:#CC2200;font-size:13px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="logo">🌿</div>
+  <div class="brand">أريج أكاديمي</div>
+  <div id="content"><div style="color:#9ca3af">جاري التحميل...</div></div>
+</div>
+<script>
+const token = location.pathname.split('/').pop();
+
+async function loadPayLink() {
+  const r = await fetch('/api/public/pay/' + token);
+  const d = await r.json();
+  if (!d.ok) {
+    document.getElementById('content').innerHTML = '<div class="err">❌ ' + (d.error||'لينك غير صالح') + '</div>';
+    return;
+  }
+  const link = d.link;
+  if (link.status === 'paid') {
+    showPaid();
+    return;
+  }
+  document.getElementById('content').innerHTML = `
+    <div class="currency">المبلغ المطلوب</div>
+    <div class="amount">${link.amount.toLocaleString('ar-EG')}</div>
+    <div class="currency">ج.م</div>
+    ${link.client_name ? '<div style="font-size:15px;font-weight:700;margin-top:8px">'+link.client_name+'</div>' : ''}
+    ${link.description ? '<div class="desc">'+link.description+'</div>' : ''}
+    <button class="btn" onclick="confirmPayment()">💳 ادفع دلوقتي</button>
+    <div style="font-size:11px;color:#9ca3af;margin-top:8px">🔒 دفع آمن ومشفّر</div>
+    <div id="pay-msg"></div>
+  `;
+}
+
+async function confirmPayment() {
+  const btn = document.querySelector('.btn');
+  btn.disabled = true;
+  btn.textContent = 'جاري المعالجة...';
+  const r = await fetch('/api/public/pay/' + token + '/confirm', { method: 'POST', headers: {'Content-Type':'application/json'} });
+  const d = await r.json();
+  if (d.ok) { showPaid(); }
+  else { document.getElementById('pay-msg').innerHTML = '<div class="err">❌ ' + (d.error||'خطأ') + '</div>'; btn.disabled=false; btn.textContent='💳 ادفع دلوقتي'; }
+}
+
+function showPaid() {
+  document.getElementById('content').innerHTML = `
+    <div class="status-paid">
+      <div class="icon">✅</div>
+      <h3>تم الدفع بنجاح!</h3>
+      <p style="font-size:13px;color:#6b7280">شكراً — تم استلام مبلغك.</p>
+    </div>`;
+}
+
+loadPayLink();
+</script>
+</body>
+</html>

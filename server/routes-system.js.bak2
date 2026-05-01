@@ -1,0 +1,3563 @@
+/**
+ * System Routes — /api/system/*
+ * Multi-tenant: كل request بيجيب db الخاصة بالـ user من JWT
+ */
+const express = require('express');
+const router = express.Router();
+const { getTenantDb } = require('./db-tenant');
+const { requireAuth } = require('./auth-middleware');
+
+// Middleware: inject tenant db
+router.use(requireAuth);
+router.use((req, res, next) => {
+  req.db = getTenantDb(req.user.id);
+  next();
+});
+
+// Compatibility shim: كود الـ routes بيستخدم db مش req.db
+// نعوّض بـ getter ديناميكي
+function getDb(req) { return req.db; }
+
+
+
+// ============================================================
+// INVENTORY — PRODUCTS
+// ============================================================
+
+// GET /api/system/products
+router.get('/products', (req, res) => {
+    const db = req.db;
+    try {
+    const { search, category, low_stock } = req.query;
+    let where = 'WHERE 1=1';
+    const params = [];
+    if (search) { where += ' AND (name LIKE ? OR sku LIKE ?)'; const s='%'+search+'%'; params.push(s,s); }
+    if (category) { where += ' AND category=?'; params.push(category); }
+    if (low_stock === '1') { where += ' AND stock_qty <= low_stock_at AND low_stock_at > 0'; }
+
+    const products = db.prepare(`SELECT * FROM sys_products ${where} ORDER BY name ASC`).all(...params);
+
+    // حساب قيمة المخزون لكل منتج
+    const enriched = products.map(p => ({
+      ...p,
+      stock_value: +(p.stock_qty * p.cost_price).toFixed(2),
+      potential_revenue: +(p.stock_qty * p.sell_price).toFixed(2),
+      is_low_stock: p.stock_qty <= p.low_stock_at && p.low_stock_at > 0
+    }));
+
+    const total_value = enriched.reduce((s, p) => s + p.stock_value, 0);
+    res.json({ ok: true, data: enriched, total_value: +total_value.toFixed(2) });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// GET /api/system/products/:id
+router.get('/products/:id', (req, res) => {
+    const db = req.db;
+    try {
+    const p = db.prepare('SELECT * FROM sys_products WHERE id=?').get(req.params.id);
+    if (!p) return res.status(404).json({ ok: false, error: 'Not found' });
+    const moves = db.prepare(`
+      SELECT m.*,
+        CASE WHEN m.ref_type='invoice' THEN (SELECT invoice_no FROM sys_invoices WHERE id=m.ref_id) END as invoice_no,
+        CASE WHEN m.ref_type='po'      THEN (SELECT po_no FROM sys_purchase_orders WHERE id=m.ref_id) END as po_no
+      FROM sys_stock_moves m
+      WHERE m.product_id=? ORDER BY m.created_at DESC LIMIT 100
+    `).all(p.id);
+    res.json({ ok: true, data: { ...p, moves } });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// POST /api/system/products
+router.post('/products', (req, res) => {
+    const db = req.db;
+    try {
+    const { name, sku, category, unit='قطعة', cost_price=0, sell_price=0, stock_qty=0, low_stock_at=5, notes } = req.body;
+    if (!name?.trim()) return res.status(400).json({ ok: false, error: 'اسم المنتج مطلوب' });
+
+    const ins = db.prepare(`
+      INSERT INTO sys_products (name, sku, category, unit, cost_price, sell_price, stock_qty, low_stock_at, notes)
+      VALUES (?,?,?,?,?,?,?,?,?)
+    `).run(name.trim(), sku||null, category||null, unit, +cost_price, +sell_price, +stock_qty, +low_stock_at, notes||null);
+
+    // سجّل حركة الكمية الأولية
+    if (+stock_qty > 0) {
+      db.prepare(`INSERT INTO sys_stock_moves (product_id, type, qty, unit_cost, ref_type, notes)
+        VALUES (?,?,?,?,'manual','رصيد أولي')`).run(ins.lastInsertRowid, 'in', +stock_qty, +cost_price);
+    }
+
+    res.json({ ok: true, id: ins.lastInsertRowid, data: { id: ins.lastInsertRowid } });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// PUT /api/system/products/:id
+router.put('/products/:id', (req, res) => {
+    const db = req.db;
+    try {
+    const { name, sku, category, unit, cost_price, sell_price, low_stock_at, notes } = req.body;
+    db.prepare(`
+      UPDATE sys_products SET
+        name=COALESCE(?,name), sku=COALESCE(?,sku), category=COALESCE(?,category),
+        unit=COALESCE(?,unit), cost_price=COALESCE(?,cost_price), sell_price=COALESCE(?,sell_price),
+        low_stock_at=COALESCE(?,low_stock_at), notes=COALESCE(?,notes)
+      WHERE id=?
+    `).run(name,sku,category,unit,cost_price!=null?+cost_price:null,sell_price!=null?+sell_price:null,low_stock_at!=null?+low_stock_at:null,notes,req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// DELETE /api/system/products/:id
+router.delete('/products/:id', (req, res) => {
+    const db = req.db;
+    try {
+    db.prepare('DELETE FROM sys_products WHERE id=?').run(req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// STOCK MOVES — شراء / بيع / تعديل
+// ============================================================
+
+// POST /api/system/products/:id/move
+router.post('/products/:id/move', (req, res) => {
+    const db = req.db;
+    try {
+    const { type, qty, unit_cost, notes, ref_type, ref_id } = req.body;
+    if (!['in','out','adjust','return'].includes(type)) return res.status(400).json({ ok: false, error: 'نوع الحركة غير صحيح' });
+    if (!qty || +qty <= 0) return res.status(400).json({ ok: false, error: 'الكمية يجب أن تكون أكبر من صفر' });
+
+    const pid = +req.params.id;
+    const product = db.prepare('SELECT * FROM sys_products WHERE id=?').get(pid);
+    if (!product) return res.status(404).json({ ok: false, error: 'المنتج غير موجود' });
+
+    // حساب الكمية الجديدة
+    let newQty = product.stock_qty;
+    if (type === 'in' || type === 'return') newQty += +qty;
+    else if (type === 'out') newQty -= +qty;
+    else if (type === 'adjust') newQty = +qty; // تعديل مباشر
+
+    if (newQty < 0) return res.status(400).json({ ok: false, error: 'الكمية المطلوبة أكبر من المخزون المتاح' });
+
+    db.transaction(() => {
+      db.prepare(`INSERT INTO sys_stock_moves (product_id, type, qty, unit_cost, ref_type, ref_id, notes)
+        VALUES (?,?,?,?,?,?,?)`).run(pid, type, +qty, unit_cost ? +unit_cost : product.cost_price, ref_type||'manual', ref_id||null, notes||null);
+      db.prepare("UPDATE sys_products SET stock_qty=? WHERE id=?").run(newQty, pid);
+
+      // لو شراء وعنده تكلفة جديدة — حدّث الـ cost_price
+      if (type === 'in' && unit_cost) {
+        db.prepare("UPDATE sys_products SET cost_price=? WHERE id=?").run(+unit_cost, pid);
+      }
+    })();
+
+    res.json({ ok: true, new_qty: newQty });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// STATS
+// ============================================================
+
+router.get('/stats', (req, res) => {
+    const db = req.db;
+    try {
+    const total_products = db.prepare('SELECT COUNT(*) as n FROM sys_products').get().n;
+    const low_stock = db.prepare('SELECT COUNT(*) as n FROM sys_products WHERE stock_qty <= low_stock_at AND low_stock_at > 0').get().n;
+    const stock_value = db.prepare('SELECT COALESCE(SUM(stock_qty * cost_price),0) as v FROM sys_products').get().v;
+    const potential_revenue = db.prepare('SELECT COALESCE(SUM(stock_qty * sell_price),0) as v FROM sys_products').get().v;
+    const categories = db.prepare('SELECT category, COUNT(*) as n FROM sys_products WHERE category IS NOT NULL GROUP BY category ORDER BY n DESC').all();
+    const recent_moves = db.prepare(`
+      SELECT m.*, p.name as product_name FROM sys_stock_moves m
+      JOIN sys_products p ON p.id=m.product_id
+      ORDER BY m.created_at DESC LIMIT 10
+    `).all();
+
+    res.json({ ok: true, data: {
+      total_products, low_stock,
+      stock_value: +stock_value.toFixed(2),
+      potential_revenue: +potential_revenue.toFixed(2),
+      estimated_profit: +(potential_revenue - stock_value).toFixed(2),
+      categories, recent_moves
+    }});
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// PRICING CALCULATOR — حاسبة التسعير
+// ============================================================
+
+// POST /api/system/pricing/calculate
+router.post('/pricing/calculate', (req, res) => {
+    const db = req.db;
+    try {
+    const {
+      product_id,     // اختياري — يجيب تكلفة الشراء من المخزون
+      cost_price,             // تكلفة الشراء/الإنتاج
+      print_cost = 0,         // تكلفة الطباعة
+      shipping_cost = 0, shipping = 0,  // shipping alias
+      fixed_cost = 0,
+      platform_fee = 0,       // عمولة المنصة %
+      other_costs = 0,
+      margin_percent,         // هامش الربح %
+      target_margin,          // alias for margin_percent
+      target_price            // عكسي: السعر → احسب الهامش
+    } = req.body;
+    // aliases
+    const _margin  = margin_percent != null ? margin_percent : (target_margin != null ? target_margin : null);
+    const _ship    = +shipping_cost || +shipping || 0;
+    const _pfee    = +platform_fee || 0;
+
+    let base_cost = +cost_price || 0;
+
+    // لو product_id موجود — جيب التكلفة من المخزون
+    if (product_id && !cost_price) {
+      const p = db.prepare('SELECT cost_price FROM sys_products WHERE id=?').get(+product_id);
+      if (p) base_cost = p.cost_price;
+    }
+
+    const total_cost = base_cost + +print_cost + _ship + +fixed_cost + +other_costs;
+    // platform_fee is % of sell price — applied later
+
+    let result = {};
+
+    if (_margin != null) { const margin_percent = _margin;
+      // احسب سعر البيع من الهامش
+      const margin = +margin_percent / 100;
+      // if platform_fee % → adjust denominator
+      const pfee_factor = _pfee > 0 ? (1 - _pfee/100) : 1;
+      const sell_price = total_cost / ((1 - margin) * pfee_factor);
+      const profit = sell_price * pfee_factor - total_cost;
+      result = {
+        total_cost: +total_cost.toFixed(2),
+        sell_price: +sell_price.toFixed(2),
+        suggested_price: +sell_price.toFixed(2),
+        profit: +profit.toFixed(2),
+        margin_pct: +margin_percent,
+        margin_percent: +margin_percent,
+        breakeven_units: profit > 0 ? Math.ceil(total_cost / profit) : 0
+      };
+    } else if (target_price != null) {
+      // احسب الهامش من السعر
+      const profit = +target_price - total_cost;
+      const margin = total_cost > 0 ? (profit / +target_price) * 100 : 0;
+      result = {
+        total_cost: +total_cost.toFixed(2),
+        sell_price: +target_price,
+        profit: +profit.toFixed(2),
+        margin_percent: +margin.toFixed(1),
+        is_profitable: profit > 0
+      };
+    } else {
+      return res.status(400).json({ ok: false, error: 'مطلوب margin_percent أو target_price' });
+    }
+
+    res.json({ ok: true, data: result });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// INVOICES
+// ============================================================
+
+function nextInvoiceNo(db) {
+  db.prepare('UPDATE sys_invoice_seq SET counter=counter+1').run();
+  const row = db.prepare('SELECT counter as seq FROM sys_invoice_seq').get();
+  const n = row.seq;
+  return 'INV-' + String(n).padStart(4, '0');
+}
+
+// GET /api/system/invoices
+router.get('/invoices', (req, res) => {
+    const db = req.db;
+    try {
+    const { status, search, page = 1, limit = 30 } = req.query;
+    let where = 'WHERE 1=1'; const params = [];
+    if (status) { where += ' AND i.status=?'; params.push(status); }
+    if (search) {
+      where += ' AND (i.invoice_no LIKE ? OR i.client_name LIKE ?)';
+      const s = '%'+search+'%'; params.push(s, s);
+    }
+    const offset = (parseInt(page)-1) * parseInt(limit);
+    const total = db.prepare('SELECT COUNT(*) as n FROM sys_invoices i ' + where).get(...params).n;
+    const rows = db.prepare(`
+      SELECT i.*, c.name as crm_name,
+        CASE WHEN EXISTS(SELECT 1 FROM sys_orders o WHERE o.invoice_id=i.id) THEN 1 ELSE 0 END as has_order
+      FROM sys_invoices i
+      LEFT JOIN crm_contacts c ON c.id=i.contact_id
+      ${where} ORDER BY i.created_at DESC LIMIT ? OFFSET ?
+    `).all(...params, parseInt(limit), offset);
+    res.json({ ok: true, data: rows, total, page: parseInt(page), pages: Math.ceil(total/parseInt(limit)) });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// GET /api/system/invoices/:id
+router.get('/invoices/:id', (req, res) => {
+  const db = req.db;
+  try {
+    const inv = db.prepare('SELECT * FROM sys_invoices WHERE id=?').get(req.params.id);
+    if (!inv) return res.status(404).json({ ok: false, error: 'Not found' });
+
+    // Items with product name
+    const items = db.prepare(`
+      SELECT ii.*, p.name as product_name
+      FROM sys_invoice_items ii
+      LEFT JOIN sys_products p ON p.id = ii.product_id
+      WHERE ii.invoice_id = ? ORDER BY ii.id
+    `).all(inv.id);
+
+    // Payment transactions linked to this invoice
+    const payments = db.prepare(`
+      SELECT t.*, w.name as wallet_name
+      FROM sys_transactions t
+      LEFT JOIN sys_wallets w ON w.id = t.wallet_id
+      WHERE t.ref_type = 'invoice' AND t.ref_id = ?
+      ORDER BY t.created_at ASC
+    `).all(inv.id);
+
+    // CRM contact info
+    let contact = null;
+    if (inv.contact_id) {
+      contact = db.prepare('SELECT id, name, phone, email, city FROM crm_contacts WHERE id=?').get(inv.contact_id);
+    }
+
+    res.json({ ok: true, data: { ...inv, items, payments, contact } });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// POST /api/system/invoices
+router.post('/invoices', (req, res) => {
+    const db = req.db;
+    try {
+    const { contact_id, client_name, client_phone, client_email, client_address,
+            items = [], notes, discount = 0, tax = 0, due_date, status = 'draft',
+            wallet_id = null, payment_method = null } = req.body;
+    if (!client_name?.trim()) return res.status(400).json({ ok: false, error: 'اسم العميل مطلوب' });
+    if (!items.length) return res.status(400).json({ ok: false, error: 'لازم يكون فيه منتج واحد على الأقل' });
+
+    const invoice_no = nextInvoiceNo(db);
+    const subtotal = items.reduce((s, it) => s + (+it.qty * +it.unit_price), 0);
+    const total = subtotal - +discount + +tax;
+    // If wallet provided → auto-mark as paid
+    const finalStatus = (wallet_id && status !== 'draft') ? 'paid' : status;
+
+    const invId = db.transaction(() => {
+      // من قام بإنشاء الفاتورة
+      const creatorId   = req.tenantUser ? req.tenantUser.id   : req.user.id;
+      const creatorName = req.tenantUser ? req.tenantUser.name : req.user.name;
+
+      const ins = db.prepare(`
+        INSERT INTO sys_invoices (invoice_no, contact_id, client_name, client_phone, client_email,
+          client_address, status, notes, subtotal, discount, tax, total, due_date,
+          paid_at, created_by_id, created_by_name)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      `).run(invoice_no, contact_id||null, client_name.trim(), client_phone||null, client_email||null,
+             client_address||null, finalStatus, notes||null, subtotal, +discount, +tax, total, due_date||null,
+             (finalStatus === 'paid' ? new Date().toISOString().replace('T',' ').split('.')[0] : null),
+             creatorId, creatorName||'');
+
+      const insItem = db.prepare(`
+        INSERT INTO sys_invoice_items (invoice_id, product_id, description, qty, unit_price, total)
+        VALUES (?,?,?,?,?,?)
+      `);
+      for (const it of items) {
+        const itTotal = +it.qty * +it.unit_price;
+        insItem.run(ins.lastInsertRowid, it.product_id||null, it.description, +it.qty, +it.unit_price, itTotal);
+        // خصم من المخزون لو المنتج موجود
+        if (it.product_id) {
+          const prod = db.prepare('SELECT * FROM sys_products WHERE id=?').get(it.product_id);
+          if (prod) {
+            const newQty = Math.max(0, prod.stock_qty - +it.qty);
+            db.prepare("UPDATE sys_products SET stock_qty=? WHERE id=?").run(newQty, it.product_id);
+            db.prepare(`INSERT INTO sys_stock_moves (product_id, type, qty, unit_cost, ref_type, ref_id, notes)
+              VALUES (?,?,?,?,'invoice',?,'فاتورة ' || ?)`).run(it.product_id, 'out', +it.qty, +it.unit_price, ins.lastInsertRowid, invoice_no);
+          }
+        }
+      }
+
+      // سجّل في CRM لو فيه contact
+      if (contact_id) {
+        db.prepare("UPDATE crm_contacts SET updated_at=datetime('now') WHERE id=?").run(contact_id);
+        db.prepare("INSERT INTO crm_notes (contact_id, content) VALUES (?,?)").run(
+          contact_id, 'تم إنشاء فاتورة ' + invoice_no + ' بقيمة ' + total.toFixed(2) + ' ج.م'
+        );
+        // upgrade CRM if paid immediately
+        if (finalStatus === 'paid') {
+          db.prepare("UPDATE crm_contacts SET status='client' WHERE id=? AND status IN ('lead','prospect')").run(contact_id);
+        }
+      }
+
+      // سجّل حركة في الخزينة لو فيه wallet
+      if (wallet_id && finalStatus === 'paid') {
+        const wlt = db.prepare('SELECT * FROM sys_wallets WHERE id=?').get(wallet_id);
+        if (wlt) {
+          db.prepare(`INSERT INTO sys_transactions (wallet_id, type, amount, description, ref_type, ref_id, date)
+            VALUES (?,?,?,?,?,?,date('now'))`)
+            .run(wallet_id, 'in', total, 'قبض فاتورة ' + invoice_no + (payment_method ? ' — ' + payment_method : ''), 'invoice', ins.lastInsertRowid);
+          db.prepare("UPDATE sys_wallets SET balance=balance+? WHERE id=?").run(total, wallet_id);
+          // تحديث CRM: مدفوع
+          if (contact_id) {
+            db.prepare("UPDATE crm_contacts SET total_paid=COALESCE(total_paid,0)+?, balance=COALESCE(balance,0)-? WHERE id=?").run(total, total, contact_id);
+          }
+        }
+      } else if (!wallet_id && finalStatus !== 'draft' && contact_id) {
+        // بدون خزينة = آجل → تسجيل ذمم على العميل
+        try {
+          db.prepare("UPDATE crm_contacts SET balance=COALESCE(balance,0)+?, total_invoiced=COALESCE(total_invoiced,0)+? WHERE id=?").run(total, total, contact_id);
+          // تسجيل في خزينة ذمم مدينة
+          const receivableWallet = db.prepare("SELECT id FROM sys_wallets WHERE type='receivable' LIMIT 1").get();
+          if (receivableWallet) {
+            db.prepare(`INSERT INTO sys_transactions (wallet_id, type, amount, description, ref_type, ref_id, date) VALUES (?,?,?,?,?,?,date('now'))`)
+              .run(receivableWallet.id, 'in', total, 'فاتورة آجل: ' + invoice_no + ' — ' + client_name, 'invoice', ins.lastInsertRowid);
+            db.prepare("UPDATE sys_wallets SET balance=balance+? WHERE id=?").run(total, receivableWallet.id);
+          }
+        } catch(e) {}
+      }
+
+      return ins.lastInsertRowid;
+    })();
+
+    // Auto-update CRM status
+    try {
+      const clientName = req.body.client_name;
+      if (clientName) {
+        const contact = db.prepare("SELECT id, status FROM crm_contacts WHERE name LIKE ?").get('%' + clientName + '%');
+        if (contact) {
+          const nextStatus = { lead: 'prospect', prospect: 'client', client: 'client', vip: 'vip', inactive: 'inactive' };
+          const newStatus = nextStatus[contact.status] || contact.status;
+          if (newStatus !== contact.status) {
+            db.prepare("UPDATE crm_contacts SET status=?, updated_at=datetime('now') WHERE id=?").run(newStatus, contact.id);
+          }
+        }
+      }
+    } catch(crmErr) { /* non-critical */ }
+
+    res.json({ ok: true, id: invId, invoice_no });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// PUT /api/system/invoices/:id/status
+router.put('/invoices/:id/status', (req, res) => {
+  const db = req.db;
+  try {
+    const { status, wallet_id, payment_method, paid_amount } = req.body;
+    const validStatuses = ['draft','sent','paid','cancelled'];
+    if (!validStatuses.includes(status)) return res.status(400).json({ ok: false, error: 'حالة غير صحيحة' });
+    const patch = status === 'paid' ? ", paid_at=datetime('now')" : '';
+    db.prepare(`UPDATE sys_invoices SET status=?${patch} WHERE id=?`).run(status, req.params.id);
+    const inv = db.prepare('SELECT * FROM sys_invoices WHERE id=?').get(req.params.id);
+    if (!inv) return res.json({ ok: false, error: 'not found' });
+
+    const amount = parseFloat(paid_amount) || inv.total;
+
+    if (status === 'paid' || (wallet_id && amount > 0)) {
+      // سجّل في الخزينة بالمبلغ الفعلي
+      if (wallet_id) {
+        const desc = 'استلام دفع: ' + inv.invoice_no + (inv.client_name ? ' — ' + inv.client_name : '') + (payment_method ? ' (' + payment_method + ')' : '');
+        db.prepare(`INSERT INTO sys_transactions (date,type,amount,wallet_id,description,ref_type,ref_id,category) VALUES (date('now'),'in',?,?,?,'invoice',?,?)`)  
+          .run(amount, parseInt(wallet_id), desc, inv.id, 'مبيعات');
+        db.prepare('UPDATE sys_wallets SET balance=balance+? WHERE id=?').run(amount, parseInt(wallet_id));
+
+        // لو كانت ذمم → اخصم من خزينة الذمم
+        const recvWallet = db.prepare("SELECT id FROM sys_wallets WHERE type='receivable' LIMIT 1").get();
+        if (recvWallet) {
+          db.prepare(`INSERT INTO sys_transactions (date,type,amount,wallet_id,description,ref_type,ref_id) VALUES (date('now'),'out',?,?,?,'invoice',?)`)
+            .run(amount, recvWallet.id, 'تحصيل ذمم: ' + inv.invoice_no + ' — ' + (inv.client_name||''), inv.id);
+          db.prepare('UPDATE sys_wallets SET balance=balance-? WHERE id=?').run(amount, recvWallet.id);
+        }
+
+        // تحديث رصيد CRM
+        if (inv.contact_id) {
+          db.prepare('UPDATE crm_contacts SET balance=MAX(0,COALESCE(balance,0)-?), total_paid=COALESCE(total_paid,0)+? WHERE id=?')
+            .run(amount, amount, inv.contact_id);
+        }
+      }
+
+      if (status === 'paid' && inv.contact_id) {
+        db.prepare("INSERT INTO crm_notes (contact_id, content) VALUES (?,?)").run(
+          inv.contact_id, '✅ دفع فاتورة ' + inv.invoice_no + ' — ' + fmt_server(amount) + ' ج.م' + (payment_method ? ' (' + payment_method + ')' : '')
+        );
+        db.prepare("UPDATE crm_contacts SET status='client' WHERE id=? AND status IN ('lead','prospect')").run(inv.contact_id);
+      }
+    }
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+function fmt_server(n) { return (+n||0).toFixed(2).replace(/\.00$/, ''); }
+
+// DELETE /api/system/invoices/:id  (draft only)
+router.delete('/invoices/:id', (req, res) => {
+    const db = req.db;
+    try {
+    const inv = db.prepare('SELECT * FROM sys_invoices WHERE id=?').get(req.params.id);
+    if (!inv) return res.status(404).json({ ok: false, error: 'Not found' });
+    if (inv.status !== 'draft') return res.status(400).json({ ok: false, error: 'يمكن حذف المسودات فقط' });
+    db.prepare('DELETE FROM sys_invoices WHERE id=?').run(req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// GET /api/system/invoices/:id/pdf — HTML للطباعة
+router.get('/invoices/:id/pdf', (req, res) => {
+    const db = req.db;
+    try {
+    const inv = db.prepare('SELECT * FROM sys_invoices WHERE id=?').get(req.params.id);
+    if (!inv) return res.status(404).send('Not found');
+    const items = db.prepare('SELECT * FROM sys_invoice_items WHERE invoice_id=? ORDER BY id').all(inv.id);
+    // Get tenant profile from master DB
+    const master = require('./db-master');
+    const owner = master.prepare('SELECT name, company_name, logo_url, brand_color, phone, email FROM users WHERE id=?').get(req.user.id);
+    const profile = db.prepare('SELECT * FROM tenant_profile WHERE id=1').get() || {};
+    const tenantProfile = {
+      company_name:   profile.company_name || owner?.company_name || owner?.name || 'شركتك',
+      company_name_en: profile.company_name_en || '',
+      logo_url:       profile.logo_url || owner?.logo_url || null,
+      brand_color:    profile.brand_color || owner?.brand_color || '#1B5E30',
+      phone:          profile.phone || owner?.phone || '',
+      email:          profile.email || owner?.email || '',
+      address:        profile.address || '',
+      website:        profile.website || '',
+      tax_number:     profile.tax_number || '',
+      commercial_reg: profile.commercial_reg || '',
+      invoice_notes:  profile.invoice_notes || '',
+    };
+    const html = generateInvoiceHTML(inv, items, tenantProfile);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  } catch(e) { res.status(500).send(e.message); }
+});
+
+// GET /api/system/invoices/stats
+router.get('/invoices/stats/summary', (req, res) => {
+    const db = req.db;
+    try {
+    const total_invoices = db.prepare('SELECT COUNT(*) as n FROM sys_invoices').get().n;
+    const paid = db.prepare("SELECT COUNT(*) as n, COALESCE(SUM(total),0) as s FROM sys_invoices WHERE status='paid'").get();
+    const pending = db.prepare("SELECT COUNT(*) as n, COALESCE(SUM(total),0) as s FROM sys_invoices WHERE status IN ('draft','sent')").get();
+    const month_revenue = db.prepare("SELECT COALESCE(SUM(total),0) as s FROM sys_invoices WHERE status='paid' AND paid_at >= datetime('now','start of month')").get().s;
+    res.json({ ok: true, data: { total_invoices, paid_count: paid.n, paid_total: paid.s, pending_count: pending.n, pending_total: pending.s, month_revenue } });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+function generateInvoiceHTML(inv, items, profile={}) {
+  const statusLabel = { draft:'مسودة', sent:'أُرسلت', paid:'مدفوعة', cancelled:'ملغية' };
+  const statusColor = { draft:'#6b7280', sent:'#3b82f6', paid:'#16a34a', cancelled:'#ef4444' };
+  const rows = items.map(it => `
+    <tr>
+      <td>${esc(it.description)}</td>
+      <td style="text-align:center">${it.qty}</td>
+      <td style="text-align:left">${fmt(it.unit_price)} ج.م</td>
+      <td style="text-align:left;font-weight:700">${fmt(it.total)} ج.م</td>
+    </tr>
+  `).join('');
+
+  return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>فاتورة ${esc(inv.invoice_no)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--brand:${profile.brand_color||'#1B5E30'}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',sans-serif;background:#fff;color:#1a1a1a;padding:32px;max-width:700px;margin:auto}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid var(--brand,#1B5E30)}
+.brand h1{font-size:24px;font-weight:800;color:var(--brand,#1B5E30)}
+.brand p{font-size:12px;color:#6b7280;margin-top:2px}
+.inv-meta{text-align:left}
+.inv-no{font-size:22px;font-weight:800;color:var(--brand,#1B5E30)}
+.inv-date{font-size:12px;color:#6b7280;margin-top:4px}
+.status-badge{display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;color:#fff;background:${statusColor[inv.status]||'#6b7280'};margin-top:6px}
+.section-title{font-size:12px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.client-box{background:#f9fafb;border-radius:10px;padding:16px;margin-bottom:24px}
+.client-name{font-size:18px;font-weight:700;margin-bottom:4px}
+.client-info{font-size:13px;color:#6b7280}
+table{width:100%;border-collapse:collapse;margin-bottom:20px}
+th{background:var(--brand,#1B5E30);color:#fff;padding:10px 12px;font-size:13px;text-align:right}
+td{padding:10px 12px;font-size:13px;border-bottom:1px solid #f3f4f6}
+tr:last-child td{border-bottom:none}
+.totals{margin-right:auto;width:260px}
+.total-row{display:flex;justify-content:space-between;padding:6px 0;font-size:14px}
+.total-row.grand{font-size:18px;font-weight:800;color:var(--brand,#1B5E30);border-top:2px solid var(--brand,#1B5E30);padding-top:10px;margin-top:4px}
+.footer{margin-top:32px;padding-top:16px;border-top:1px solid #e5e7eb;text-align:center;font-size:12px;color:#9ca3af}
+.notes-box{background:#fffbeb;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:#78350f}
+@media print{body{padding:16px}.no-print{display:none}}
+</style>
+</head>
+<body>
+<div class="no-print" style="margin-bottom:20px;display:flex;gap:10px">
+  <button onclick="window.print()" style="padding:8px 20px;background:#1B5E30;color:#fff;border:none;border-radius:8px;font-family:'Cairo',sans-serif;font-size:14px;font-weight:600;cursor:pointer">🖨️ طباعة / حفظ PDF</button>
+  <button onclick="window.close()" style="padding:8px 16px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-family:'Cairo',sans-serif;font-size:14px;cursor:pointer">إغلاق</button>
+</div>
+
+<div class="header">
+  <div class="brand">
+    ${profile.logo_url ? '<img src="'+profile.logo_url+'" style="height:52px;max-width:140px;object-fit:contain;margin-bottom:8px;display:block" onerror="this.style.display=\'none\'">' : ''}
+    <h1 style="color:${profile.brand_color||'#1B5E30'}">${esc(profile.company_name)}</h1>
+    <p style="font-size:12px;color:#6b7280;margin-top:3px">
+      ${profile.phone ? profile.phone : ''}${profile.phone && profile.email ? ' | ' : ''}${profile.email ? profile.email : ''}
+    </p>
+    ${profile.address ? '<p style="font-size:11px;color:#9ca3af;margin-top:2px">'+esc(profile.address)+'</p>' : ''}
+    ${profile.tax_number ? '<p style="font-size:11px;color:#9ca3af">الرقم الضريبي: '+esc(profile.tax_number)+'</p>' : ''}
+    ${profile.commercial_reg ? '<p style="font-size:11px;color:#9ca3af">السجل التجاري: '+esc(profile.commercial_reg)+'</p>' : ''}
+  </div>
+  <div class="inv-meta">
+    <div class="inv-no">${esc(inv.invoice_no)}</div>
+    <div class="inv-date">التاريخ: ${fmt_date(inv.created_at)}</div>
+    ${inv.due_date ? '<div class="inv-date">الاستحقاق: '+fmt_date(inv.due_date)+'</div>' : ''}
+    <div class="status-badge">${statusLabel[inv.status]||inv.status}</div>
+  </div>
+</div>
+
+<div class="section-title">بيانات العميل</div>
+<div class="client-box">
+  <div class="client-name">${esc(inv.client_name)}</div>
+  <div class="client-info">
+    ${inv.client_phone ? '📱 '+esc(inv.client_phone)+'<br>' : ''}
+    ${inv.client_email ? '✉️ '+esc(inv.client_email)+'<br>' : ''}
+    ${inv.client_address ? '📍 '+esc(inv.client_address) : ''}
+  </div>
+</div>
+
+<div class="section-title">بنود الفاتورة</div>
+<table>
+  <thead><tr><th>الوصف</th><th style="text-align:center">الكمية</th><th style="text-align:left">سعر الوحدة</th><th style="text-align:left">الإجمالي</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+
+<div class="totals">
+  <div class="total-row"><span>المجموع الفرعي</span><span>${fmt(inv.subtotal)} ج.م</span></div>
+  ${inv.discount > 0 ? '<div class="total-row" style="color:#ef4444"><span>خصم</span><span>-'+fmt(inv.discount)+' ج.م</span></div>' : ''}
+  ${inv.tax > 0 ? '<div class="total-row"><span>ضريبة</span><span>'+fmt(inv.tax)+' ج.م</span></div>' : ''}
+  <div class="total-row grand"><span>الإجمالي</span><span>${fmt(inv.total)} ج.م</span></div>
+</div>
+
+${inv.notes ? '<div class="notes-box" style="margin-top:16px"><strong>ملاحظات:</strong> '+esc(inv.notes)+'</div>' : ''}
+
+<div class="footer">
+  شكراً لتعاملكم معنا — ${esc(profile.company_name)}<br>
+  ${profile.website ? '<span>'+esc(profile.website)+'</span><br>' : ''}
+  ${profile.invoice_notes ? '<span style="color:#d97706">'+esc(profile.invoice_notes)+'</span><br>' : ''}
+  ${fmt_date(inv.created_at)}
+</div>
+</body></html>`;
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmt(n) { return (+n||0).toLocaleString('ar-EG', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+function fmt_date(s) { if(!s) return '—'; try { return new Date(s).toLocaleDateString('ar-EG', { year:'numeric', month:'long', day:'numeric' }); } catch(e) { return s; } }
+
+// ============================================================
+// CONTRACTS (مولّد العقود)
+// ============================================================
+
+// GET /api/system/contracts/templates — قائمة القوالب
+router.get('/contracts/templates', (req, res) => {
+    const db = req.db;
+res.json({ ok: true, templates: CONTRACT_TEMPLATES.map(t => ({ id: t.id, name: t.name, desc: t.desc })) });
+});
+
+// POST /api/system/contracts/generate — توليد عقد HTML
+router.post('/contracts/generate', (req, res) => {
+    const db = req.db;
+    try {
+    let { template_id, client, contract, party_a, party_b, date, details } = req.body;
+    // Support flat fields (party_a/party_b) as well as nested {client:{name}}
+    if (!client?.name && party_b) client = { name: party_b };
+    if (!client?.name && party_a) client = { name: party_a };
+    if (!template_id || !client?.name) {
+      return res.status(400).json({ ok: false, error: 'القالب واسم العميل مطلوبان' });
+    }
+    if (!contract && (date||details)) contract = { date: date||'', details: details||'' };
+    const tmpl = CONTRACT_TEMPLATES.find(t => t.id === template_id);
+    if (!tmpl) return res.status(404).json({ ok: false, error: 'قالب غير موجود' });
+    const html = tmpl.generate({ client, contract: contract || {} });
+    // Return as JSON with html field OR raw HTML based on Accept header
+    if (req.headers['accept']?.includes('text/html')) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.send(html);
+    }
+    res.json({ ok: true, html });
+  } catch(e) { res.status(500).send(e.message); }
+});
+
+// قوالب العقود
+const CONTRACT_TEMPLATES = [
+  {
+    id: 'printing-services',
+    name: 'عقد خدمات طباعة',
+    desc: 'للبراندات اللي بتطلب خدمات طباعة منتظمة',
+    generate: ({ client, contract }) => contractBase({
+      title: 'عقد خدمات طباعة على الملابس',
+      client,
+      contract,
+      body: `
+        <h3>أولاً: نطاق الخدمة</h3>
+        <p>تلتزم شركة أريج للطباعة بتقديم خدمات الطباعة على الملابس للطرف الثاني وفقًا للمواصفات المتفق عليها.</p>
+        <ul>
+          <li>نوع الطباعة: ${esc(contract.print_type || 'طباعة حرارية / سكرين')}</li>
+          <li>الكمية: ${esc(contract.quantity || 'حسب الاتفاق')}</li>
+          <li>مدة التسليم: ${esc(contract.delivery_days || '7—1٠٤')} أيام عمل</li>
+        </ul>
+        <h3>ثانيًا: الأسعار والدفع</h3>
+        <p>القيمة الإجمالية: <strong>${esc(contract.total_price || 'حسب الاتفاق')} ج.م</strong></p>
+        <p>شروط الدفع: عربون 50% عند تأكيد الطلب والباقي عند الاستلام.</p>
+        <h3>ثالثًا: مسؤوليات الطرفين</h3>
+        <p>يلتزم الطرف الثاني بتوفير التصاميم بجودة عالية (دقة لا تقل عن 150 dpi) قبل بدء الإنتاج.</p>
+        <p>تلتزم شركة أريج بضمان جودة الطباعة والتسليم خلال المدة المتفق عليها.</p>
+        <h3>رابعًا: حالات إلغاء العقد</h3>
+        <p>للطرف الأول حق إلغاء العقد مع استرداد العربون كاملاً في حال عدم بدء التنفيذ. بعد بدء الإنتاج لا يحق استرداد العربون.</p>
+      `
+    })
+  },
+  {
+    id: 'brand-partnership',
+    name: 'عقد شراكة براند',
+    desc: 'للتعاون المستمر مع براند ثابت على طول السنة',
+    generate: ({ client, contract }) => contractBase({
+      title: 'عقد شراكة وتعاون',
+      client,
+      contract,
+      body: `
+        <h3>أولاً: محور الشراكة</h3>
+        <p>يتفق الطرفان على إقامة شراكة تسويقية بين شركة أريج للطباعة وبراند ${esc(client.brand || client.name)} وذلك لمدة ${esc(contract.duration || '12')} شهراً.</p>
+        <h3>ثانيًا: التزامات الطرف الثاني</h3>
+        <ul>
+          <li>طلب منتجات الطباعة حصريًا من أريج</li>
+          <li>حجم شهري مضمون: ${esc(contract.monthly_qty || 'حسب الاتفاق')}</li>
+          <li>سعر مخصص للشريك: ${esc(contract.discount_pct || '10')}%</li>
+        </ul>
+        <h3>ثالثًا: التزامات شركة أريج</h3>
+        <ul>
+          <li>أولوية في التنفيذ وضمان الجودة</li>
+          <li>تسليم خلال ${esc(contract.delivery_days || '5–7')} أيام عمل</li>
+          <li>تحمل تكاليف الشحن داخل القاهرة والإسكندرية</li>
+        </ul>
+        <h3>رابعًا: الدفع والتجديد</h3>
+        <p>يُسدّد شهريًا خلال 3 أيام من استلام الفاتورة. يُجدّد العقد تلقائيًا ما لم يُبلغ أي طرف رغبته في الإنهاء قبل نهاية المدة بشهر.</p>
+      `
+    })
+  },
+  {
+    id: 'freelance-designer',
+    name: 'عقد مصمم حر',
+    desc: 'للتعاقد مع مصمم خارجي على مشروع محدد',
+    generate: ({ client, contract }) => contractBase({
+      title: 'عقد تقديم خدمات تصميم',
+      client,
+      contract,
+      body: `
+        <h3>أولاً: نطاق العمل</h3>
+        <p>يلتزم المصمّم بتقديم خدمات التصميم التالية:</p>
+        <ul>
+          <li>تصميم شعار البراند</li>
+          <li>تصميمات للطباعة على الملابس</li>
+          <li>مراجعة حتى ${esc(contract.revisions || '3')} تعديلات</li>
+        </ul>
+        <h3>ثانيًا: المقابل المالي</h3>
+        <p>إجمالي المشروع: <strong>${esc(contract.total_price || 'حسب الاتفاق')} ج.م</strong></p>
+        <p>دفعة أولى 50% لبدء العمل — والباقي عند تسليم الملفات النهائية.</p>
+        <h3>ثالثًا: المواعيد</h3>
+        <p>مدة المشروع: ${esc(contract.duration_days || '14')} يوم من تاريخ تأكيد الطلب واستلام الدفعة الأولى.</p>
+        <h3>رابعًا: حقوق الملكية</h3>
+        <p>تنتقل جميع حقوق الملكية الفكرية للطرف الأول فور استلام الدفعة الأخيرة كاملة. للمصمّم حق عرض العمل في ملفه الشخصي.</p>
+      `
+    })
+  }
+];
+
+function contractBase({ title, client, contract, body }) {
+  const today = fmt_date(new Date().toISOString());
+  return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(title)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',sans-serif;background:#fff;color:#1a1a1a;padding:40px;max-width:720px;margin:auto;line-height:1.8}
+.header{border-bottom:3px solid #1B5E30;padding-bottom:20px;margin-bottom:28px}
+.brand-line{display:flex;justify-content:space-between;align-items:flex-start}
+.brand h1{font-size:24px;font-weight:800;color:#1B5E30}
+.brand p{font-size:12px;color:#6b7280}
+.contract-title{text-align:center;margin:24px 0;padding:16px;background:#f0fdf4;border-radius:10px;border:2px solid #1B5E30}
+.contract-title h2{font-size:20px;font-weight:800;color:#1B5E30}
+.parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.party-box{border:1.5px solid #e5e7eb;border-radius:10px;padding:14px}
+.party-box h3{font-size:12px;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:8px}
+.party-name{font-size:16px;font-weight:700;color:#1B5E30;margin-bottom:4px}
+.party-info{font-size:13px;color:#6b7280}
+body > h3{font-size:15px;font-weight:700;color:#1B5E30;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #e5e7eb}
+body > ul{padding-right:20px;margin-bottom:12px}
+body > ul li{margin-bottom:6px;font-size:14px}
+body > p{font-size:14px;margin-bottom:10px}
+.sigs{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:48px;padding-top:24px;border-top:2px dashed #e5e7eb}
+.sig-box{text-align:center}
+.sig-line{border-bottom:2px solid #1B5E30;margin-bottom:8px;height:48px}
+.sig-label{font-size:13px;color:#6b7280;font-weight:600}
+.sig-name{font-size:14px;font-weight:700;margin-top:4px}
+.footer{margin-top:32px;text-align:center;font-size:12px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:16px}
+.no-print{margin-bottom:20px;display:flex;gap:10px}
+@media print{.no-print{display:none}body{padding:20px}}
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <button onclick="window.print()" style="padding:8px 20px;background:#1B5E30;color:#fff;border:none;border-radius:8px;font-family:'Cairo',sans-serif;font-size:14px;font-weight:600;cursor:pointer">🖨️ طباعة / حفظ PDF</button>
+  <button onclick="window.close()" style="padding:8px 16px;background:#f3f4f6;border:none;border-radius:8px;font-family:'Cairo',sans-serif;cursor:pointer">إغلاق</button>
+</div>
+
+<div class="header">
+  <div class="brand-line">
+    <div class="brand"><h1>أريج للطباعة على الملابس</h1><p>areejegypt.com | 01222784206</p></div>
+    <div style="text-align:left;font-size:13px;color:#6b7280">تاريخ العقد: ${today}<br>رقم: ${esc(contract.ref || 'CON-'+Date.now().toString().slice(-5))}</div>
+  </div>
+</div>
+
+<div class="contract-title"><h2>${esc(title)}</h2></div>
+
+<div class="parties">
+  <div class="party-box">
+    <h3>الطرف الأول (مقدّم الخدمة)</h3>
+    <div class="party-name">شركة أريج للطباعة</div>
+    <div class="party-info">القاهرة، جمهورية مصر العربية<br>sales@areejegypt.com</div>
+  </div>
+  <div class="party-box">
+    <h3>الطرف الثاني (العميل)</h3>
+    <div class="party-name">${esc(client.brand || client.name)}</div>
+    <div class="party-info">
+      ${client.name ? 'الممثل: '+esc(client.name)+'<br>' : ''}
+      ${client.phone ? 'هاتف: '+esc(client.phone)+'<br>' : ''}
+      ${client.email ? 'email: '+esc(client.email) : ''}
+    </div>
+  </div>
+</div>
+
+<p style="margin-bottom:16px"><strong>تمهيد:</strong> اتفق الطرفان على البنود والشروط الواردة بهذا العقد وذلك في تاريخ ${today}.</p>
+
+${body}
+
+<div class="sigs">
+  <div class="sig-box">
+    <div class="sig-line"></div>
+    <div class="sig-label">توقيع الطرف الأول</div>
+    <div class="sig-name">شركة أريج للطباعة</div>
+  </div>
+  <div class="sig-box">
+    <div class="sig-line"></div>
+    <div class="sig-label">توقيع الطرف الثاني</div>
+    <div class="sig-name">${esc(client.brand || client.name)}</div>
+  </div>
+</div>
+
+<div class="footer">هذا العقد محرر إلكترونيًا ويعد ساري المفعول بتوقيع الطرفين — أريج للطباعة &copy; ${new Date().getFullYear()}</div>
+</body></html>`;
+}
+
+// ============================================================
+// CENTRAL DASHBOARD
+// ============================================================
+
+router.get('/dashboard', (req, res) => {
+    const db = req.db;
+    try {
+    // — المخزون
+    const inv = db.prepare('SELECT COUNT(*) as total_products, COALESCE(SUM(sell_price*stock_qty),0) as stock_value, COALESCE(SUM(CASE WHEN stock_qty<=low_stock_at THEN 1 ELSE 0 END),0) as low_stock FROM sys_products').get();
+
+    // — الفواتير
+    const invStats = db.prepare("SELECT COUNT(*) as total, COALESCE(SUM(total),0) as revenue, COALESCE(SUM(CASE WHEN status='paid' THEN total ELSE 0 END),0) as paid_revenue, COALESCE(SUM(CASE WHEN status='draft' THEN 1 ELSE 0 END),0) as drafts FROM sys_invoices").get();
+    const monthRevenue = db.prepare("SELECT COALESCE(SUM(total),0) as s FROM sys_invoices WHERE status='paid' AND paid_at >= datetime('now','start of month')").get().s;
+
+    // — الطلبات
+    const ordStats = db.prepare("SELECT COUNT(*) as total, COALESCE(SUM(CASE WHEN status='new' THEN 1 ELSE 0 END),0) as new_orders, COALESCE(SUM(CASE WHEN status='shipped' THEN 1 ELSE 0 END),0) as shipped, COALESCE(SUM(CASE WHEN status='delivered' THEN total ELSE 0 END),0) as delivered_revenue FROM sys_orders").get();
+
+    // — CRM
+    const crmStats = db.prepare("SELECT COUNT(*) as total, COALESCE(SUM(CASE WHEN status='client' OR status='vip' THEN 1 ELSE 0 END),0) as clients, COALESCE(SUM(CASE WHEN created_at >= datetime('now','-30 days') THEN 1 ELSE 0 END),0) as new_month FROM crm_contacts").get();
+
+    // — الموردين
+    const supStats = db.prepare('SELECT COUNT(*) as total_suppliers, COALESCE(SUM(CASE WHEN po.status=\'pending\' THEN 1 ELSE 0 END),0) as pending_po FROM sys_suppliers LEFT JOIN sys_purchase_orders po ON po.supplier_id=sys_suppliers.id').get();
+
+    // — الموزعين
+    const affStats = db.prepare("SELECT COUNT(*) as total, COALESCE(SUM(CASE WHEN a.active=1 THEN 1 ELSE 0 END),0) as active, COALESCE(SUM(CASE WHEN ao.status='pending' THEN ao.commission_amount ELSE 0 END),0) as pending_comm FROM sys_affiliates a LEFT JOIN sys_affiliate_orders ao ON ao.affiliate_id=a.id").get();
+
+    // — آخر 5 طلبات
+    const recentOrders = db.prepare("SELECT o.*, i.invoice_no FROM sys_orders o LEFT JOIN sys_invoices i ON i.id=o.invoice_id ORDER BY o.created_at DESC LIMIT 5").all();
+
+    // — أفضل 5 عملاء
+    const topClients = db.prepare("SELECT c.name, c.phone, c.status, COUNT(o.id) as order_count, COALESCE(SUM(o.total),0) as total_spent FROM crm_contacts c LEFT JOIN sys_orders o ON o.contact_id=c.id GROUP BY c.id HAVING order_count>0 ORDER BY total_spent DESC LIMIT 5").all();
+
+    // — مخزون منخفض
+    const lowStock = db.prepare('SELECT name, stock_qty, low_stock_at, sell_price FROM sys_products WHERE stock_qty<=low_stock_at AND stock_qty>=0 ORDER BY stock_qty ASC LIMIT 5').all();
+
+    // — متابعة مطلوبة
+    const fupNeeded = db.prepare("SELECT COUNT(*) as n FROM sys_followup_logs WHERE status='pending' AND sent_at >= datetime('now','-1 day')").get().n;
+
+    res.json({
+      ok: true,
+      data: {
+        inventory: inv,
+        invoices: { ...invStats, month_revenue: monthRevenue },
+        orders: ordStats,
+        crm: crmStats,
+        suppliers: supStats,
+        affiliates: affStats,
+        recent_orders: recentOrders,
+        top_clients: topClients,
+        low_stock: lowStock,
+        followup_needed: fupNeeded
+      }
+    });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// ============================================================
+// AFFILIATES
+// ============================================================
+
+// GET /api/system/affiliates
+router.get('/affiliates', (req, res) => {
+    const db = req.db;
+    try {
+    const rows = db.prepare(`
+      SELECT a.*,
+        COUNT(ao.id) as order_count,
+        COALESCE(SUM(ao.order_total),0) as total_sales,
+        COALESCE(SUM(ao.commission_amount),0) as total_commission,
+        COALESCE(SUM(CASE WHEN ao.status='pending' THEN ao.commission_amount ELSE 0 END),0) as pending_commission
+      FROM sys_affiliates a
+      LEFT JOIN sys_affiliate_orders ao ON ao.affiliate_id=a.id
+      GROUP BY a.id ORDER BY total_sales DESC
+    `).all();
+    const stats = {
+      total: rows.length,
+      active: rows.filter(r=>r.status==='active').length,
+      total_sales: rows.reduce((s,r)=>s+r.total_sales,0),
+      pending_commission: rows.reduce((s,r)=>s+r.pending_commission,0)
+    };
+    res.json({ ok:true, data:rows, stats });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// GET /api/system/affiliates/stats/summary
+router.get('/affiliates/stats/summary', (req, res) => {
+    const db = req.db;
+    try {
+    const rows = db.prepare(`SELECT CASE WHEN a.active=1 THEN 'active' ELSE 'inactive' END as status, COUNT(*) as n, COALESCE(SUM(ao.commission_amount),0) as commission
+      FROM sys_affiliates a LEFT JOIN sys_affiliate_orders ao ON ao.affiliate_id=a.id AND ao.status='pending'
+      GROUP BY status`).all();
+    const active = rows.find(r=>r.status==='active')?.n || 0;
+    const pending_comm = rows.reduce((s,r)=>s+r.commission,0);
+    const total_sales = db.prepare("SELECT COALESCE(SUM(order_total),0) as s FROM sys_affiliate_orders").get().s;
+    res.json({ ok:true, data: { active, pending_comm, total_sales } });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// POST /api/system/affiliates
+router.post('/affiliates', (req, res) => {
+    const db = req.db;
+    try {
+    const { name, whatsapp, email, city, commission_rate=10, notes } = req.body;
+    if (!name?.trim()) return res.status(400).json({ ok:false, error:'اسم الموزع مطلوب' });
+    const r = db.prepare('INSERT INTO sys_affiliates (name,whatsapp,email,city,commission_rate,notes) VALUES (?,?,?,?,?,?)').run(name.trim(),whatsapp||null,email||null,city||null,+commission_rate||10,notes||null);
+    res.json({ ok:true, id:r.lastInsertRowid, data:{id:r.lastInsertRowid} });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// PUT /api/system/affiliates/:id
+router.put('/affiliates/:id', (req, res) => {
+    const db = req.db;
+    try {
+    const { name, whatsapp, email, city, commission_rate, status, notes } = req.body;
+    db.prepare('UPDATE sys_affiliates SET name=COALESCE(?,name), whatsapp=COALESCE(?,whatsapp), email=COALESCE(?,email), city=COALESCE(?,city), commission_rate=COALESCE(?,commission_rate), status=COALESCE(?,status), notes=COALESCE(?,notes) WHERE id=?')
+      .run(name||null,whatsapp||null,email||null,city||null,commission_rate!=null?+commission_rate:null,status||null,notes||null,req.params.id);
+    res.json({ ok:true });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// GET /api/system/affiliates/:id/orders
+router.get('/affiliates/:id/orders', (req, res) => {
+    const db = req.db;
+    try {
+    const aff = db.prepare('SELECT * FROM sys_affiliates WHERE id=?').get(req.params.id);
+    if (!aff) return res.status(404).json({ ok:false, error:'Not found' });
+    const orders = db.prepare('SELECT ao.*, o.order_no FROM sys_affiliate_orders ao LEFT JOIN sys_orders o ON o.id=ao.order_id WHERE ao.affiliate_id=? ORDER BY ao.created_at DESC').all(req.params.id);
+    res.json({ ok:true, affiliate:aff, data:orders });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// POST /api/system/affiliates/:id/orders
+router.post('/affiliates/:id/orders', (req, res) => {
+    const db = req.db;
+    try {
+    const aff = db.prepare('SELECT * FROM sys_affiliates WHERE id=?').get(req.params.id);
+    if (!aff) return res.status(404).json({ ok:false, error:'Not found' });
+    const { amount=0, commission_rate, order_id } = req.body;
+    let { description } = req.body;
+    // auto-generate description from order if not provided
+    if (!description?.trim() && order_id) {
+      const ord = db.prepare('SELECT * FROM sys_orders WHERE id=?').get(order_id);
+      description = ord ? 'طلب ' + ord.order_no + ' — ' + (ord.client_name||'') : 'طلب #' + order_id;
+    }
+    if (!description?.trim()) description = 'طلب موزع';
+    const pct = commission_rate != null ? +commission_rate : aff.commission_rate;
+    const commission = (+amount * pct / 100);
+    const r = db.prepare('INSERT INTO sys_affiliate_orders (affiliate_id,order_id,description,amount,commission) VALUES (?,?,?,?,?)').run(+req.params.id, order_id||null, description.trim(), +amount, commission);
+    res.json({ ok:true, id:r.lastInsertRowid, commission });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// PUT /api/system/affiliate-orders/:id/status
+router.put('/affiliate-orders/:id/status', (req, res) => {
+    const db = req.db;
+    try {
+    const { status } = req.body;
+    const extra = status==='paid' ? ", paid_at=datetime('now')" : '';
+    db.prepare('UPDATE sys_affiliate_orders SET status=?'+extra+' WHERE id=?').run(status, req.params.id);
+    res.json({ ok:true });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// ============================================================
+// FOLLOW-UP ENGINE
+// ============================================================
+
+// GET /api/system/followup/rules
+router.get('/followup/rules', (req, res) => {
+    const db = req.db;
+    try {
+    const rules = db.prepare('SELECT * FROM sys_followup_rules ORDER BY id').all();
+    res.json({ ok:true, data:rules });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// POST /api/system/followup/rules
+router.post('/followup/rules', (req, res) => {
+    const db = req.db;
+    try {
+    const { name, trigger, days, template, active=1 } = req.body;
+    if (!name||!trigger||!template) return res.status(400).json({ ok:false, error:'Missing fields' });
+    const r = db.prepare('INSERT INTO sys_followup_rules (name,trigger,days,template,active) VALUES (?,?,?,?,?)').run(name,trigger,+days||1,template,active?1:0);
+    res.json({ ok:true, id:r.lastInsertRowid, data:{id:r.lastInsertRowid} });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// PUT /api/system/followup/rules/:id
+router.put('/followup/rules/:id', (req, res) => {
+    const db = req.db;
+    try {
+    const { name, trigger, days, template, active } = req.body;
+    db.prepare('UPDATE sys_followup_rules SET name=COALESCE(?,name), trigger=COALESCE(?,trigger), days=COALESCE(?,days), template=COALESCE(?,template), active=COALESCE(?,active) WHERE id=?')
+      .run(name||null, trigger||null, days!=null?+days:null, template||null, active!=null?(active?1:0):null, req.params.id);
+    res.json({ ok:true });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// DELETE /api/system/followup/rules/:id
+router.delete('/followup/rules/:id', (req, res) => {
+    const db = req.db;
+    try {
+    db.prepare('DELETE FROM sys_followup_rules WHERE id=?').run(req.params.id);
+    res.json({ ok:true });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// GET /api/system/followup/scan  —  فحص من يحتاج متابعة اليوم
+router.get('/followup/scan', (req, res) => {
+    const db = req.db;
+    try {
+    const rules = db.prepare('SELECT * FROM sys_followup_rules WHERE active=1').all();
+    const results = [];
+
+    rules.forEach(rule => {
+      if (rule.trigger === 'no_order_days') {
+        // عملاء آخر طلب لهم منذ X يوم أو أكثر
+        const contacts = db.prepare(`
+          SELECT c.id, c.name, c.phone, c.status,
+                 MAX(o.created_at) as last_order
+          FROM crm_contacts c
+          LEFT JOIN sys_orders o ON o.contact_id=c.id AND o.status='delivered'
+          WHERE c.status IN ('client','vip')
+          GROUP BY c.id
+          HAVING last_order IS NULL OR last_order < datetime('now','-'||?||' days')
+        `).all(rule.days);
+        contacts.forEach(c => {
+          const recentLog = db.prepare("SELECT id FROM sys_followup_logs WHERE rule_id=? AND contact_id=? AND created_at > datetime('now','-7 days')").get(rule.id, c.id);
+          if (recentLog) return;
+          const msg = rule.template
+            .replace(/{name}/g, c.name||'عزيزي')
+            .replace(/{phone}/g, c.whatsapp||'');
+          results.push({ rule_id:rule.id, rule_name:rule.name, contact_id:c.id, contact_name:c.name, wa_phone:c.phone, message:msg, trigger:rule.trigger, last_order:c.last_order });
+        });
+      }
+
+      if (rule.trigger === 'delivered_days') {
+        // طلبات تم تسليمها منذ X أيام
+        const orders = db.prepare(`
+          SELECT o.id, o.order_no, o.client_name, o.client_phone, o.contact_id, o.updated_at
+          FROM sys_orders o
+          WHERE o.status='delivered'
+          AND o.updated_at < datetime('now','-'||?||' days')
+          AND o.updated_at > datetime('now','-'||((?)+7)||' days')
+        `).all(rule.days, rule.days);
+        orders.forEach(o => {
+          const recentLog = db.prepare('SELECT id FROM sys_followup_logs WHERE rule_id=? AND order_id=?').get(rule.id, o.id);
+          if (recentLog) return;
+          const contact = o.contact_id ? db.prepare('SELECT * FROM crm_contacts WHERE id=?').get(o.contact_id) : null;
+          const msg = rule.template
+            .replace(/{name}/g, contact?.name||o.client_name||'عزيزي')
+            .replace(/{order_no}/g, o.order_no);
+          results.push({ rule_id:rule.id, rule_name:rule.name, contact_id:o.contact_id, order_id:o.id, contact_name:o.client_name, wa_phone:o.client_phone, message:msg, trigger:rule.trigger, order_no:o.order_no });
+        });
+      }
+
+      if (rule.trigger === 'shipped_days') {
+        // طلبات لا تزال "مع المندوب" منذ X أيام
+        const orders = db.prepare(`
+          SELECT o.id, o.order_no, o.client_name, o.client_phone, o.contact_id, o.updated_at
+          FROM sys_orders o
+          WHERE o.status='shipped'
+          AND o.updated_at < datetime('now','-'||?||' days')
+        `).all(rule.days);
+        orders.forEach(o => {
+          const recentLog = db.prepare('SELECT id FROM sys_followup_logs WHERE rule_id=? AND order_id=? AND created_at > datetime(\'now\',\'-3 days\')').get(rule.id, o.id);
+          if (recentLog) return;
+          const contact = o.contact_id ? db.prepare('SELECT * FROM crm_contacts WHERE id=?').get(o.contact_id) : null;
+          const msg = rule.template
+            .replace(/{name}/g, contact?.name||o.client_name||'عزيزي')
+            .replace(/{order_no}/g, o.order_no);
+          results.push({ rule_id:rule.id, rule_name:rule.name, contact_id:o.contact_id, order_id:o.id, contact_name:o.client_name, wa_phone:o.client_phone, message:msg, trigger:rule.trigger, order_no:o.order_no });
+        });
+      }
+    });
+
+    res.json({ ok:true, data:results, count:results.length });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// POST /api/system/followup/mark-sent  — تسجيل إرسال
+router.post('/followup/mark-sent', (req, res) => {
+    const db = req.db;
+    try {
+    const { rule_id, contact_id, order_id, wa_phone, message, status='sent' } = req.body;
+    const r = db.prepare('INSERT INTO sys_followup_logs (rule_id,contact_id,order_id,wa_phone,message,status,sent_at) VALUES (?,?,?,?,?,?,datetime(\'now\'))').run(
+      rule_id||null, contact_id||null, order_id||null, wa_phone||null, message, status
+    );
+    // سجّل في CRM
+    if (contact_id) db.prepare("INSERT INTO crm_notes (contact_id,content) VALUES (?,?)").run(contact_id, '📱 متابعة واتساب: ' + (message||'').substring(0,80));
+    res.json({ ok:true, id:r.lastInsertRowid, data:{id:r.lastInsertRowid} });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// GET /api/system/followup/logs
+router.get('/followup/logs', (req, res) => {
+    const db = req.db;
+    try {
+    const { limit=50 } = req.query;
+    const logs = db.prepare('SELECT l.*, r.name as rule_name FROM sys_followup_logs l LEFT JOIN sys_followup_rules r ON r.id=l.rule_id ORDER BY l.created_at DESC LIMIT ?').all(+limit);
+    const stats = db.prepare('SELECT status, COUNT(*) as n FROM sys_followup_logs GROUP BY status').all();
+    res.json({ ok:true, data:logs, stats });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// ============================================================
+// ORDER TRACKING
+// ============================================================
+
+function nextOrderNo(db) {
+  db.prepare('UPDATE sys_order_seq SET counter=counter+1').run();
+  const row = db.prepare('SELECT counter as seq FROM sys_order_seq').get();
+  return 'ORD-' + String(row.seq).padStart(4,'0');
+}
+
+const STATUS_LABELS = {
+  new:           'جديد',
+  confirmed:     'مؤكد',
+  in_production: 'قيد الإنتاج',
+  ready:         'جاهز للشحن',
+  processing:    'قيد المعالجة',
+  preparing:     'قيد التجهيز',
+  shipped:       'مع المندوب',
+  delivered:     'تم التسليم',
+  cancelled:     'ملغي',
+  returned:      'مرتجع'
+};
+
+const ORDER_TYPE_LABELS = {
+  stock:      'من المخزون',
+  pod_own:    'طباعة — خامتك',
+  pod_client: 'طباعة — خامة العميل'
+};
+
+// GET /api/system/orders
+router.get('/orders', (req, res) => {
+    const db = req.db;
+    try {
+    const { status, search, page=1, limit=50 } = req.query;
+    let where = 'WHERE 1=1'; const params = [];
+    if (status) { where += ' AND o.status=?'; params.push(status); }
+    if (search) {
+      where += ' AND (o.order_no LIKE ? OR o.client_name LIKE ? OR o.client_phone LIKE ?)';
+      const q='%'+search+'%'; params.push(q,q,q);
+    }
+    const offset = (parseInt(page)-1)*parseInt(limit);
+    const total = db.prepare('SELECT COUNT(*) as n FROM sys_orders o '+where).get(...params).n;
+    const rows = db.prepare(`
+      SELECT o.*, i.invoice_no
+      FROM sys_orders o
+      LEFT JOIN sys_invoices i ON i.id=o.invoice_id
+      ${where} ORDER BY o.created_at DESC LIMIT ? OFFSET ?
+    `).all(...params, parseInt(limit), offset);
+    // stats
+    const stats = {};
+    Object.keys(STATUS_LABELS).forEach(s => {
+      stats[s] = db.prepare('SELECT COUNT(*) as n FROM sys_orders WHERE status=?').get(s).n;
+    });
+    res.json({ ok:true, data:rows, total, stats });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// GET /api/system/orders/:id
+router.get('/orders/:id', (req, res) => {
+    const db = req.db;
+    try {
+    const o = db.prepare('SELECT o.*, i.invoice_no FROM sys_orders o LEFT JOIN sys_invoices i ON i.id=o.invoice_id WHERE o.id=?').get(req.params.id);
+    if (!o) return res.status(404).json({ ok:false, error:'Not found' });
+    const logs = db.prepare('SELECT * FROM sys_order_logs WHERE order_id=? ORDER BY created_at DESC').all(o.id);
+    res.json({ ok:true, data:{ ...o, logs } });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// GET /api/system/orders/:id/public — بدون token لصفحة حالة الطلب
+router.get('/orders/:id/public', (req, res) => {
+    const db = req.db;
+    try {
+    const o = db.prepare('SELECT id,order_no,client_name,status,shipping_co,tracking_no,created_at,updated_at,total FROM sys_orders WHERE id=?').get(req.params.id);
+    if (!o) return res.status(404).json({ ok:false, error:'Not found' });
+    const logs = db.prepare('SELECT status,note,created_at FROM sys_order_logs WHERE order_id=? ORDER BY created_at ASC').all(o.id);
+    res.json({ ok:true, data:{ ...o, logs, status_label: STATUS_LABELS[o.status]||o.status } });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// POST /api/system/orders — إنشاء يدوياً أو من فاتورة
+router.post('/orders', (req, res) => {
+    const db = req.db;
+    try {
+    const { invoice_id, contact_id, client_name, client_phone, client_address, client_email,
+            notes, total=0, shipping_co, tracking_no,
+            order_type='stock', production_notes, production_supplier, production_due_date } = req.body;
+    if (!client_name?.trim()) return res.status(400).json({ ok:false, error:'اسم العميل مطلوب' });
+
+    let invData = {};
+    if (invoice_id) {
+      const inv = db.prepare('SELECT * FROM sys_invoices WHERE id=?').get(+invoice_id);
+      if (inv) invData = { contact_id: inv.contact_id, client_name: inv.client_name, client_phone: inv.client_phone, total: inv.total };
+    }
+
+    const order_no = nextOrderNo(db);
+    const ordId = db.transaction(() => {
+      const ins = db.prepare(`
+        INSERT INTO sys_orders (order_no,invoice_id,contact_id,client_name,client_phone,client_address,client_email,notes,total,shipping_co,tracking_no,order_type,production_notes,production_supplier,production_due_date)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      `).run(
+        order_no, invoice_id||null,
+        contact_id || invData.contact_id || null,
+        client_name?.trim() || invData.client_name,
+        client_phone || invData.client_phone || null,
+        client_address||null, client_email||null,
+        notes||null, total || invData.total || 0,
+        shipping_co||null, tracking_no||null,
+        order_type, production_notes||null, production_supplier||null, production_due_date||null
+      );
+      // لوغ أولي
+      db.prepare('INSERT INTO sys_order_logs (order_id,status,note) VALUES (?,?,?)').run(ins.lastInsertRowid, 'new', 'تم إنشاء الطلب');
+      // حدّث CRM
+      const cid = contact_id || invData.contact_id;
+      if (cid) {
+        db.prepare("UPDATE crm_contacts SET updated_at=datetime('now') WHERE id=?").run(cid);
+        db.prepare("INSERT INTO crm_notes (contact_id,content) VALUES (?,?)").run(cid, 'طلب جديد: '+order_no);
+      }
+      return ins.lastInsertRowid;
+    })();
+
+    // Auto-update CRM status
+    try {
+      const clientName = req.body.client_name;
+      if (clientName) {
+        const contact = db.prepare("SELECT id, status FROM crm_contacts WHERE name LIKE ?").get('%' + clientName + '%');
+        if (contact) {
+          const nextStatus = { lead: 'prospect', prospect: 'client', client: 'client', vip: 'vip', inactive: 'inactive' };
+          const newStatus = nextStatus[contact.status] || contact.status;
+          if (newStatus !== contact.status) {
+            db.prepare("UPDATE crm_contacts SET status=?, updated_at=datetime('now') WHERE id=?").run(newStatus, contact.id);
+          }
+        }
+      }
+    } catch(crmErr) { /* non-critical */ }
+
+    res.json({ ok:true, id:ordId, order_no });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// PUT /api/system/orders/:id/status
+router.put('/orders/:id/status', (req, res) => {
+    const db = req.db;
+    try {
+    const { status, note, shipping_co, tracking_no } = req.body;
+    if (!STATUS_LABELS[status]) return res.status(400).json({ ok:false, error:'حالة غير صحيحة' });
+    const ord = db.prepare('SELECT * FROM sys_orders WHERE id=?').get(req.params.id);
+    if (!ord) return res.status(404).json({ ok:false, error:'Not found' });
+
+    db.transaction(() => {
+      let sql = "UPDATE sys_orders SET status=?, updated_at=datetime('now')";
+      const params = [status];
+      if (shipping_co) { sql += ', shipping_co=?'; params.push(shipping_co); }
+      if (tracking_no) { sql += ', tracking_no=?'; params.push(tracking_no); }
+      sql += ' WHERE id=?'; params.push(ord.id);
+      db.prepare(sql).run(...params);
+
+      db.prepare('INSERT INTO sys_order_logs (order_id,status,note) VALUES (?,?,?)').run(ord.id, status, note || STATUS_LABELS[status]);
+
+      // حدّث CRM عند التسليم
+      if (ord.contact_id) {
+        db.prepare("UPDATE crm_contacts SET updated_at=datetime('now') WHERE id=?").run(ord.contact_id);
+        if (status === 'delivered') {
+          db.prepare("INSERT INTO crm_notes (contact_id,content) VALUES (?,?)").run(ord.contact_id, '✅ تسليم طلب '+ord.order_no);
+          db.prepare("UPDATE crm_contacts SET status='client' WHERE id=? AND status IN ('lead','prospect')").run(ord.contact_id);
+        }
+        if (status === 'returned') {
+          db.prepare("INSERT INTO crm_notes (contact_id,content) VALUES (?,?)").run(ord.contact_id, '⚠️ مرتجع طلب '+ord.order_no);
+        }
+      }
+    })();
+    res.json({ ok:true });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// POST /api/system/orders/from-invoice/:inv_id — تحويل فاتورة → طلب
+router.post('/orders/from-invoice/:inv_id', (req, res) => {
+    const db = req.db;
+    try {
+    const inv = db.prepare('SELECT * FROM sys_invoices WHERE id=?').get(req.params.inv_id);
+    if (!inv) return res.status(404).json({ ok:false, error:'Not found' });
+    // لو فيه طلب بالفعل
+    const existing = db.prepare('SELECT id FROM sys_orders WHERE invoice_id=?').get(inv.id);
+    if (existing) return res.json({ ok:true, id:existing.id, already_exists:true });
+
+    const order_no = nextOrderNo(db);
+    const ordId = db.transaction(() => {
+      const ins = db.prepare(`INSERT INTO sys_orders (order_no,invoice_id,contact_id,client_name,client_phone,total) VALUES (?,?,?,?,?,?)`).
+        run(order_no, inv.id, inv.contact_id||null, inv.client_name, inv.client_phone||null, inv.total);
+      db.prepare('INSERT INTO sys_order_logs (order_id,status,note) VALUES (?,?,?)').run(ins.lastInsertRowid,'new','محوّل من فاتورة '+inv.invoice_no);
+      if (inv.contact_id) db.prepare("INSERT INTO crm_notes (contact_id,content) VALUES (?,?)").run(inv.contact_id, 'طلب جديد: '+order_no);
+      return ins.lastInsertRowid;
+    })();
+    res.json({ ok:true, id:ordId, order_no });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// GET /api/system/orders/stats/summary
+router.get('/orders/stats/summary', (req, res) => {
+    const db = req.db;
+    try {
+    const stats = {};
+    Object.keys(STATUS_LABELS).forEach(s => { stats[s] = db.prepare('SELECT COUNT(*) as n FROM sys_orders WHERE status=?').get(s).n; });
+    const total_revenue = db.prepare("SELECT COALESCE(SUM(total),0) as s FROM sys_orders WHERE status='delivered'").get().s;
+    const month_orders = db.prepare("SELECT COUNT(*) as n FROM sys_orders WHERE created_at >= datetime('now','start of month')").get().n;
+    res.json({ ok:true, data:{ ...stats, total_revenue, month_orders } });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// ============================================================
+// SUPPLIERS
+// ============================================================
+
+function nextPONo(db) {
+  db.prepare('UPDATE sys_po_seq SET counter=counter+1').run();
+  const row = db.prepare('SELECT counter as seq FROM sys_po_seq').get();
+  return 'PO-' + String(row.seq).padStart(4, '0');
+}
+
+// GET /api/system/suppliers
+router.get('/suppliers', (req, res) => {
+    const db = req.db;
+    try {
+    const { search, category } = req.query;
+    let where = 'WHERE 1=1'; const params = [];
+    if (search) { where += ' AND (s.name LIKE ? OR s.phone LIKE ?)'; const q='%'+search+'%'; params.push(q,q); }
+    if (category) { where += ' AND s.category=?'; params.push(category); }
+    const rows = db.prepare(`
+      SELECT s.*,
+        COUNT(DISTINCT po.id) as po_count,
+        COALESCE(SUM(po.total),0) as total_purchased
+      FROM sys_suppliers s
+      LEFT JOIN sys_purchase_orders po ON po.supplier_id=s.id AND po.status != 'cancelled'
+      ${where}
+      GROUP BY s.id ORDER BY s.name
+    `).all(...params);
+    const cats = db.prepare('SELECT DISTINCT category FROM sys_suppliers WHERE category IS NOT NULL ORDER BY category').all().map(r=>r.category);
+    res.json({ ok: true, data: rows, categories: cats });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// GET /api/system/suppliers/:id
+router.get('/suppliers/:id', (req, res) => {
+    const db = req.db;
+    try {
+    const s = db.prepare('SELECT * FROM sys_suppliers WHERE id=?').get(req.params.id);
+    if (!s) return res.status(404).json({ ok:false, error:'Not found' });
+    const orders = db.prepare(`SELECT * FROM sys_purchase_orders WHERE supplier_id=? ORDER BY created_at DESC LIMIT 20`).all(s.id);
+    res.json({ ok:true, data: { ...s, orders } });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// POST /api/system/suppliers
+router.post('/suppliers', (req, res) => {
+  const db = req.db;
+  try {
+    const { name, company_name, phone, whatsapp, email, city, governorate, address, country, phone_code, category, products, notes, rating=3 } = req.body;
+    const displayName = company_name || name;
+    if (!displayName?.trim()) return res.status(400).json({ ok:false, error:'اسم المورد مطلوب' });
+    const r = db.prepare(`INSERT INTO sys_suppliers (name,phone,whatsapp,email,city,governorate,address,country,phone_code,category,products,notes,rating) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .run(displayName.trim(), phone||null, whatsapp||null, email||null, city||null, governorate||null, address||null, country||'EG', phone_code||'+20', category||null, products||null, notes||null, +rating||3);
+    res.json({ ok:true, id: r.lastInsertRowid });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// PUT /api/system/suppliers/:id
+router.put('/suppliers/:id', (req, res) => {
+  const db = req.db;
+  try {
+    const { name, company_name, phone, whatsapp, email, city, governorate, address, country, phone_code, category, products, notes, rating, active } = req.body;
+    const displayName = company_name || name;
+    db.prepare(`UPDATE sys_suppliers SET name=COALESCE(?,name),phone=COALESCE(?,phone),whatsapp=COALESCE(?,whatsapp),
+      email=COALESCE(?,email),city=COALESCE(?,city),governorate=COALESCE(?,governorate),address=COALESCE(?,address),
+      country=COALESCE(?,country),phone_code=COALESCE(?,phone_code),category=COALESCE(?,category),
+      products=COALESCE(?,products),notes=COALESCE(?,notes),rating=COALESCE(?,rating),active=COALESCE(?,active) WHERE id=?`)
+      .run(displayName||null,phone||null,whatsapp||null,email||null,city||null,governorate||null,address||null,
+        country||null,phone_code||null,category||null,products||null,notes||null,rating?+rating:null,
+        active===false?0:active===true?1:null, req.params.id);
+    res.json({ ok:true });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// DELETE /api/system/suppliers/:id
+router.delete('/suppliers/:id', (req, res) => {
+    const db = req.db;
+    try {
+    db.prepare('DELETE FROM sys_suppliers WHERE id=?').run(req.params.id);
+    res.json({ ok:true });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// ── PURCHASE ORDERS ──
+
+// GET /api/system/purchase-orders
+router.get('/purchase-orders', (req, res) => {
+    const db = req.db;
+    try {
+    const { supplier_id, status } = req.query;
+    let where = 'WHERE 1=1'; const params = [];
+    if (supplier_id) { where += ' AND po.supplier_id=?'; params.push(+supplier_id); }
+    if (status) { where += ' AND po.status=?'; params.push(status); }
+    const rows = db.prepare(`
+      SELECT po.*, s.name as supplier_name_crm
+      FROM sys_purchase_orders po
+      LEFT JOIN sys_suppliers s ON s.id=po.supplier_id
+      ${where} ORDER BY po.created_at DESC LIMIT 100
+    `).all(...params);
+    res.json({ ok:true, data:rows });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// POST /api/system/purchase-orders
+router.post('/purchase-orders', (req, res) => {
+    const db = req.db;
+    try {
+    const { supplier_id, items=[], notes, expected_date, wallet_id=null, payment_method=null } = req.body;
+    if (!items.length) return res.status(400).json({ ok:false, error:'لازم فيه صنف واحد' });
+    const sup = supplier_id ? db.prepare('SELECT * FROM sys_suppliers WHERE id=?').get(+supplier_id) : null;
+    const supplier_name = sup?.name || 'غير محدد';
+    const po_no = nextPONo(db);
+    const total = items.reduce((s,it) => s + (+it.qty * +it.unit_cost), 0);
+
+    const poId = db.transaction(() => {
+      const ins = db.prepare(`INSERT INTO sys_purchase_orders (po_no,supplier_id,supplier_name,total,notes,expected_date,wallet_id,payment_method) VALUES (?,?,?,?,?,?,?,?)`)
+        .run(po_no, supplier_id||null, supplier_name, total, notes||null, expected_date||null, wallet_id||null, payment_method||null);
+      const insItem = db.prepare(`INSERT INTO sys_purchase_items (po_id,product_id,description,qty,unit_cost,total) VALUES (?,?,?,?,?,?)`);
+      for (const it of items) {
+        insItem.run(ins.lastInsertRowid, it.product_id||null, it.description, +it.qty, +it.unit_cost, +it.qty * +it.unit_cost);
+      }
+      // لو تم تحديد خزينة دفع → سجّل مصروف
+      if (wallet_id && total > 0) {
+        db.prepare(`INSERT INTO sys_transactions (date,type,amount,wallet_id,description,ref_type,ref_id)
+          VALUES (date('now'),'out',?,?,?,'po',?)`)
+          .run(total, wallet_id, 'دفع مورد: '+supplier_name+' — '+po_no+(payment_method?' ('+payment_method+')':''), ins.lastInsertRowid);
+        db.prepare("UPDATE sys_wallets SET balance=balance-? WHERE id=?").run(total, wallet_id);
+      }
+      return ins.lastInsertRowid;
+    })();
+    res.json({ ok:true, id:poId, po_no });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// PUT /api/system/purchase-orders/:id/receive — تسجيل استلام = دخول مخزون
+router.put('/purchase-orders/:id/receive', (req, res) => {
+    const db = req.db;
+    try {
+    const po = db.prepare('SELECT * FROM sys_purchase_orders WHERE id=?').get(req.params.id);
+    if (!po) return res.status(404).json({ ok:false, error:'Not found' });
+    const items = db.prepare('SELECT * FROM sys_purchase_items WHERE po_id=?').all(po.id);
+
+    db.transaction(() => {
+      for (const it of items) {
+        if (it.product_id) {
+          const prod = db.prepare('SELECT * FROM sys_products WHERE id=?').get(it.product_id);
+          if (prod) {
+            const newQty = prod.stock_qty + it.qty;
+            db.prepare("UPDATE sys_products SET stock_qty=? WHERE id=?").run(newQty, it.product_id);
+            db.prepare(`INSERT INTO sys_stock_moves (product_id,type,qty,unit_cost,ref_type,ref_id,notes) VALUES (?,'in',?,?,'po',?,?)`)
+              .run(it.product_id, it.qty, it.unit_cost, po.id, 'أوردر شراء '+po.po_no);
+          }
+        }
+        db.prepare('UPDATE sys_purchase_items SET received_qty=qty WHERE id=?').run(it.id);
+      }
+      db.prepare("UPDATE sys_purchase_orders SET status='received', received_date=datetime('now') WHERE id=?")
+        .run(po.id);
+      // سجّل دفع للمورد في الخزينة لو wallet_id موجود
+      const { wallet_id } = req.body;
+      if (wallet_id && po.total_amount > 0) {
+        db.prepare(`INSERT INTO sys_transactions (date,type,amount,wallet_id,description,ref_type,ref_id)
+          VALUES (date('now'),'out',?,?,?,'po',?)`)
+          .run(po.total_amount, wallet_id,
+            'دفع مورد: ' + (db.prepare('SELECT name FROM sys_suppliers WHERE id=?').get(po.supplier_id)?.name || 'مورد') + ' — ' + po.po_no,
+            po.id);
+      }
+    })();
+    res.json({ ok:true });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// PUT /api/system/purchase-orders/:id/cancel
+router.put('/purchase-orders/:id/cancel', (req, res) => {
+    const db = req.db;
+    try {
+    db.prepare("UPDATE sys_purchase_orders SET status='cancelled' WHERE id=?")
+      .run(req.params.id);
+    res.json({ ok:true });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// GET /api/system/suppliers/stats/summary
+router.get('/suppliers/stats/summary', (req, res) => {
+    const db = req.db;
+    try {
+    const total = db.prepare('SELECT COUNT(*) as n FROM sys_suppliers WHERE active=1').get().n;
+    const po_total = db.prepare("SELECT COUNT(*) as n FROM sys_purchase_orders").get().n;
+    const po_pending = db.prepare("SELECT COUNT(*) as n FROM sys_purchase_orders WHERE status='pending'").get().n;
+    const total_spent = db.prepare("SELECT COALESCE(SUM(total),0) as s FROM sys_purchase_orders WHERE status='received'").get().s;
+    res.json({ ok:true, data:{ total_suppliers:total, total_po:po_total, pending_po:po_pending, total_spent } });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// ── Public router (no auth) ─────────────────────────────────
+const publicRouter = require('express').Router();
+
+publicRouter.get('/:id/public', (req, res) => {
+    const db = req.db;
+    try {
+    const o = db.prepare('SELECT id,order_no,client_name,status,shipping_co,tracking_no,created_at,updated_at,total FROM sys_orders WHERE id=?').get(req.params.id);
+    if (!o) return res.status(404).json({ ok:false, error:'الطلب غير موجود' });
+    const logs = db.prepare('SELECT status,note,created_at FROM sys_order_logs WHERE order_id=? ORDER BY created_at ASC').all(o.id);
+    const STATUS_LBL = { new:'جديد', processing:'قيد المعالجة', preparing:'قيد التجهيز', shipped:'مع المندوب', delivered:'تم التسليم', cancelled:'ملغي', returned:'مرتجع' };
+    res.json({ ok:true, data:{ ...o, logs, status_label: STATUS_LBL[o.status]||o.status } });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+
+// ============================================================
+// TREASURY — الخزينة
+// ============================================================
+
+// GET /api/system/wallets
+router.get('/wallets', (req, res) => {
+    const db = req.db;
+    try {
+    const wallets = db.prepare(`
+      SELECT w.*,
+        COALESCE((SELECT SUM(
+            CASE
+              WHEN t.type='in'                              THEN  t.amount   -- وارد: يزيد
+              WHEN t.type='out'                             THEN -t.amount   -- صادر: ينقص
+              WHEN t.type='transfer' AND t.wallet_id=w.id  THEN -t.amount   -- تحويل خارج: ينقص
+              ELSE 0
+            END)
+          FROM sys_transactions t WHERE t.wallet_id=w.id),0)
+        +
+        COALESCE((SELECT SUM(t.amount)                                       -- تحويل داخل: يزيد
+          FROM sys_transactions t WHERE t.wallet_to_id=w.id AND t.type='transfer'),0)
+        as computed_balance
+      FROM sys_wallets w WHERE w.active=1 ORDER BY w.id
+    `).all();
+    // update stored balance
+    const upd = db.prepare('UPDATE sys_wallets SET balance=? WHERE id=?');
+    wallets.forEach(w => upd.run(w.computed_balance, w.id));
+    res.json({ ok: true, data: wallets });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// POST /api/system/wallets
+router.post('/wallets', (req, res) => {
+    const db = req.db;
+    try {
+    const { name, type='cash', color='#1B5E30', icon='💰', notes } = req.body;
+    if (!name) return res.status(400).json({ ok:false, error:'name required' });
+    const r = db.prepare('INSERT INTO sys_wallets (name,type,color,icon,notes) VALUES (?,?,?,?,?)').run(name,type,color,icon,notes||null);
+    res.json({ ok:true, data: { id: r.lastInsertRowid } });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// PUT /api/system/wallets/:id
+router.put('/wallets/:id', (req, res) => {
+    const db = req.db;
+    try {
+    const { name, color, icon, notes, active } = req.body;
+    db.prepare('UPDATE sys_wallets SET name=COALESCE(?,name), color=COALESCE(?,color), icon=COALESCE(?,icon), notes=COALESCE(?,notes), active=COALESCE(?,active) WHERE id=?')
+      .run(name||null, color||null, icon||null, notes||null, active!=null?active:null, req.params.id);
+    res.json({ ok:true });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// GET /api/system/wallets/summary — dashboard totals
+router.get('/wallets/summary', (req, res) => {
+    const db = req.db;
+    try {
+    const wallets = db.prepare(`
+      SELECT w.id, w.name, w.type, NULL as icon, NULL as color,
+        COALESCE(SUM(CASE WHEN t.type='in' THEN t.amount WHEN t.type='out' THEN -t.amount
+                         WHEN t.type='transfer' AND t.wallet_id=w.id THEN -t.amount
+                         WHEN t.type='transfer' AND t.wallet_to_id=w.id THEN t.amount ELSE 0 END),0) as balance
+      FROM sys_wallets w LEFT JOIN sys_transactions t ON (t.wallet_id=w.id OR t.wallet_to_id=w.id)
+      WHERE w.active=1 GROUP BY w.id ORDER BY w.id
+    `).all();
+    const liquid = wallets.filter(w=>['cash','ewallet','bank'].includes(w.type)).reduce((s,w)=>s+w.balance,0);
+    const receivable = wallets.filter(w=>['shipping_co','receivable'].includes(w.type)).reduce((s,w)=>s+w.balance,0);
+    const payable = Math.abs(wallets.filter(w=>w.type==='payable').reduce((s,w)=>s+w.balance,0));
+    res.json({ ok:true, data: { wallets, liquid, receivable, payable, net: liquid+receivable-payable } });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// GET /api/system/transactions
+router.get('/transactions', (req, res) => {
+    const db = req.db;
+    try {
+    const { wallet_id, type, from, to, limit=50, page=1, category } = req.query;
+    let where = 'WHERE 1=1';
+    const params = [];
+    if (wallet_id) { where += ' AND (t.wallet_id=? OR t.wallet_to_id=?)'; params.push(wallet_id, wallet_id); }
+    if (type)      { where += ' AND t.type=?'; params.push(type); }
+    if (from)      { where += ' AND t.date>=?'; params.push(from); }
+    if (to)        { where += ' AND t.date<=?'; params.push(to); }
+    if (category)  { where += ' AND t.category=?'; params.push(category); }
+    const offset = (parseInt(page)-1)*parseInt(limit);
+    const total = db.prepare(`SELECT COUNT(*) as n FROM sys_transactions t ${where}`).get(...params).n;
+    const rows = db.prepare(`
+      SELECT t.*, w.name as wallet_name, NULL as wallet_icon, w2.name as wallet_to_name
+      FROM sys_transactions t
+      LEFT JOIN sys_wallets w ON w.id=t.wallet_id
+      LEFT JOIN sys_wallets w2 ON w2.id=t.wallet_to_id
+      ${where} ORDER BY t.created_at DESC LIMIT ? OFFSET ?
+    `).all(...params, parseInt(limit), offset);
+    res.json({ ok:true, data: rows, total, page: parseInt(page), pages: Math.ceil(total/parseInt(limit)) });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// POST /api/system/transactions
+router.post('/transactions', (req, res) => {
+    const db = req.db;
+    try {
+    const { date, type, amount, wallet_id, wallet_to_id, description, ref_type, ref_id, category, notes } = req.body;
+    if (!type || !amount || !wallet_id || !description) return res.status(400).json({ ok:false, error:'missing fields' });
+    if (type==='transfer' && !wallet_to_id) return res.status(400).json({ ok:false, error:'wallet_to_id required for transfer' });
+    const r = db.prepare(`INSERT INTO sys_transactions (date,type,amount,wallet_id,wallet_to_id,description,category,notes,ref_type,ref_id)
+      VALUES (?,?,?,?,?,?,?,?,?,?)`).run(date||null, type, parseFloat(amount), wallet_id, wallet_to_id||null, description, category||null, notes||null, ref_type||null, ref_id||null);
+    // update wallet balance
+    db.prepare("UPDATE sys_wallets SET balance=balance+? WHERE id=?")
+      .run(type==='in' ? parseFloat(amount) : -parseFloat(amount), wallet_id);
+    if (type==='transfer' && wallet_to_id) {
+      db.prepare("UPDATE sys_wallets SET balance=balance+? WHERE id=?")
+        .run(parseFloat(amount), wallet_to_id);
+    }
+    res.json({ ok:true, data: { id: r.lastInsertRowid } });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// DELETE /api/system/transactions/:id
+router.delete('/transactions/:id', (req, res) => {
+    const db = req.db;
+    try {
+    db.prepare('DELETE FROM sys_transactions WHERE id=?').run(req.params.id);
+    res.json({ ok:true });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// GET /api/system/transactions/stats/categories — مصروفات بالتصنيف
+router.get('/transactions/stats/categories', (req, res) => {
+    const db = req.db;
+    try {
+    const { from, to, type = 'out' } = req.query;
+    let where = "WHERE t.type=?";
+    const params = [type];
+    if (from) { where += ' AND t.date>=?'; params.push(from); }
+    if (to)   { where += ' AND t.date<=?'; params.push(to); }
+    const rows = db.prepare(`
+      SELECT COALESCE(t.category,'غير مصنّف') as category,
+        COUNT(*) as count,
+        COALESCE(SUM(t.amount),0) as total
+      FROM sys_transactions t
+      ${where}
+      GROUP BY category ORDER BY total DESC
+    `).all(...params);
+    const grand = rows.reduce((s,r)=>s+r.total, 0);
+    res.json({ ok:true, data: rows, grand_total: grand });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// GET /api/system/transactions/stats/monthly — trend آخر 6 شهور
+router.get('/transactions/stats/monthly', (req, res) => {
+    const db = req.db;
+    try {
+    const rows = db.prepare(`
+      SELECT strftime('%Y-%m', date) as month,
+        COALESCE(SUM(CASE WHEN type='in' THEN amount ELSE 0 END),0) as total_in,
+        COALESCE(SUM(CASE WHEN type='out' THEN amount ELSE 0 END),0) as total_out
+      FROM sys_transactions
+      WHERE date >= date('now','-6 months')
+      GROUP BY month ORDER BY month
+    `).all();
+    res.json({ ok:true, data: rows });
+  } catch(e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+router.get('/notifications', requireAuth, (req, res) => {
+  const db = req.tenantDb;
+  try {
+    const rows = db.prepare(`SELECT * FROM notifications ORDER BY created_at DESC LIMIT 50`).all();
+    const unread = db.prepare(`SELECT COUNT(*) as c FROM notifications WHERE is_read=0`).get().c;
+    res.json({ ok:true, notifications: rows, unread });
+  } catch(e) { res.json({ ok:true, notifications:[], unread:0 }); }
+});
+
+router.post('/notifications/read/:id', requireAuth, (req, res) => {
+  const db = req.tenantDb;
+  try {
+    db.prepare(`UPDATE notifications SET is_read=1 WHERE id=?`).run(req.params.id);
+    res.json({ ok:true });
+  } catch(e) { res.json({ ok:false }); }
+});
+
+router.post('/notifications/read-all', requireAuth, (req, res) => {
+  const db = req.tenantDb;
+  try {
+    db.prepare(`UPDATE notifications SET is_read=1`).run();
+    res.json({ ok:true });
+  } catch(e) { res.json({ ok:false }); }
+});
+
+// ============================================================
+// UNIFIED INBOX
+// ============================================================
+
+// GET /api/system/inbox/conversations
+router.get('/inbox/conversations', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const platform = req.query.platform || '';
+    let q = `SELECT c.*, 
+      (SELECT COUNT(*) FROM inbox_messages m WHERE m.conversation_id=c.id AND m.is_read=0 AND m.direction='in') as unread
+      FROM inbox_conversations c`;
+    if (platform) q += ` WHERE c.platform=?`;
+    q += ` ORDER BY c.last_message_at DESC LIMIT 50`;
+    const rows = platform ? db.prepare(q).all(platform) : db.prepare(q).all();
+    res.json({ ok: true, conversations: rows });
+  } catch(e) { res.json({ ok: true, conversations: [] }); }
+});
+
+// GET /api/system/inbox/messages/:convId
+router.get('/inbox/messages/:convId', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const msgs = db.prepare(`SELECT * FROM inbox_messages WHERE conversation_id=? ORDER BY sent_at ASC LIMIT 100`).all(req.params.convId);
+    // Mark as read
+    db.prepare(`UPDATE inbox_messages SET is_read=1 WHERE conversation_id=? AND direction='in'`).run(req.params.convId);
+    db.prepare(`UPDATE inbox_conversations SET unread_count=0 WHERE id=?`).run(req.params.convId);
+    res.json({ ok: true, messages: msgs });
+  } catch(e) { res.json({ ok: true, messages: [] }); }
+});
+
+// POST /api/system/inbox/send
+router.post('/inbox/send', requireAuth, async (req, res) => {
+  const db = req.db;
+  try {
+    const { conversation_id, content } = req.body;
+    if (!conversation_id || !content) return res.json({ ok: false, error: 'missing fields' });
+    const conv = db.prepare(`SELECT * FROM inbox_conversations WHERE id=?`).get(conversation_id);
+    if (!conv) return res.json({ ok: false, error: 'conversation not found' });
+
+    // Save outgoing message
+    db.prepare(`INSERT INTO inbox_messages (conversation_id, platform, direction, content) VALUES (?,?,?,?)`).run(conversation_id, conv.platform, 'out', content);
+    db.prepare(`UPDATE inbox_conversations SET last_message=?, last_message_at=datetime('now') WHERE id=?`).run(content, conversation_id);
+
+    // Actually send via platform
+    let sendResult = { sent: false, error: null };
+    const settings = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get();
+
+    if (conv.platform === 'telegram' && settings && settings.telegram_token && settings.telegram_active) {
+      try {
+        const https = require('https');
+        const chatId = conv.sender_id;
+        const tgUrl = `https://api.telegram.org/bot${settings.telegram_token}/sendMessage`;
+        const payload = JSON.stringify({ chat_id: chatId, text: content });
+        await new Promise((resolve, reject) => {
+          const urlObj = new URL(tgUrl);
+          const options = {
+            hostname: urlObj.hostname,
+            path: urlObj.pathname,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+          };
+          const reqHttp = https.request(options, (r) => {
+            let data = '';
+            r.on('data', chunk => data += chunk);
+            r.on('end', () => {
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.ok) { sendResult.sent = true; }
+                else { sendResult.error = parsed.description || 'Telegram error'; }
+              } catch(e) { sendResult.error = 'parse error'; }
+              resolve();
+            });
+          });
+          reqHttp.on('error', (e) => { sendResult.error = e.message; resolve(); });
+          reqHttp.write(payload);
+          reqHttp.end();
+        });
+      } catch(e) {
+        sendResult.error = e.message;
+      }
+    }
+
+    if (sendResult.error) {
+      return res.json({ ok: false, error: 'تم الحفظ لكن فشل الإرسال: ' + sendResult.error });
+    }
+    res.json({ ok: true, sent: sendResult.sent });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// POST /api/system/inbox/convert-lead/:convId
+router.post('/inbox/convert-lead/:convId', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const conv = db.prepare(`SELECT * FROM inbox_conversations WHERE id=?`).get(req.params.convId);
+    if (!conv) return res.json({ ok: false, error: 'not found' });
+    const existing = db.prepare(`SELECT id FROM crm_contacts WHERE phone=?`).get(conv.sender_phone || conv.sender_id);
+    if (existing) {
+      db.prepare(`UPDATE inbox_conversations SET lead_id=? WHERE id=?`).run(existing.id, conv.id);
+      return res.json({ ok: true, lead_id: existing.id, existed: true });
+    }
+    const r = db.prepare(`INSERT INTO crm_contacts (name, phone, status, source, created_at) VALUES (?,?,?,?,datetime('now'))`)
+      .run(conv.sender_name || conv.sender_id, conv.sender_phone || '', 'lead', conv.platform);
+    db.prepare(`UPDATE inbox_conversations SET lead_id=? WHERE id=?`).run(r.lastInsertRowid, conv.id);
+    res.json({ ok: true, lead_id: r.lastInsertRowid, existed: false });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// GET /api/system/inbox/settings
+router.get('/inbox/settings', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    let s = db.prepare(`SELECT * FROM inbox_settings WHERE id=1`).get();
+    if (!s) { db.prepare(`INSERT OR IGNORE INTO inbox_settings (id) VALUES (1)`).run(); s = db.prepare(`SELECT * FROM inbox_settings WHERE id=1`).get(); }
+    res.json({ ok: true, settings: s });
+  } catch(e) { res.json({ ok: true, settings: {} }); }
+});
+
+// POST /api/system/inbox/settings
+router.post('/inbox/settings', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { telegram_token, telegram_active, meta_token, meta_page_id, meta_active } = req.body;
+    db.prepare(`INSERT OR REPLACE INTO inbox_settings (id, telegram_token, telegram_active, meta_token, meta_page_id, meta_active, updated_at)
+      VALUES (1,?,?,?,?,?,datetime('now'))`).run(telegram_token||null, telegram_active?1:0, meta_token||null, meta_page_id||null, meta_active?1:0);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// GET /api/system/inbox/unread-count
+router.get('/inbox/unread-count', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const r = db.prepare(`SELECT COUNT(*) as c FROM inbox_messages WHERE direction='in' AND is_read=0`).get();
+    res.json({ ok: true, count: r.c });
+  } catch(e) { res.json({ ok: true, count: 0 }); }
+});
+
+// GET /api/system/inbox/templates
+router.get('/inbox/templates', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const rows = db.prepare(`SELECT * FROM inbox_templates ORDER BY id DESC`).all();
+    res.json({ ok: true, templates: rows });
+  } catch(e) { res.json({ ok: true, templates: [] }); }
+});
+
+// POST /api/system/inbox/templates
+router.post('/inbox/templates', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { name, content } = req.body;
+    if (!name || !content) return res.json({ ok: false, error: 'missing fields' });
+    const r = db.prepare(`INSERT INTO inbox_templates (name, content) VALUES (?,?)`).run(name, content);
+    res.json({ ok: true, id: r.lastInsertRowid });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// MARKETPLACE — سوق الموردين
+// ============================================================
+const masterForMarket = require('./db-master');
+
+// GET /api/system/marketplace/suppliers
+router.get('/marketplace/suppliers', requireAuth, (req, res) => {
+  try {
+    const { region, product, search, page = 1 } = req.query;
+    let q = `SELECT * FROM marketplace_suppliers WHERE status='approved'`;
+    const params = [];
+    if (region) { q += ` AND regions LIKE ?`; params.push('%' + region + '%'); }
+    if (product) { q += ` AND products LIKE ?`; params.push('%' + product + '%'); }
+    if (search) { q += ` AND (name LIKE ? OR description LIKE ? OR products LIKE ?)`; params.push('%'+search+'%','%'+search+'%','%'+search+'%'); }
+    q += ` ORDER BY rating DESC, id ASC LIMIT 20 OFFSET ?`;
+    params.push((parseInt(page)-1)*20);
+    const rows = masterForMarket.prepare(q).all(...params);
+    const total = masterForMarket.prepare(`SELECT COUNT(*) as c FROM marketplace_suppliers WHERE status='approved'`).get().c;
+    res.json({ ok: true, suppliers: rows, total });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// POST /api/system/marketplace/quote
+router.post('/marketplace/quote', requireAuth, (req, res) => {
+  try {
+    const { supplier_id, product_type, quantity, specs, message } = req.body;
+    if (!supplier_id || !product_type) return res.json({ ok: false, error: 'missing fields' });
+    const supplier = masterForMarket.prepare('SELECT * FROM marketplace_suppliers WHERE id=? AND status=?').get(supplier_id, 'approved');
+    if (!supplier) return res.json({ ok: false, error: 'supplier not found' });
+    const user = req.user;
+    const r = masterForMarket.prepare(`INSERT INTO marketplace_quotes (supplier_id, client_user_id, client_name, client_phone, product_type, quantity, specs, message) VALUES (?,?,?,?,?,?,?,?)`)
+      .run(supplier_id, user.id, user.name, user.phone||'', product_type, quantity||0, specs||'', message||'');
+    res.json({ ok: true, quote_id: r.lastInsertRowid, supplier_phone: supplier.phone, supplier_name: supplier.name });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// POST /api/system/marketplace/rate
+router.post('/marketplace/rate', requireAuth, (req, res) => {
+  try {
+    const { supplier_id, rating, comment } = req.body;
+    if (!supplier_id || !rating) return res.json({ ok: false, error: 'missing fields' });
+    const existing = masterForMarket.prepare('SELECT id FROM marketplace_ratings WHERE supplier_id=? AND user_id=?').get(supplier_id, req.user.id);
+    if (existing) {
+      masterForMarket.prepare('UPDATE marketplace_ratings SET rating=?, comment=? WHERE id=?').run(rating, comment||'', existing.id);
+    } else {
+      masterForMarket.prepare('INSERT INTO marketplace_ratings (supplier_id, user_id, rating, comment) VALUES (?,?,?,?)').run(supplier_id, req.user.id, rating, comment||'');
+    }
+    // تحديث متوسط التقييم
+    const avg = masterForMarket.prepare('SELECT AVG(rating) as avg, COUNT(*) as cnt FROM marketplace_ratings WHERE supplier_id=?').get(supplier_id);
+    masterForMarket.prepare('UPDATE marketplace_suppliers SET rating=?, rating_count=? WHERE id=?').run(avg.avg||0, avg.cnt||0, supplier_id);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// GET /api/system/marketplace/my-quotes
+router.get('/marketplace/my-quotes', requireAuth, (req, res) => {
+  try {
+    const quotes = masterForMarket.prepare(`SELECT q.*, s.name as supplier_name, s.phone as supplier_phone FROM marketplace_quotes q JOIN marketplace_suppliers s ON s.id=q.supplier_id WHERE q.client_user_id=? ORDER BY q.created_at DESC LIMIT 20`).all(req.user.id);
+    res.json({ ok: true, quotes });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── ADMIN: marketplace management ──
+router.get('/marketplace/admin/suppliers', requireAuth, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ ok: false });
+  try {
+    const rows = masterForMarket.prepare('SELECT * FROM marketplace_suppliers ORDER BY created_at DESC').all();
+    res.json({ ok: true, suppliers: rows });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+router.post('/marketplace/admin/approve/:id', requireAuth, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ ok: false });
+  try {
+    masterForMarket.prepare('UPDATE marketplace_suppliers SET status=? WHERE id=?').run(req.body.status || 'approved', req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+router.post('/marketplace/admin/add', requireAuth, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ ok: false });
+  try {
+    const { name, phone, products, regions, price_range, description, commission_rate } = req.body;
+    if (!name || !phone || !products) return res.json({ ok: false, error: 'missing fields' });
+    const r = masterForMarket.prepare('INSERT INTO marketplace_suppliers (name,phone,products,regions,price_range,description,commission_rate,status) VALUES (?,?,?,?,?,?,?,?)').run(name,phone,products,regions||'',price_range||'',description||'',commission_rate||3,'approved');
+    res.json({ ok: true, id: r.lastInsertRowid });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+router.delete('/marketplace/admin/suppliers/:id', requireAuth, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ ok: false });
+  try {
+    masterForMarket.prepare('DELETE FROM marketplace_suppliers WHERE id=?').run(req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+router.get('/marketplace/admin/quotes', requireAuth, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ ok: false });
+  try {
+    const rows = masterForMarket.prepare('SELECT q.*, s.name as supplier_name, s.commission_rate FROM marketplace_quotes q JOIN marketplace_suppliers s ON s.id=q.supplier_id ORDER BY q.created_at DESC LIMIT 50').all();
+    const total_deals = masterForMarket.prepare('SELECT SUM(deal_amount) as t FROM marketplace_quotes WHERE deal_amount > 0').get().t || 0;
+    const total_commission = masterForMarket.prepare('SELECT SUM(commission_amount) as t FROM marketplace_quotes WHERE commission_amount > 0').get().t || 0;
+    res.json({ ok: true, quotes: rows, total_deals, total_commission });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+router.put('/marketplace/admin/quotes/:id', requireAuth, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ ok: false });
+  try {
+    const { status, deal_amount } = req.body;
+    const q = masterForMarket.prepare('SELECT * FROM marketplace_quotes q JOIN marketplace_suppliers s ON s.id=q.supplier_id WHERE q.id=?').get(req.params.id);
+    if (!q) return res.json({ ok: false, error: 'not found' });
+    const commission = deal_amount ? (deal_amount * (q.commission_rate / 100)) : 0;
+    masterForMarket.prepare('UPDATE marketplace_quotes SET status=?, deal_amount=?, commission_amount=? WHERE id=?').run(status || q.status, deal_amount || q.deal_amount, commission, req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// PAYMENT LINKS — لينك دفع للزبون
+// ============================================================
+const crypto = require('crypto');
+
+// POST /api/system/payment-links — إنشاء لينك دفع
+router.post('/payment-links', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { invoice_id, amount, client_name, client_phone, description } = req.body;
+    if (!amount) return res.json({ ok: false, error: 'amount required' });
+    const token = crypto.randomBytes(16).toString('hex');
+    const r = db.prepare(`INSERT INTO payment_links (invoice_id, token, amount, client_name, client_phone, description) VALUES (?,?,?,?,?,?)`)
+      .run(invoice_id || null, token, parseFloat(amount), client_name||'', client_phone||'', description||'');
+    const baseUrl = process.env.APP_BASE_URL || 'https://pro.areejegypt.com';
+    const link = `${baseUrl}/pay/${token}`;
+    res.json({ ok: true, id: r.lastInsertRowid, token, link });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// GET /api/system/payment-links — قائمة اللينكات
+router.get('/payment-links', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const rows = db.prepare(`SELECT pl.*, i.invoice_no FROM payment_links pl LEFT JOIN sys_invoices i ON i.id=pl.invoice_id ORDER BY pl.created_at DESC LIMIT 30`).all();
+    res.json({ ok: true, links: rows });
+  } catch(e) { res.json({ ok: true, links: [] }); }
+});
+
+// ============================================================
+// ORDER FORMS — فورم الطلب
+// ============================================================
+
+// POST /api/system/order-forms — إنشاء فورم
+router.post('/order-forms', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { title, products } = req.body;
+    if (!title) return res.json({ ok: false, error: 'title required' });
+    const token = crypto.randomBytes(12).toString('hex');
+    const r = db.prepare(`INSERT INTO order_forms (token, title, products) VALUES (?,?,?)`)
+      .run(token, title, JSON.stringify(products || []));
+    const baseUrl = process.env.APP_BASE_URL || 'https://pro.areejegypt.com';
+    const link = `${baseUrl}/order-form/${token}`;
+    res.json({ ok: true, id: r.lastInsertRowid, token, link });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// GET /api/system/order-forms
+router.get('/order-forms', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const forms = db.prepare(`SELECT f.*, (SELECT COUNT(*) FROM order_form_submissions s WHERE s.form_id=f.id) as submissions_count FROM order_forms f ORDER BY f.created_at DESC`).all();
+    res.json({ ok: true, forms });
+  } catch(e) { res.json({ ok: true, forms: [] }); }
+});
+
+// GET /api/system/order-forms/:token/submissions
+router.get('/order-forms/:token/submissions', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const form = db.prepare('SELECT * FROM order_forms WHERE token=?').get(req.params.token);
+    if (!form) return res.json({ ok: false, error: 'not found' });
+    const subs = db.prepare('SELECT * FROM order_form_submissions WHERE form_id=? ORDER BY created_at DESC').all(form.id);
+    res.json({ ok: true, form, submissions: subs });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// DELETE /api/system/order-forms/:id
+router.delete('/order-forms/:id', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    db.prepare('DELETE FROM order_forms WHERE id=?').run(req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// SHIPPING — الشحن المتكامل
+// ============================================================
+
+// GET /api/system/shipping/settings
+router.get('/shipping/settings', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    let s = db.prepare('SELECT * FROM shipping_settings WHERE id=1').get();
+    if (!s) {
+      db.prepare('INSERT OR IGNORE INTO shipping_settings (id) VALUES (1)').run();
+      s = db.prepare('SELECT * FROM shipping_settings WHERE id=1').get();
+    }
+    res.json({ ok: true, settings: s || {} });
+  } catch(e) { res.json({ ok: true, settings: {} }); }
+});
+
+// POST /api/system/shipping/settings
+router.post('/shipping/settings', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { bosta_api_key, aramex_api_key, jnt_api_key, default_company, sender_name, sender_phone, sender_address } = req.body;
+    db.prepare(`INSERT OR REPLACE INTO shipping_settings (id, bosta_api_key, aramex_api_key, jnt_api_key, default_company, sender_name, sender_phone, sender_address, updated_at)
+      VALUES (1,?,?,?,?,?,?,?,datetime('now'))`).run(bosta_api_key||'', aramex_api_key||'', jnt_api_key||'', default_company||'bosta', sender_name||'', sender_phone||'', sender_address||'');
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// POST /api/system/shipping/create — إنشاء شحنة
+router.post('/shipping/create', requireAuth, async (req, res) => {
+  const db = req.db;
+  try {
+    const { order_id, company, receiver_name, receiver_phone, receiver_address, receiver_city, weight, cod_amount, notes } = req.body;
+    if (!order_id || !receiver_phone) return res.json({ ok: false, error: 'order_id and receiver_phone required' });
+    const order = db.prepare('SELECT * FROM sys_orders WHERE id=?').get(order_id);
+    if (!order) return res.json({ ok: false, error: 'order not found' });
+    const settings = db.prepare('SELECT * FROM shipping_settings WHERE id=1').get() || {};
+    const shippingCo = company || settings.default_company || 'manual';
+
+    // Generate waybill number
+    const waybillNo = shippingCo.toUpperCase().substring(0,3) + '-' + Date.now().toString().slice(-8);
+
+    // Save shipment
+    const r = db.prepare(`INSERT INTO sys_shipments (order_id, company, waybill_no, receiver_name, receiver_phone, receiver_address, receiver_city, weight, cod_amount, notes, status)
+      VALUES (?,?,?,?,?,?,?,?,?,?,'pending')`).run(order_id, shippingCo, waybillNo, receiver_name||order.client_name, receiver_phone||order.client_phone, receiver_address||order.client_address||'', receiver_city||'', weight||0.5, cod_amount||0, notes||'');
+
+    // Update order with tracking
+    db.prepare('UPDATE sys_orders SET shipping_co=?, tracking_no=? WHERE id=?').run(shippingCo, waybillNo, order_id);
+
+    // Add order log
+    db.prepare('INSERT INTO sys_order_logs (order_id, status, note) VALUES (?,?,?)').run(order_id, 'shipped', 'تم إنشاء شحنة ' + shippingCo + ' — ' + waybillNo);
+
+    const trackingLink = `https://pro.areejegypt.com/track/${waybillNo}`;
+    const waMsg = `مرحباً ${receiver_name||order.client_name} 👋\nطلبك رقم ${order.order_no} في الطريق إليك!\nرقم الشحنة: ${waybillNo}\nتتبع الشحنة: ${trackingLink}\nشركة الشحن: ${shippingCo}`;
+
+    res.json({ ok: true, shipment_id: r.lastInsertRowid, waybill_no: waybillNo, tracking_link: trackingLink, wa_message: waMsg });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// GET /api/system/shipping/shipments
+router.get('/shipping/shipments', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const rows = db.prepare(`SELECT s.*, o.order_no, o.client_name FROM sys_shipments s LEFT JOIN sys_orders o ON o.id=s.order_id ORDER BY s.created_at DESC LIMIT 30`).all();
+    const stats = db.prepare(`SELECT status, COUNT(*) as c FROM sys_shipments GROUP BY status`).all();
+    res.json({ ok: true, shipments: rows, stats });
+  } catch(e) { res.json({ ok: true, shipments: [], stats: [] }); }
+});
+
+// PUT /api/system/shipping/shipments/:id/status
+router.put('/shipping/shipments/:id/status', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { status, notes } = req.body;
+    db.prepare('UPDATE sys_shipments SET status=?, notes=?, updated_at=datetime(\'now\') WHERE id=?').run(status, notes||'', req.params.id);
+    // Update order status too
+    const ship = db.prepare('SELECT * FROM sys_shipments WHERE id=?').get(req.params.id);
+    if (ship) {
+      const ordStatus = status === 'delivered' ? 'delivered' : status === 'returned' ? 'returned' : 'shipped';
+      db.prepare('UPDATE sys_orders SET status=? WHERE id=?').run(ordStatus, ship.order_id);
+    }
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// PRODUCT CATEGORIES
+// ============================================================
+router.get('/categories', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const rows = db.prepare('SELECT * FROM product_categories ORDER BY name').all();
+    res.json({ ok: true, categories: rows });
+  } catch(e) { res.json({ ok: true, categories: [] }); }
+});
+
+router.post('/categories', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { name } = req.body;
+    if (!name) return res.json({ ok: false, error: 'name required' });
+    const r = db.prepare('INSERT INTO product_categories (name) VALUES (?)').run(name.trim());
+    res.json({ ok: true, id: r.lastInsertRowid });
+  } catch(e) {
+    if (e.message.includes('UNIQUE')) return res.json({ ok: false, error: 'الفئة موجودة بالفعل' });
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+router.delete('/categories/:id', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    db.prepare('DELETE FROM product_categories WHERE id=?').run(req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// GET /api/system/products/check-name?name=xxx
+router.get('/products/check-name', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { name, exclude_id } = req.query;
+    if (!name) return res.json({ ok: true, exists: false });
+    let q = 'SELECT id FROM sys_products WHERE LOWER(name)=LOWER(?)';
+    const params = [name.trim()];
+    if (exclude_id) { q += ' AND id != ?'; params.push(parseInt(exclude_id)); }
+    const row = db.prepare(q).get(...params);
+    res.json({ ok: true, exists: !!row });
+  } catch(e) { res.json({ ok: true, exists: false }); }
+});
+
+// ============================================================
+// PRODUCT IMAGE UPLOAD
+// ============================================================
+const multer_prod = require('multer');
+const path_prod = require('path');
+const prodImgStorage = multer_prod.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path_prod.join(__dirname, '../public/uploads/products');
+    require('fs').mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path_prod.extname(file.originalname);
+    cb(null, 'prod-' + Date.now() + ext);
+  }
+});
+const prodUpload = multer_prod({ storage: prodImgStorage, limits: { fileSize: 3 * 1024 * 1024 } });
+
+router.post('/products/:id/image', requireAuth, prodUpload.single('image'), (req, res) => {
+  const db = req.db;
+  try {
+    if (!req.file) return res.json({ ok: false, error: 'no file' });
+    const url = '/uploads/products/' + req.file.filename;
+    db.prepare('UPDATE sys_products SET image_url=? WHERE id=?').run(url, req.params.id);
+    res.json({ ok: true, url });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// SHIPPING COMPANIES — شركات الشحن
+// ============================================================
+
+// GET /api/system/shipping/companies
+router.get('/shipping/companies', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const rows = db.prepare('SELECT * FROM shipping_companies ORDER BY is_default DESC, name ASC').all();
+    res.json({ ok: true, companies: rows });
+  } catch(e) { res.json({ ok: true, companies: [] }); }
+});
+
+// POST /api/system/shipping/companies
+router.post('/shipping/companies', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { name, name_en, logo_url, api_endpoint, api_key, api_secret, tracking_url_template, webhook_secret, is_default, notes } = req.body;
+    if (!name) return res.json({ ok: false, error: 'name required' });
+    if (is_default) db.prepare('UPDATE shipping_companies SET is_default=0').run();
+    const r = db.prepare(`INSERT INTO shipping_companies (name,name_en,logo_url,api_endpoint,api_key,api_secret,tracking_url_template,webhook_secret,is_default,notes)
+      VALUES (?,?,?,?,?,?,?,?,?,?)`).run(name,name_en||'',logo_url||'',api_endpoint||'',api_key||'',api_secret||'',
+      tracking_url_template||'',webhook_secret||'',is_default?1:0,notes||'');
+    res.json({ ok: true, id: r.lastInsertRowid });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// PUT /api/system/shipping/companies/:id
+router.put('/shipping/companies/:id', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { name, name_en, logo_url, api_endpoint, api_key, api_secret, tracking_url_template, webhook_secret, is_default, notes, active } = req.body;
+    if (is_default) db.prepare('UPDATE shipping_companies SET is_default=0').run();
+    db.prepare(`UPDATE shipping_companies SET name=COALESCE(?,name), name_en=COALESCE(?,name_en),
+      api_endpoint=COALESCE(?,api_endpoint), api_key=COALESCE(?,api_key), api_secret=COALESCE(?,api_secret),
+      tracking_url_template=COALESCE(?,tracking_url_template), webhook_secret=COALESCE(?,webhook_secret),
+      is_default=COALESCE(?,is_default), notes=COALESCE(?,notes), active=COALESCE(?,active)
+      WHERE id=?`).run(name||null,name_en||null,api_endpoint||null,api_key||null,api_secret||null,
+      tracking_url_template||null,webhook_secret||null,is_default!=null?is_default?1:0:null,
+      notes||null,active!=null?active?1:0:null,req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// DELETE /api/system/shipping/companies/:id
+router.delete('/shipping/companies/:id', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    db.prepare('DELETE FROM shipping_companies WHERE id=?').run(req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// POST /api/system/shipping/companies/:id/test — اختبار الـ API
+router.post('/shipping/companies/:id/test', requireAuth, async (req, res) => {
+  const db = req.db;
+  try {
+    const co = db.prepare('SELECT * FROM shipping_companies WHERE id=?').get(req.params.id);
+    if (!co) return res.json({ ok: false, error: 'not found' });
+    if (!co.api_endpoint || !co.api_key) return res.json({ ok: false, error: 'API endpoint/key not configured' });
+    const https = require('https');
+    const http = require('http');
+    const url = new URL(co.api_endpoint);
+    const mod = url.protocol === 'https:' ? https : http;
+    await new Promise((resolve) => {
+      const req2 = mod.request({ hostname: url.hostname, path: url.pathname, method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + co.api_key, 'Content-Type': 'application/json' }
+      }, (r) => { resolve(r.statusCode); });
+      req2.on('error', () => resolve(null));
+      req2.setTimeout(5000, () => { req2.destroy(); resolve(null); });
+      req2.end();
+    });
+    res.json({ ok: true, message: 'تم الاتصال بنجاح' });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// GET /api/system/shipping/shipments/:id
+router.get('/shipping/shipments/:id', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const s = db.prepare(`SELECT s.*, o.order_no, o.client_name as order_client, o.total as order_total,
+      o.status as order_status FROM sys_shipments s LEFT JOIN sys_orders o ON o.id=s.order_id WHERE s.id=?`).get(req.params.id);
+    if (!s) return res.json({ ok: false, error: 'not found' });
+    res.json({ ok: true, shipment: s });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// ORDER → INVOICE
+// ============================================================
+router.post('/orders/:id/to-invoice', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const ord = db.prepare('SELECT * FROM sys_orders WHERE id=?').get(req.params.id);
+    if (!ord) return res.json({ ok: false, error: 'الطلب غير موجود' });
+    if (ord.invoice_id) {
+      const inv = db.prepare('SELECT invoice_no FROM sys_invoices WHERE id=?').get(ord.invoice_id);
+      return res.json({ ok: true, invoice_id: ord.invoice_id, invoice_no: inv?.invoice_no, already_exists: true });
+    }
+
+    const { wallet_id, payment_method, items } = req.body;
+    const invoice_no = nextInvoiceNo(db);
+
+    // حساب الإجمالي من items أو من الأوردر
+    let invoiceItems = items || [];
+    const subtotal = invoiceItems.length
+      ? invoiceItems.reduce((s, it) => s + (+it.qty * +it.unit_price), 0)
+      : (ord.total || 0);
+    const total = subtotal;
+
+    const creatorId   = req.tenantUser ? req.tenantUser.id   : req.user.id;
+    const creatorName = req.tenantUser ? req.tenantUser.name : req.user.name;
+
+    const invId = db.transaction(() => {
+      const ins = db.prepare(`
+        INSERT INTO sys_invoices (invoice_no, contact_id, client_name, client_phone, client_email, client_address,
+          status, notes, subtotal, discount, tax, total, created_by_id, created_by_name)
+        VALUES (?,?,?,?,?,?,?,?,?,0,0,?,?,?)
+      `).run(invoice_no, ord.contact_id||null, ord.client_name, ord.client_phone||null,
+             ord.client_email||null, ord.client_address||null,
+             wallet_id ? 'paid' : 'sent',
+             ord.notes||null, subtotal, total, creatorId, creatorName||'');
+
+      const invInserted = ins.lastInsertRowid;
+
+      // إضافة الـ items
+      if (invoiceItems.length) {
+        const insItem = db.prepare('INSERT INTO sys_invoice_items (invoice_id,description,qty,unit_price,total,product_id) VALUES (?,?,?,?,?,?)');
+        invoiceItems.forEach(it => {
+          const itTotal = +it.qty * +it.unit_price;
+          insItem.run(invInserted, it.description||it.name||'', +it.qty, +it.unit_price, itTotal, it.product_id||null);
+          // خصم من المخزون (إلا لو POD من خامة العميل)
+          if (it.product_id && ord.order_type !== 'pod_client') {
+            const prod = db.prepare('SELECT * FROM sys_products WHERE id=?').get(it.product_id);
+            if (prod) {
+              const newQty = Math.max(0, prod.stock_qty - +it.qty);
+              db.prepare('UPDATE sys_products SET stock_qty=? WHERE id=?').run(newQty, it.product_id);
+              db.prepare(`INSERT INTO sys_stock_moves (product_id,type,qty,unit_cost,ref_type,ref_id,notes) VALUES (?,'out',?,?,'invoice',?,?)`)
+                .run(it.product_id, +it.qty, +it.unit_price, invInserted, 'فاتورة '+invoice_no);
+            }
+          }
+        });
+      }
+
+      // ربط الأوردر بالفاتورة
+      db.prepare('UPDATE sys_orders SET invoice_id=?, status=?, updated_at=datetime(\'now\') WHERE id=?').run(invInserted, 'preparing', ord.id);
+      db.prepare('INSERT INTO sys_order_logs (order_id,status,note) VALUES (?,?,?)').run(ord.id, 'preparing', 'تم تحويله لفاتورة: '+invoice_no);
+
+      // دفع إلى خزينة
+      if (wallet_id) {
+        db.prepare(`INSERT INTO sys_transactions (wallet_id,type,amount,description,ref_type,ref_id,date) VALUES (?,?,?,?,?,?,date('now'))`)
+          .run(parseInt(wallet_id), 'in', total, 'فاتورة: '+invoice_no+' — '+ord.client_name, 'invoice', invInserted);
+        db.prepare('UPDATE sys_wallets SET balance=balance+? WHERE id=?').run(total, parseInt(wallet_id));
+        db.prepare('UPDATE sys_invoices SET paid_at=datetime(\'now\') WHERE id=?').run(invInserted);
+      }
+
+      // CRM note
+      if (ord.contact_id) {
+        db.prepare("INSERT INTO crm_notes (contact_id,content) VALUES (?,?)").run(ord.contact_id, 'فاتورة من أوردر: '+invoice_no+' — '+total+' ج.م');
+      }
+
+      return invInserted;
+    })();
+
+    res.json({ ok: true, invoice_id: invId, invoice_no });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// POST /api/system/orders/:id/to-production
+router.post('/orders/:id/to-production', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { production_notes, production_supplier, production_due_date } = req.body;
+    const ord = db.prepare('SELECT * FROM sys_orders WHERE id=?').get(req.params.id);
+    if (!ord) return res.json({ ok: false, error: 'not found' });
+    db.prepare(`UPDATE sys_orders SET status='in_production', production_notes=COALESCE(?,production_notes),
+      production_supplier=COALESCE(?,production_supplier), production_due_date=COALESCE(?,production_due_date),
+      updated_at=datetime('now') WHERE id=?`).run(production_notes||null, production_supplier||null, production_due_date||null, ord.id);
+    db.prepare('INSERT INTO sys_order_logs (order_id,status,note) VALUES (?,?,?)').run(ord.id, 'in_production', 'تم إرساله للإنتاج'+(production_supplier?' — '+production_supplier:''));
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// POST /api/system/orders/:id/ready
+router.post('/orders/:id/ready', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const ord = db.prepare('SELECT * FROM sys_orders WHERE id=?').get(req.params.id);
+    if (!ord) return res.json({ ok: false, error: 'not found' });
+    db.prepare("UPDATE sys_orders SET status='ready', updated_at=datetime('now') WHERE id=?").run(ord.id);
+    db.prepare('INSERT INTO sys_order_logs (order_id,status,note) VALUES (?,?,?)').run(ord.id, 'ready', 'جاهز للشحن');
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// POST /api/system/suppliers/:id/link-person
+router.post('/suppliers/:id/link-person', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { person_id } = req.body;
+    db.prepare('UPDATE sys_suppliers SET person_id=? WHERE id=?').run(person_id, req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// INBOX MEDIA UPLOAD
+// ============================================================
+const inboxMediaStorage = require('multer').diskStorage({
+  destination: (req, file, cb) => {
+    const dir = require('path').join(__dirname, '../public/uploads/inbox');
+    require('fs').mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = require('path').extname(file.originalname);
+    cb(null, 'media-' + Date.now() + '-' + Math.random().toString(36).slice(2,8) + ext);
+  }
+});
+const inboxUpload = require('multer')({
+  storage: inboxMediaStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    const allowed = /\.(jpg|jpeg|png|gif|webp|mp4|mp3|ogg|wav|pdf|doc|docx|xls|xlsx)$/i;
+    cb(null, allowed.test(file.originalname));
+  }
+});
+
+// POST /api/system/inbox/upload-media
+router.post('/inbox/upload-media', requireAuth, inboxUpload.single('file'), (req, res) => {
+  if (!req.file) return res.json({ ok: false, error: 'no file or invalid type' });
+  const url = '/uploads/inbox/' + req.file.filename;
+  const mimeType = req.file.mimetype;
+  const mediaType = mimeType.startsWith('image/') ? 'image'
+    : mimeType.startsWith('video/') ? 'video'
+    : mimeType.startsWith('audio/') ? 'audio'
+    : 'file';
+  res.json({ ok: true, url, media_type: mediaType, original_name: req.file.originalname, size: req.file.size });
+});
+
+// POST /api/system/inbox/send-media — إرسال media في محادثة
+router.post('/inbox/send-media', requireAuth, async (req, res) => {
+  const db = req.db;
+  try {
+    const { conversation_id, media_url, media_type, caption, original_name } = req.body;
+    if (!conversation_id || !media_url) return res.json({ ok: false, error: 'missing fields' });
+    const conv = db.prepare('SELECT * FROM inbox_conversations WHERE id=?').get(conversation_id);
+    if (!conv) return res.json({ ok: false, error: 'conversation not found' });
+    const content = caption || original_name || '[مرفق]';
+    
+    // Ensure media columns exist
+    try {
+      const cols = db.prepare("PRAGMA table_info(inbox_messages)").all().map(c => c.name);
+      if (!cols.includes('media_url'))  db.prepare("ALTER TABLE inbox_messages ADD COLUMN media_url TEXT").run();
+      if (!cols.includes('media_type')) db.prepare("ALTER TABLE inbox_messages ADD COLUMN media_type TEXT").run();
+      if (!cols.includes('file_id'))    db.prepare("ALTER TABLE inbox_messages ADD COLUMN file_id TEXT").run();
+    } catch(e) {}
+    
+    db.prepare('INSERT INTO inbox_messages (conversation_id, platform, direction, content, message_type, platform_msg_id, media_url, media_type) VALUES (?,?,?,?,?,?,?,?)')
+      .run(conversation_id, conv.platform, 'out', content, media_type || 'file', media_url, media_url, media_type || 'file');
+    db.prepare("UPDATE inbox_conversations SET last_message=?, last_message_at=datetime('now') WHERE id=?").run(content, conversation_id);
+    
+    // Actually send via platform API
+    let sendResult = { sent: false, error: null };
+    const settings = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get();
+    
+    if (conv.platform === 'telegram' && settings && settings.telegram_token && settings.telegram_active) {
+      try {
+        const https = require('https');
+        const chatId = conv.sender_id;
+        
+        // Build absolute URL for Telegram (if relative, prepend server base)
+        let absoluteUrl = media_url;
+        if (media_url.startsWith('/')) {
+          absoluteUrl = `https://npiihpds.gensparkclaw.com${media_url}`;
+        }
+        
+        // Choose correct Telegram method based on media_type
+        let tgMethod = 'sendDocument';
+        let tgField = 'document';
+        if (media_type === 'image') { tgMethod = 'sendPhoto'; tgField = 'photo'; }
+        else if (media_type === 'audio') { tgMethod = 'sendAudio'; tgField = 'audio'; }
+        else if (media_type === 'video') { tgMethod = 'sendVideo'; tgField = 'video'; }
+        
+        const tgUrl = `https://api.telegram.org/bot${settings.telegram_token}/${tgMethod}`;
+        const tgPayload = { chat_id: chatId, [tgField]: absoluteUrl };
+        if (caption) tgPayload.caption = caption;
+        
+        const payload = JSON.stringify(tgPayload);
+        await new Promise((resolve) => {
+          const urlObj = new URL(tgUrl);
+          const options = {
+            hostname: urlObj.hostname,
+            path: urlObj.pathname,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+          };
+          const reqHttp = https.request(options, (r) => {
+            let data = '';
+            r.on('data', chunk => data += chunk);
+            r.on('end', () => {
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.ok) { sendResult.sent = true; }
+                else { sendResult.error = parsed.description || 'Telegram error'; }
+              } catch(e) { sendResult.error = 'parse error'; }
+              resolve();
+            });
+          });
+          reqHttp.on('error', (e) => { sendResult.error = e.message; resolve(); });
+          reqHttp.write(payload);
+          reqHttp.end();
+        });
+      } catch(e) {
+        sendResult.error = e.message;
+      }
+    }
+    
+    res.json({ ok: true, sent: sendResult.sent, note: sendResult.error || null });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// INBOX AUTO-MESSAGES (Welcome + Away)
+// ============================================================
+router.get('/inbox/auto-messages', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    let s = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get();
+    if (!s) { db.prepare('INSERT OR IGNORE INTO inbox_settings (id) VALUES (1)').run(); s = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get(); }
+    res.json({ ok: true, settings: {
+      welcome_active: s.welcome_active || 0,
+      welcome_message: s.welcome_message || '',
+      away_active: s.away_active || 0,
+      away_message: s.away_message || '',
+      away_start: s.away_start || '22:00',
+      away_end: s.away_end || '09:00'
+    }});
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+router.post('/inbox/auto-messages', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { welcome_active, welcome_message, away_active, away_message, away_start, away_end } = req.body;
+    db.prepare('INSERT OR IGNORE INTO inbox_settings (id) VALUES (1)').run();
+    db.prepare(`UPDATE inbox_settings SET welcome_active=?, welcome_message=?, away_active=?, away_message=?, away_start=?, away_end=? WHERE id=1`)
+      .run(welcome_active?1:0, welcome_message||'', away_active?1:0, away_message||'', away_start||'22:00', away_end||'09:00');
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// INBOX LABELS
+// ============================================================
+router.get('/inbox/labels', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const rows = db.prepare('SELECT * FROM inbox_labels ORDER BY name').all();
+    res.json({ ok: true, labels: rows });
+  } catch(e) { res.json({ ok: true, labels: [] }); }
+});
+router.post('/inbox/labels', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { name, color } = req.body;
+    if (!name) return res.json({ ok: false, error: 'name required' });
+    const r = db.prepare('INSERT INTO inbox_labels (name, color) VALUES (?,?)').run(name, color||'#1B5E30');
+    res.json({ ok: true, id: r.lastInsertRowid });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+router.delete('/inbox/labels/:id', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    db.prepare('DELETE FROM inbox_labels WHERE id=?').run(req.params.id);
+    db.prepare('DELETE FROM inbox_conversation_labels WHERE label_id=?').run(req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+// GET/POST labels on conversation
+router.get('/inbox/conversations/:id/labels', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const rows = db.prepare('SELECT l.* FROM inbox_labels l JOIN inbox_conversation_labels cl ON cl.label_id=l.id WHERE cl.conversation_id=?').all(req.params.id);
+    res.json({ ok: true, labels: rows });
+  } catch(e) { res.json({ ok: true, labels: [] }); }
+});
+router.post('/inbox/conversations/:id/labels/:labelId', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    db.prepare('INSERT OR IGNORE INTO inbox_conversation_labels (conversation_id, label_id) VALUES (?,?)').run(req.params.id, req.params.labelId);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+router.delete('/inbox/conversations/:id/labels/:labelId', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    db.prepare('DELETE FROM inbox_conversation_labels WHERE conversation_id=? AND label_id=?').run(req.params.id, req.params.labelId);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// INBOX INTERNAL NOTES
+// ============================================================
+router.get('/inbox/conversations/:id/notes', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const notes = db.prepare('SELECT n.*, u.name as author_name FROM inbox_notes n LEFT JOIN tenant_users u ON u.id=n.author_id WHERE n.conversation_id=? ORDER BY n.created_at DESC').all(req.params.id);
+    res.json({ ok: true, notes });
+  } catch(e) { res.json({ ok: true, notes: [] }); }
+});
+router.post('/inbox/conversations/:id/notes', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { content } = req.body;
+    if (!content) return res.json({ ok: false, error: 'content required' });
+    const authorId = req.tenantUser ? req.tenantUser.id : req.user.id;
+    const r = db.prepare('INSERT INTO inbox_notes (conversation_id, content, author_id) VALUES (?,?,?)').run(req.params.id, content, authorId);
+    res.json({ ok: true, id: r.lastInsertRowid });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// INBOX ASSIGNMENT
+// ============================================================
+router.post('/inbox/conversations/:id/assign', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { user_id, user_name } = req.body;
+    db.prepare('UPDATE inbox_conversations SET assigned_to_id=?, assigned_to_name=? WHERE id=?').run(user_id||null, user_name||null, req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// INBOX KEYWORD AUTO-REPLY
+// ============================================================
+router.get('/inbox/keywords', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const rows = db.prepare('SELECT * FROM inbox_keywords ORDER BY keyword').all();
+    res.json({ ok: true, keywords: rows });
+  } catch(e) { res.json({ ok: true, keywords: [] }); }
+});
+router.post('/inbox/keywords', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { keyword, reply, active } = req.body;
+    if (!keyword || !reply) return res.json({ ok: false, error: 'keyword and reply required' });
+    const r = db.prepare('INSERT INTO inbox_keywords (keyword, reply, active) VALUES (?,?,?)').run(keyword.trim(), reply, active!==false?1:0);
+    res.json({ ok: true, id: r.lastInsertRowid });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+router.put('/inbox/keywords/:id', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { keyword, reply, active } = req.body;
+    db.prepare('UPDATE inbox_keywords SET keyword=COALESCE(?,keyword), reply=COALESCE(?,reply), active=COALESCE(?,active) WHERE id=?').run(keyword||null, reply||null, active!=null?active?1:0:null, req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+router.delete('/inbox/keywords/:id', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    db.prepare('DELETE FROM inbox_keywords WHERE id=?').run(req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// INBOX BROADCAST
+// ============================================================
+router.get('/inbox/broadcasts', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const rows = db.prepare('SELECT * FROM inbox_broadcasts ORDER BY created_at DESC LIMIT 20').all();
+    res.json({ ok: true, broadcasts: rows });
+  } catch(e) { res.json({ ok: true, broadcasts: [] }); }
+});
+
+router.post('/inbox/broadcasts', requireAuth, async (req, res) => {
+  const db = req.db;
+  try {
+    const { title: rawTitle, name: rawName, message, platform, audience, scheduled_at } = req.body;
+    const title = rawTitle || rawName;
+    if (!title || !message) return res.json({ ok: false, error: 'title and message required' });
+    // audience: 'all' | 'clients' | 'vip' | custom array of contact_ids
+    const r = db.prepare('INSERT INTO inbox_broadcasts (title, message, platform, audience, status, scheduled_at) VALUES (?,?,?,?,?,?)')
+      .run(title, message, platform||'telegram', JSON.stringify(audience||'all'), 'draft', scheduled_at||null);
+    res.json({ ok: true, id: r.lastInsertRowid });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+router.post('/inbox/broadcasts/:id/send', requireAuth, async (req, res) => {
+  const db = req.db;
+  try {
+    const broadcast = db.prepare('SELECT * FROM inbox_broadcasts WHERE id=?').get(req.params.id);
+    if (!broadcast) return res.json({ ok: false, error: 'not found' });
+    const settings = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get();
+    if (!settings || !settings.telegram_token) return res.json({ ok: false, error: 'تيليجرام غير مفعّل' });
+    // Get audience conversations
+    let conversations = db.prepare("SELECT * FROM inbox_conversations WHERE platform='telegram'").all();
+    if (broadcast.audience !== 'all' && broadcast.audience !== '"all"') {
+      try {
+        const aud = JSON.parse(broadcast.audience);
+        if (Array.isArray(aud)) conversations = conversations.filter(c => aud.includes(c.id));
+      } catch(e) {}
+    }
+    let sent = 0; let failed = 0;
+    const https = require('https');
+    for (const conv of conversations) {
+      try {
+        await new Promise((resolve) => {
+          const payload = JSON.stringify({ chat_id: conv.sender_id, text: broadcast.message });
+          const req2 = https.request({
+            hostname: 'api.telegram.org', path: '/bot'+settings.telegram_token+'/sendMessage',
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+          }, (r2) => { r2.on('data',()=>{}); r2.on('end', resolve); });
+          req2.on('error', () => { failed++; resolve(); });
+          req2.write(payload); req2.end();
+        });
+        sent++;
+      } catch(e) { failed++; }
+    }
+    db.prepare('UPDATE inbox_broadcasts SET status=?, sent_count=?, failed_count=?, sent_at=datetime(\'now\') WHERE id=?')
+      .run('sent', sent, failed, broadcast.id);
+    res.json({ ok: true, sent, failed, total: conversations.length });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// INBOX CHATBOT
+// ============================================================
+router.get('/inbox/chatbot', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const flows = db.prepare('SELECT * FROM inbox_chatbot_flows ORDER BY id').all();
+    const settings = db.prepare('SELECT chatbot_active, chatbot_trigger FROM inbox_settings WHERE id=1').get();
+    res.json({ ok: true, flows, active: settings?.chatbot_active||0, trigger: settings?.chatbot_trigger||'' });
+  } catch(e) { res.json({ ok: true, flows: [], active: 0, trigger: '' }); }
+});
+
+router.post('/inbox/chatbot/flow', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { trigger_text, response_text, is_start, parent_id } = req.body;
+    const r = db.prepare('INSERT INTO inbox_chatbot_flows (trigger_text, response_text, is_start, parent_id) VALUES (?,?,?,?)')
+      .run(trigger_text||'', response_text||'', is_start?1:0, parent_id||null);
+    res.json({ ok: true, id: r.lastInsertRowid });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+router.delete('/inbox/chatbot/flow/:id', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    db.prepare('DELETE FROM inbox_chatbot_flows WHERE id=? OR parent_id=?').run(req.params.id, req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+router.post('/inbox/chatbot/settings', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { active, trigger } = req.body;
+    db.prepare('INSERT OR IGNORE INTO inbox_settings (id) VALUES (1)').run();
+    db.prepare('UPDATE inbox_settings SET chatbot_active=?, chatbot_trigger=? WHERE id=1').run(active?1:0, trigger||'');
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// INBOX ANALYTICS
+// ============================================================
+router.get('/inbox/analytics', requireAuth, (req, res) => {
+  const db = req.db;
+  if (!db) return res.json({ ok: false, error: 'no tenant db' });
+  try {
+    const { from, to } = req.query;
+    let where = "WHERE 1=1";
+    if (from) where += ` AND date(created_at) >= '${from}'`;
+    if (to)   where += ` AND date(created_at) <= '${to}'`;
+
+    const totalConvs    = db.prepare(`SELECT COUNT(*) as c FROM inbox_conversations ${where}`).get().c;
+    const totalMessages = db.prepare(`SELECT COUNT(*) as c FROM inbox_messages ${where}`).get().c;
+    const inMessages    = db.prepare(`SELECT COUNT(*) as c FROM inbox_messages ${where} AND direction='in'`).get().c;
+    const outMessages   = db.prepare(`SELECT COUNT(*) as c FROM inbox_messages ${where} AND direction='out'`).get().c;
+    const byPlatform    = db.prepare(`SELECT platform, COUNT(*) as c FROM inbox_conversations ${where} GROUP BY platform`).all();
+    const newContacts   = db.prepare(`SELECT COUNT(*) as c FROM inbox_conversations ${where} AND lead_id IS NOT NULL`).get().c;
+    // Daily messages last 7 days
+    const daily = db.prepare(`SELECT date(sent_at) as day, COUNT(*) as c FROM inbox_messages WHERE date(sent_at) >= date('now','-7 days') GROUP BY day ORDER BY day ASC`).all();
+
+    res.json({ ok: true, analytics: {
+      total_conversations: totalConvs,
+      total_messages: totalMessages,
+      incoming: inMessages,
+      outgoing: outMessages,
+      by_platform: byPlatform,
+      converted_to_lead: newContacts,
+      daily_last_7_days: daily
+    }});
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// INBOX AUTOMATION RULES (Phase 3)
+// ============================================================
+router.get('/inbox/automation-rules', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    // Ensure table exists
+    db.prepare(`CREATE TABLE IF NOT EXISTS inbox_automation_rules (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT,
+      active INTEGER DEFAULT 1,
+      priority INTEGER DEFAULT 0,
+      condition_type TEXT,
+      condition_value TEXT,
+      condition_field TEXT DEFAULT 'message',
+      platform TEXT DEFAULT 'all',
+      action_type TEXT,
+      action_value TEXT,
+      created_at DATETIME DEFAULT (datetime('now'))
+    )`).run();
+    const rules = db.prepare('SELECT * FROM inbox_automation_rules ORDER BY priority DESC, id ASC').all();
+    res.json({ ok: true, rules });
+  } catch(e) { res.json({ ok: true, rules: [] }); }
+});
+
+router.post('/inbox/automation-rules', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    db.prepare(`CREATE TABLE IF NOT EXISTS inbox_automation_rules (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT,
+      active INTEGER DEFAULT 1,
+      priority INTEGER DEFAULT 0,
+      condition_type TEXT,
+      condition_value TEXT,
+      condition_field TEXT DEFAULT 'message',
+      platform TEXT DEFAULT 'all',
+      action_type TEXT,
+      action_value TEXT,
+      created_at DATETIME DEFAULT (datetime('now'))
+    )`).run();
+    const { name, condition_type, condition_value, condition_field, platform, action_type, action_value, priority } = req.body;
+    if (!name || !action_type) return res.json({ ok: false, error: 'name and action_type required' });
+    const r = db.prepare(`INSERT INTO inbox_automation_rules 
+      (name, active, priority, condition_type, condition_value, condition_field, platform, action_type, action_value)
+      VALUES (?,1,?,?,?,?,?,?,?)`)
+      .run(name, priority||0, condition_type||'contains', condition_value||'', condition_field||'message', platform||'all', action_type, action_value||'');
+    res.json({ ok: true, id: r.lastInsertRowid });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+router.put('/inbox/automation-rules/:id', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { active, name, condition_type, condition_value, condition_field, platform, action_type, action_value, priority } = req.body;
+    if (active !== undefined) {
+      db.prepare('UPDATE inbox_automation_rules SET active=? WHERE id=?').run(active?1:0, req.params.id);
+    } else {
+      db.prepare(`UPDATE inbox_automation_rules SET name=?, condition_type=?, condition_value=?, condition_field=?, platform=?, action_type=?, action_value=?, priority=? WHERE id=?`)
+        .run(name, condition_type, condition_value, condition_field||'message', platform||'all', action_type, action_value, priority||0, req.params.id);
+    }
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+router.delete('/inbox/automation-rules/:id', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    db.prepare('DELETE FROM inbox_automation_rules WHERE id=?').run(req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// INBOX TEMPLATES WITH VARIABLES (Phase 3b)
+// ============================================================
+router.post('/inbox/templates/render', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { template_id, conversation_id } = req.body;
+    const tmpl = db.prepare('SELECT * FROM inbox_templates WHERE id=?').get(template_id);
+    if (!tmpl) return res.json({ ok: false, error: 'template not found' });
+    let text = tmpl.content;
+    // Get context for variable substitution
+    const profile = db.prepare('SELECT * FROM tenant_profile WHERE id=1').get() || {};
+    const conv = conversation_id ? db.prepare('SELECT * FROM inbox_conversations WHERE id=?').get(conversation_id) : null;
+    const vars = {
+      customer_name: conv?.sender_name || 'عزيزي العميل',
+      company_name: profile.company_name || 'أريج',
+      agent_name: 'فريق خدمة العملاء',
+      order_no: '',
+      invoice_no: ''
+    };
+    // If conv has lead_id, try to get order info
+    if (conv?.lead_id) {
+      try {
+        const lastOrder = db.prepare('SELECT * FROM sys_orders WHERE contact_id=? ORDER BY id DESC LIMIT 1').get(conv.lead_id);
+        if (lastOrder) vars.order_no = lastOrder.order_no;
+        const lastInv = db.prepare('SELECT * FROM sys_invoices WHERE contact_id=? ORDER BY id DESC LIMIT 1').get(conv.lead_id);
+        if (lastInv) vars.invoice_no = lastInv.invoice_no;
+      } catch(e) {}
+    }
+    // Replace variables
+    Object.keys(vars).forEach(k => {
+      text = text.replace(new RegExp('{{\\s*' + k + '\\s*}}', 'gi'), vars[k]);
+    });
+    res.json({ ok: true, text });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// INBOX AGENT STATUS (Phase 5)
+// ============================================================
+router.get('/inbox/agent-status', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    db.prepare(`CREATE TABLE IF NOT EXISTS inbox_agent_status (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      user_name TEXT,
+      status TEXT DEFAULT 'online',
+      updated_at DATETIME DEFAULT (datetime('now'))
+    )`).run();
+    const statuses = db.prepare('SELECT * FROM inbox_agent_status ORDER BY updated_at DESC').all();
+    res.json({ ok: true, statuses });
+  } catch(e) { res.json({ ok: true, statuses: [] }); }
+});
+
+router.post('/inbox/agent-status', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    db.prepare(`CREATE TABLE IF NOT EXISTS inbox_agent_status (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      user_name TEXT,
+      status TEXT DEFAULT 'online',
+      updated_at DATETIME DEFAULT (datetime('now'))
+    )`).run();
+    const { status } = req.body; // online | away | busy | offline
+    const userId = req.user.id;
+    const userName = req.user.name || req.user.email;
+    const existing = db.prepare('SELECT id FROM inbox_agent_status WHERE user_id=?').get(userId);
+    if (existing) {
+      db.prepare("UPDATE inbox_agent_status SET status=?, updated_at=datetime('now') WHERE user_id=?").run(status||'online', userId);
+    } else {
+      db.prepare('INSERT INTO inbox_agent_status (user_id, user_name, status) VALUES (?,?,?)').run(userId, userName, status||'online');
+    }
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// INBOX QUEUE (Phase 5b)
+// ============================================================
+router.get('/inbox/queue', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    // Conversations that are open and unassigned
+    const queued = db.prepare(`
+      SELECT c.*, 
+        ROUND((julianday('now') - julianday(c.last_message_at)) * 24 * 60) as wait_minutes
+      FROM inbox_conversations c
+      WHERE (c.status = 'open' OR c.status IS NULL)
+      AND (c.assigned_to_id IS NULL OR c.assigned_to_id = 0)
+      ORDER BY c.last_message_at ASC
+      LIMIT 50
+    `).all();
+    res.json({ ok: true, queue: queued });
+  } catch(e) { res.json({ ok: true, queue: [] }); }
+});
+
+// ============================================================
+// INBOX BROADCAST CAMPAIGNS (Phase 7)
+// ============================================================
+router.get('/inbox/broadcasts', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const campaigns = db.prepare('SELECT * FROM inbox_broadcasts ORDER BY created_at DESC LIMIT 30').all();
+    res.json({ ok: true, campaigns });
+  } catch(e) { res.json({ ok: true, campaigns: [] }); }
+});
+
+router.post('/inbox/broadcasts', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    // Ensure columns
+    try {
+      const cols = db.prepare('PRAGMA table_info(inbox_broadcasts)').all().map(c => c.name);
+      if (!cols.includes('sent_count')) db.prepare('ALTER TABLE inbox_broadcasts ADD COLUMN sent_count INTEGER DEFAULT 0').run();
+      if (!cols.includes('failed_count')) db.prepare('ALTER TABLE inbox_broadcasts ADD COLUMN failed_count INTEGER DEFAULT 0').run();
+      if (!cols.includes('status')) db.prepare('ALTER TABLE inbox_broadcasts ADD COLUMN status TEXT DEFAULT "draft"').run();
+    } catch(e) {}
+    
+    const { name, message, platform, target_filter } = req.body;
+    if (!name || !message) return res.json({ ok: false, error: 'name and message required' });
+    const r = db.prepare(`INSERT INTO inbox_broadcasts (name, message, platform, target_filter, status, created_at) VALUES (?,?,?,?,"draft",datetime('now'))`)
+      .run(name, message, platform||'telegram', target_filter||'all');
+    res.json({ ok: true, id: r.lastInsertRowid });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+router.post('/inbox/broadcasts/:id/send', requireAuth, async (req, res) => {
+  const db = req.db;
+  try {
+    // Ensure columns
+    try {
+      const cols = db.prepare('PRAGMA table_info(inbox_broadcasts)').all().map(c => c.name);
+      if (!cols.includes('sent_count')) db.prepare('ALTER TABLE inbox_broadcasts ADD COLUMN sent_count INTEGER DEFAULT 0').run();
+      if (!cols.includes('failed_count')) db.prepare('ALTER TABLE inbox_broadcasts ADD COLUMN failed_count INTEGER DEFAULT 0').run();
+      if (!cols.includes('status')) db.prepare('ALTER TABLE inbox_broadcasts ADD COLUMN status TEXT DEFAULT "draft"').run();
+    } catch(e) {}
+    
+    const campaign = db.prepare('SELECT * FROM inbox_broadcasts WHERE id=?').get(req.params.id);
+    if (!campaign) return res.json({ ok: false, error: 'campaign not found' });
+    
+    const settings = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get();
+    if (!settings?.telegram_token) return res.json({ ok: false, error: 'Telegram not configured' });
+    
+    // Get target conversations
+    let query = 'SELECT * FROM inbox_conversations WHERE status="open" OR status IS NULL';
+    if (campaign.platform && campaign.platform !== 'all') {
+      query += ` AND platform="${campaign.platform}"`;
+    }
+    const conversations = db.prepare(query).all();
+    
+    db.prepare('UPDATE inbox_broadcasts SET status="sending" WHERE id=?').run(campaign.id);
+    
+    let sent = 0, failed = 0;
+    const https = require('https');
+    
+    for (const conv of conversations) {
+      if (conv.platform !== 'telegram') continue;
+      try {
+        const payload = JSON.stringify({ chat_id: conv.sender_id, text: campaign.message });
+        await new Promise((resolve) => {
+          const opts = { hostname:'api.telegram.org', path:'/bot'+settings.telegram_token+'/sendMessage', method:'POST', headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(payload)} };
+          const reqH = https.request(opts, (r) => {
+            let data = ''; r.on('data', c => data+=c);
+            r.on('end', () => { try { if(JSON.parse(data).ok) sent++; else failed++; } catch(e) { failed++; } resolve(); });
+          });
+          reqH.on('error', () => { failed++; resolve(); });
+          reqH.write(payload); reqH.end();
+        });
+        // Small delay to avoid rate limiting
+        await new Promise(r => setTimeout(r, 100));
+      } catch(e) { failed++; }
+    }
+    
+    db.prepare('UPDATE inbox_broadcasts SET status="sent", sent_count=?, failed_count=?, sent_at=datetime(\'now\') WHERE id=?').run(sent, failed, campaign.id);
+    res.json({ ok: true, sent, failed, total: conversations.length });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// INBOX ANALYTICS ENHANCED (Phase 6)
+// ============================================================
+router.get('/inbox/analytics/advanced', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const days = parseInt(req.query.days) || 30;
+    
+    // Total conversations
+    const totalConvs = db.prepare(`SELECT COUNT(*) as c FROM inbox_conversations WHERE last_message_at >= datetime('now', '-${days} days')`).get()?.c || 0;
+    
+    // By platform
+    const byPlatform = db.prepare(`SELECT platform, COUNT(*) as count FROM inbox_conversations WHERE last_message_at >= datetime('now', '-${days} days') GROUP BY platform`).all();
+    
+    // Average response time (minutes)
+    const avgResponseTime = db.prepare(`
+      SELECT AVG(diff_minutes) as avg_mins FROM (
+        SELECT m_in.conversation_id,
+          MIN(ROUND((julianday(m_out.sent_at) - julianday(m_in.sent_at)) * 24 * 60)) as diff_minutes
+        FROM inbox_messages m_in
+        JOIN inbox_messages m_out ON m_out.conversation_id = m_in.conversation_id
+          AND m_out.direction = 'out'
+          AND m_out.sent_at > m_in.sent_at
+        WHERE m_in.direction = 'in'
+          AND m_in.sent_at >= datetime('now', '-${days} days')
+        GROUP BY m_in.id
+      )
+    `).get()?.avg_mins || 0;
+    
+    // Messages count
+    const totalMessages = db.prepare(`SELECT COUNT(*) as c FROM inbox_messages WHERE sent_at >= datetime('now', '-${days} days')`).get()?.c || 0;
+    const inMessages = db.prepare(`SELECT COUNT(*) as c FROM inbox_messages WHERE direction='in' AND sent_at >= datetime('now', '-${days} days')`).get()?.c || 0;
+    const outMessages = db.prepare(`SELECT COUNT(*) as c FROM inbox_messages WHERE direction='out' AND sent_at >= datetime('now', '-${days} days')`).get()?.c || 0;
+    
+    // Daily trend
+    const dailyTrend = db.prepare(`
+      SELECT DATE(last_message_at) as date, COUNT(*) as conversations
+      FROM inbox_conversations
+      WHERE last_message_at >= datetime('now', '-${days} days')
+      GROUP BY DATE(last_message_at)
+      ORDER BY date ASC
+    `).all();
+    
+    // Top keywords from messages
+    const recentMessages = db.prepare(`SELECT content FROM inbox_messages WHERE direction='in' AND sent_at >= datetime('now', '-${days} days') LIMIT 500`).all();
+    const wordFreq = {};
+    const stopWords = new Set(['في','من','على','إلى','عن','هل','أنا','ما','لا','نعم','ان','التي','الذي','هذا','هذه','مع']);
+    recentMessages.forEach(m => {
+      if (!m.content) return;
+      m.content.split(/\s+/).forEach(w => {
+        const word = w.replace(/[^\u0600-\u06FF]/g, '').trim();
+        if (word.length > 2 && !stopWords.has(word)) {
+          wordFreq[word] = (wordFreq[word] || 0) + 1;
+        }
+      });
+    });
+    const topKeywords = Object.entries(wordFreq).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([word,count])=>({word,count}));
+    
+    // Open vs closed
+    const statusBreakdown = db.prepare(`SELECT COALESCE(status,'open') as status, COUNT(*) as count FROM inbox_conversations GROUP BY COALESCE(status,'open')`).all();
+    
+    res.json({ ok: true, analytics: {
+      period_days: days,
+      total_conversations: totalConvs,
+      total_messages: totalMessages,
+      incoming_messages: inMessages,
+      outgoing_messages: outMessages,
+      avg_response_minutes: Math.round(avgResponseTime),
+      by_platform: byPlatform,
+      daily_trend: dailyTrend,
+      top_keywords: topKeywords,
+      status_breakdown: statusBreakdown
+    }});
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// INBOX CONTACT NOTES (Internal - Phase 4)
+// ============================================================
+router.get('/inbox/conversations/:id/notes', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const notes = db.prepare('SELECT * FROM inbox_notes WHERE conversation_id=? ORDER BY created_at DESC').all(req.params.id);
+    res.json({ ok: true, notes });
+  } catch(e) { res.json({ ok: true, notes: [] }); }
+});
+
+router.post('/inbox/conversations/:id/notes', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { content } = req.body;
+    if (!content) return res.json({ ok: false, error: 'content required' });
+    // Ensure table has user columns
+    try {
+      const cols = db.prepare('PRAGMA table_info(inbox_notes)').all().map(c=>c.name);
+      if (!cols.includes('user_name')) db.prepare('ALTER TABLE inbox_notes ADD COLUMN user_name TEXT').run();
+    } catch(e) {}
+    const r = db.prepare("INSERT INTO inbox_notes (conversation_id, content, user_name, created_at) VALUES (?,?,?,datetime('now'))")
+      .run(req.params.id, content, req.user?.name || req.user?.email || 'أنت');
+    res.json({ ok: true, id: r.lastInsertRowid });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+router.delete('/inbox/conversations/:id/notes/:noteId', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    db.prepare('DELETE FROM inbox_notes WHERE id=? AND conversation_id=?').run(req.params.noteId, req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ============================================================
+// INBOX VOICE NOTE UPLOAD (Phase 1d)
+// ============================================================
+router.post('/inbox/upload-voice', requireAuth, (req, res) => {
+  // Handled by multer inboxUpload - same as upload-media but forced audio type
+  inboxUpload.single('audio')(req, res, (err) => {
+    if (err || !req.file) return res.json({ ok: false, error: err?.message || 'no file' });
+    const url = '/uploads/inbox/' + req.file.filename;
+    res.json({ ok: true, url, media_type: 'audio', original_name: req.file.originalname });
+  });
+});
+
+module.exports = router;
+module.exports.publicOrderRouter = publicRouter;
+
+// ============================================================
+// INBOX CONVERSATION STATUS + SEARCH
+// ============================================================
+
+// PUT /api/system/inbox/conversations/:id/status
+router.put('/inbox/conversations/:id/status', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { status } = req.body; // open | closed | waiting
+    if (!['open','closed','waiting'].includes(status)) return res.json({ ok:false, error:'invalid status' });
+    db.prepare('UPDATE inbox_conversations SET status=? WHERE id=?').run(status, req.params.id);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// GET /api/system/inbox/search?q=xxx
+router.get('/inbox/search', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const q = (req.query.q || '').trim();
+    if (q.length < 2) return res.json({ ok:true, results:[] });
+    const messages = db.prepare(`
+      SELECT m.*, c.sender_name, c.platform
+      FROM inbox_messages m
+      JOIN inbox_conversations c ON c.id = m.conversation_id
+      WHERE m.content LIKE ?
+      ORDER BY m.sent_at DESC LIMIT 20
+    `).all('%'+q+'%');
+    const convs = db.prepare(`
+      SELECT * FROM inbox_conversations
+      WHERE sender_name LIKE ? OR sender_id LIKE ?
+      ORDER BY last_message_at DESC LIMIT 10
+    `).all('%'+q+'%', '%'+q+'%');
+    res.json({ ok:true, results:{ messages, conversations: convs } });
+  } catch(e) { res.json({ ok:false, error: e.message }); }
+});
+
+// SLA: GET /api/system/inbox/sla
+router.get('/inbox/sla', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const settings = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get() || {};
+    const slaMinutes = settings.sla_minutes || 120;
+    // Conversations open more than SLA minutes without reply
+    const breached = db.prepare(`
+      SELECT c.*, 
+        ROUND((julianday('now') - julianday(c.last_message_at)) * 24 * 60) as minutes_waiting
+      FROM inbox_conversations c
+      WHERE c.status = 'open'
+      AND c.last_message_at < datetime('now', '-' || ? || ' minutes')
+      AND NOT EXISTS (
+        SELECT 1 FROM inbox_messages m 
+        WHERE m.conversation_id = c.id AND m.direction = 'out'
+        AND m.sent_at > c.last_message_at
+      )
+      ORDER BY c.last_message_at ASC
+      LIMIT 20
+    `).all(slaMinutes);
+    res.json({ ok:true, sla_minutes: slaMinutes, breached, count: breached.length });
+  } catch(e) { res.json({ ok:false, error: e.message }); }
+});
+
+router.post('/inbox/sla/settings', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { sla_minutes } = req.body;
+    db.prepare('INSERT OR IGNORE INTO inbox_settings (id) VALUES (1)').run();
+    try { db.prepare('ALTER TABLE inbox_settings ADD COLUMN sla_minutes INTEGER DEFAULT 120').run(); } catch(e) {}
+    db.prepare('UPDATE inbox_settings SET sla_minutes=? WHERE id=1').run(parseInt(sla_minutes)||120);
+    res.json({ ok:true });
+  } catch(e) { res.json({ ok:false, error:e.message }); }
+});
+
+// CSAT: POST /api/public/inbox/csat/:token
+// (handled in routes-public.js)
+
+// Assignment: GET available agents
+router.get('/inbox/agents', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const agents = db.prepare('SELECT id, name, email FROM tenant_users WHERE active=1').all();
+    // Include owner
+    res.json({ ok:true, agents: [{ id: req.user.id, name: req.user.name, email: req.user.email, is_owner: true }, ...agents] });
+  } catch(e) { res.json({ ok:false, error:e.message }); }
+});
+
+// POST /api/system/inbox/conversations/:id/csat-token
+router.post('/inbox/conversations/:id/csat-token', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { token } = req.body;
+    db.prepare('UPDATE inbox_conversations SET csat_token=? WHERE id=?').run(token, req.params.id);
+    res.json({ ok:true });
+  } catch(e) { res.json({ ok:false, error:e.message }); }
+});
+
+// ============================================================
+// DRIP CAMPAIGNS
+// ============================================================
+router.get('/inbox/drip', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const campaigns = db.prepare('SELECT * FROM inbox_drip_campaigns ORDER BY created_at DESC').all();
+    res.json({ ok:true, campaigns });
+  } catch(e) { res.json({ ok:true, campaigns:[] }); }
+});
+
+router.post('/inbox/drip', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { name, trigger, steps } = req.body; // trigger: 'new_contact'|'after_purchase'|'custom'
+    if (!name || !steps?.length) return res.json({ ok:false, error:'name and steps required' });
+    const r = db.prepare('INSERT INTO inbox_drip_campaigns (name, trigger, steps, active) VALUES (?,?,?,1)')
+      .run(name, trigger||'new_contact', JSON.stringify(steps));
+    res.json({ ok:true, id: r.lastInsertRowid });
+  } catch(e) { res.json({ ok:false, error:e.message }); }
+});
+
+router.put('/inbox/drip/:id', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { active } = req.body;
+    db.prepare('UPDATE inbox_drip_campaigns SET active=? WHERE id=?').run(active?1:0, req.params.id);
+    res.json({ ok:true });
+  } catch(e) { res.json({ ok:false, error:e.message }); }
+});
+
+router.delete('/inbox/drip/:id', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    db.prepare('DELETE FROM inbox_drip_campaigns WHERE id=?').run(req.params.id);
+    res.json({ ok:true });
+  } catch(e) { res.json({ ok:false, error:e.message }); }
+});
+
+// Trigger drip manually for a conversation
+router.post('/inbox/drip/:id/trigger/:convId', requireAuth, async (req, res) => {
+  const db = req.db;
+  try {
+    const campaign = db.prepare('SELECT * FROM inbox_drip_campaigns WHERE id=?').get(req.params.id);
+    if (!campaign || !campaign.active) return res.json({ ok:false, error:'campaign not found or inactive' });
+    const conv = db.prepare('SELECT * FROM inbox_conversations WHERE id=?').get(req.params.convId);
+    if (!conv) return res.json({ ok:false, error:'conversation not found' });
+    const steps = JSON.parse(campaign.steps || '[]');
+    const settings = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get();
+    let sent = 0;
+    for (const step of steps) {
+      // step: { delay_minutes, message }
+      const delayMs = (step.delay_minutes || 0) * 60 * 1000;
+      setTimeout(async () => {
+        if (settings?.telegram_token && conv.platform === 'telegram') {
+          try {
+            const https = require('https');
+            const payload = JSON.stringify({ chat_id: conv.sender_id, text: step.message });
+            const req2 = https.request({ hostname:'api.telegram.org', path:'/bot'+settings.telegram_token+'/sendMessage', method:'POST', headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(payload)} }, ()=>{});
+            req2.write(payload); req2.end();
+            db.prepare("INSERT INTO inbox_messages (conversation_id,platform,direction,content,message_type) VALUES (?,?,?,?,?)").run(conv.id,'telegram','out',step.message,'text');
+          } catch(e) {}
+        }
+      }, delayMs);
+      sent++;
+    }
+    res.json({ ok:true, steps_queued: sent });
+  } catch(e) { res.json({ ok:false, error:e.message }); }
+});
+
+// ============================================================
+// WHATSAPP CATALOG (Products showcase)
+// ============================================================
+router.get('/inbox/catalog', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const products = db.prepare('SELECT * FROM sys_products WHERE stock_qty > 0 ORDER BY name LIMIT 50').all();
+    const settings = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get() || {};
+    res.json({ ok:true, products, catalog_active: settings.catalog_active||0 });
+  } catch(e) { res.json({ ok:true, products:[], catalog_active:0 }); }
+});
+
+router.post('/inbox/catalog/send', requireAuth, async (req, res) => {
+  const db = req.db;
+  try {
+    const { conversation_id, product_ids } = req.body;
+    const conv = db.prepare('SELECT * FROM inbox_conversations WHERE id=?').get(conversation_id);
+    if (!conv) return res.json({ ok:false, error:'conversation not found' });
+    const settings = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get();
+    if (!settings?.telegram_token) return res.json({ ok:false, error:'telegram not configured' });
+    const products = product_ids
+      ? db.prepare(`SELECT * FROM sys_products WHERE id IN (${product_ids.map(()=>'?').join(',')}) AND stock_qty > 0`).all(...product_ids)
+      : db.prepare('SELECT * FROM sys_products WHERE stock_qty > 0 LIMIT 10').all();
+    if (!products.length) return res.json({ ok:false, error:'no products found' });
+    // Build catalog message
+    let msg = '🛍️ كتالوج منتجاتنا:\n\n';
+    products.forEach((p, i) => {
+      msg += `${i+1}. ${p.name}\n`;
+      if (p.sell_price) msg += `   💰 السعر: ${p.sell_price} ج.م\n`;
+      if (p.stock_qty) msg += `   📦 متاح: ${p.stock_qty} ${p.unit||'قطعة'}\n`;
+      msg += '\n';
+    });
+    msg += 'للطلب: ابعت رقم المنتج أو تواصل معنا 🌿';
+    const https = require('https');
+    const payload = JSON.stringify({ chat_id: conv.sender_id, text: msg });
+    const req2 = https.request({ hostname:'api.telegram.org', path:'/bot'+settings.telegram_token+'/sendMessage', method:'POST', headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(payload)} }, ()=>{});
+    req2.write(payload); req2.end();
+    db.prepare("INSERT INTO inbox_messages (conversation_id,platform,direction,content,message_type) VALUES (?,?,?,?,?)").run(conversation_id,'telegram','out',msg,'text');
+    res.json({ ok:true, products_sent: products.length });
+  } catch(e) { res.json({ ok:false, error:e.message }); }
+});
+
+// ============================================================
+// CUSTOM CONTACT ATTRIBUTES
+// ============================================================
+router.get('/inbox/conversations/:id/attributes', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const attrs = db.prepare('SELECT * FROM inbox_contact_attrs WHERE conversation_id=?').all(req.params.id);
+    res.json({ ok:true, attributes: attrs });
+  } catch(e) { res.json({ ok:true, attributes:[] }); }
+});
+
+router.post('/inbox/conversations/:id/attributes', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { key, value } = req.body;
+    if (!key) return res.json({ ok:false, error:'key required' });
+    db.prepare('INSERT OR REPLACE INTO inbox_contact_attrs (conversation_id, attr_key, attr_value, updated_at) VALUES (?,?,?,datetime(\'now\'))').run(req.params.id, key, value||'');
+    res.json({ ok:true });
+  } catch(e) { res.json({ ok:false, error:e.message }); }
+});
+
+// ============================================================
+// REVENUE ATTRIBUTION
+// ============================================================
+router.get('/inbox/revenue', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    // Link conversations to invoices via CRM contact
+    const revenue = db.prepare(`
+      SELECT c.id, c.sender_name, c.platform,
+        COUNT(DISTINCT i.id) as invoice_count,
+        COALESCE(SUM(i.total), 0) as total_revenue
+      FROM inbox_conversations c
+      JOIN crm_contacts cc ON cc.phone LIKE '%' || REPLACE(c.sender_phone, '0', '') || '%'
+      JOIN sys_invoices i ON i.contact_id = cc.id AND i.status = 'paid'
+      GROUP BY c.id
+      ORDER BY total_revenue DESC LIMIT 20
+    `).all();
+    const totalFromInbox = revenue.reduce((s,r)=>s+r.total_revenue, 0);
+    res.json({ ok:true, revenue, total: totalFromInbox });
+  } catch(e) { res.json({ ok:true, revenue:[], total:0 }); }
+});
+
+// ============================================================
+// AI SMART REPLY
+// ============================================================
+router.post('/inbox/ai-reply', requireAuth, async (req, res) => {
+  const db = req.db;
+  try {
+    const { conversation_id, last_message } = req.body;
+    if (!last_message) return res.json({ ok:false, error:'last_message required' });
+    // Get conversation context
+    const msgs = db.prepare('SELECT * FROM inbox_messages WHERE conversation_id=? ORDER BY sent_at DESC LIMIT 5').all(conversation_id||0);
+    const context = msgs.reverse().map(m => (m.direction==='in'?'عميل: ':'أنت: ') + m.content).join('\n');
+    // Get business context
+    const profile = db.prepare('SELECT * FROM tenant_profile WHERE id=1').get() || {};
+    const products = db.prepare('SELECT name, sell_price FROM sys_products WHERE stock_qty > 0 LIMIT 10').all();
+    const productList = products.map(p => p.name + ' - ' + p.sell_price + ' ج.م').join('، ');
+    // Build AI prompt
+    const systemPrompt = `أنت مساعد خدمة عملاء لشركة "${profile.company_name||'أريج للملابس'}" المتخصصة في ملابس وتيشيرتات مطبوعة في مصر.
+منتجاتنا: ${productList || 'تيشيرتات، هوديات، ملابس مطبوعة'}
+أسلوبك: ودود، محترف، مختصر. اكتب بالعربية.
+السياق: ${context}`;
+    const userMsg = `رسالة العميل: "${last_message}"\nاكتب 3 ردود مقترحة مختصرة (كل رد في سطر) مناسبة للرد على هذه الرسالة:`;
+    // Call AI (using available model)
+    const { execSync } = require('child_process');
+    let suggestions = [];
+    try {
+      const result = execSync(`gsk ai "${userMsg.replace(/"/g,"'")} System: ${systemPrompt.replace(/"/g,"'").substring(0,200)}"`, 
+        { timeout: 15000, encoding: 'utf8', maxBuffer: 1024*1024 });
+      const lines = result.trim().split('\n').filter(l => l.trim().length > 5).slice(0,3);
+      suggestions = lines.map(l => l.replace(/^\d+\.\s*/, '').trim()).filter(Boolean);
+    } catch(e) {
+      // Fallback suggestions based on message keywords
+      const msg = last_message.toLowerCase();
+      if (msg.includes('سعر') || msg.includes('بكم')) {
+        suggestions = ['أسعارنا تبدأ من 80 ج.م للتيشيرت المطبوع. تفضل موقعنا أو أخبرني بالمنتج 🌿', 'السعر يتوقف على الكمية والطباعة. كم قطعة تحتاج؟', 'سنرسل لك قائمة الأسعار الكاملة الآن 📋'];
+      } else if (msg.includes('توصيل') || msg.includes('شحن')) {
+        suggestions = ['الشحن لجميع المحافظات 3-5 أيام 🚚', 'التوصيل متاح لكل مصر. تكلفة الشحن تبدأ من 45 ج.م', 'نشحن لعنوانك خلال 3-5 أيام عمل بعد التأكيد ✅'];
+      } else if (msg.includes('مرحبا') || msg.includes('هاي') || msg.includes('السلام')) {
+        suggestions = ['أهلاً وسهلاً! كيف يمكنني مساعدتك اليوم؟ 🌿', 'مرحباً! يسعدنا خدمتك. ماذا تحتاج؟', 'أهلاً! نحن هنا للمساعدة 😊'];
+      } else {
+        suggestions = ['شكراً لتواصلك! سنرد عليك في أقرب وقت 🌿', 'وصلت رسالتك. هل يمكنك توضيح طلبك أكثر؟', 'سنساعدك بكل سرور! ما الذي تحتاجه؟'];
+      }
+    }
+    res.json({ ok:true, suggestions: suggestions.slice(0,3) });
+  } catch(e) { res.json({ ok:false, error:e.message }); }
+});

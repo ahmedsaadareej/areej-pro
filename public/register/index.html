@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>حساب جديد — نظام أريج</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Cairo',sans-serif;background:linear-gradient(135deg,#0d3b20 0%,#1B5E30 60%,#0d3b20 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+.card{background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.logo{text-align:center;margin-bottom:24px}
+.logo-icon{font-size:36px;margin-bottom:6px}
+.logo h1{color:#1B5E30;font-size:20px;font-weight:800;margin-bottom:3px}
+.logo p{color:#9ca3af;font-size:12px}
+.trial-badge{background:#fff8e1;border:1px solid #F5A623;border-radius:10px;padding:11px 14px;text-align:center;margin-bottom:20px}
+.trial-badge strong{color:#e65100;font-size:13px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;font-weight:700;color:#374151;margin-bottom:6px}
+.field input{width:100%;padding:11px 14px;border:2px solid #e5e5e5;border-radius:10px;font-family:'Cairo',sans-serif;font-size:14px;outline:none;transition:.2s}
+.field input:focus{border-color:#1B5E30;box-shadow:0 0 0 3px rgba(27,94,48,.08)}
+.btn{width:100%;padding:13px;background:#1B5E30;color:#fff;border:none;border-radius:10px;font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:.2s;margin-top:4px}
+.btn:hover{background:#155228}
+.btn:disabled{background:#9ca3af;cursor:not-allowed}
+.promo-row{display:flex;gap:8px}
+.promo-row input{flex:1}
+.promo-btn{padding:11px 14px;background:#F5A623;color:#fff;border:none;border-radius:10px;font-family:'Cairo',sans-serif;font-size:13px;cursor:pointer;white-space:nowrap;font-weight:700}
+.promo-status{font-size:12px;margin-top:4px;color:#666}
+.promo-status.ok{color:#1B5E30;font-weight:700}
+.promo-status.err{color:#c62828}
+.msg{padding:11px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none}
+.msg.error{background:#fef2f2;color:#c62828;border:1px solid #fca5a5;display:block}
+.msg.success{background:#f0f9f4;color:#1B5E30;border:1px solid #a7f3d0;display:block}
+footer{text-align:center;margin-top:18px;font-size:12px;color:#9ca3af}
+footer a{color:#1B5E30;text-decoration:none;font-weight:700}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">🌿</div>
+    <h1>نظام أريج — حساب جديد</h1>
+    <p>منصة إدارة أعمال الملابس والطباعة</p>
+  </div>
+
+  <div class="trial-badge">
+    <strong>🎁 14 يوم مجاناً — بدون كريدت كارد</strong>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <div class="field">
+    <label>اسمك الكامل</label>
+    <input id="r-name" type="text" placeholder="محمد أحمد" autocomplete="name">
+  </div>
+  <div class="field">
+    <label>اسم الشركة / البراند <span style="color:#ef4444">*</span></label>
+    <input id="r-company" type="text" placeholder="مثال: منى للموضة" oninput="autoSlug()">
+  </div>
+  <div class="field">
+    <label>اسم الـ subdomain <span style="color:#ef4444">*</span> <small style="color:#9ca3af;font-weight:400">(بالإنجليزي)</small></label>
+    <div style="display:flex;align-items:center;gap:0">
+      <input id="r-slug" type="text" placeholder="mona-fashion" style="border-radius:10px 0 0 10px;border-left:none" oninput="checkSlug()" autocomplete="off">
+      <span style="background:#f3f4f6;border:2px solid #e5e5e5;border-right:none;padding:11px 10px;font-size:12px;color:#6b7280;white-space:nowrap;border-radius:0 10px 10px 0">.pro.areejegypt.com</span>
+    </div>
+    <div id="slug-status" style="font-size:12px;margin-top:5px;min-height:16px"></div>
+  </div>
+  <div class="field">
+    <label>الإيميل</label>
+    <input id="r-email" type="email" placeholder="you@company.com" autocomplete="email">
+  </div>
+  <div class="field">
+    <label>رقم الهاتف <span style="color:#9ca3af;font-weight:400">(اختياري)</span></label>
+    <input id="r-phone" type="tel" placeholder="01xxxxxxxxx">
+  </div>
+  <div class="field">
+    <label>كلمة السر <span style="color:#9ca3af;font-weight:400">(6 أحرف على الأقل)</span></label>
+    <input id="r-password" type="password" placeholder="••••••••" autocomplete="new-password">
+  </div>
+  <div class="field">
+    <label>كود خصم <span style="color:#9ca3af;font-weight:400">(اختياري)</span></label>
+    <div class="promo-row">
+      <input id="r-promo" type="text" placeholder="PROMO2026">
+      <button class="promo-btn" onclick="validatePromo()">تحقق</button>
+    </div>
+    <div id="promo-status" class="promo-status"></div>
+  </div>
+
+  <button class="btn" id="regBtn" onclick="doRegister()">إنشاء الحساب ←</button>
+
+  <footer>
+    عندك حساب بالفعل؟ <a href="/owner/">سجّل دخول</a>
+  </footer>
+</div>
+
+<script>
+const BASE = '/api';
+
+function showMsg(text, type='error') {
+  const el = document.getElementById('msg');
+  el.textContent = text;
+  el.className = 'msg ' + type;
+}
+
+async function validatePromo() {
+  const code = document.getElementById('r-promo').value.trim();
+  if (!code) return;
+  const el = document.getElementById('promo-status');
+  el.textContent = 'جاري التحقق...'; el.className = 'promo-status';
+  const r = await fetch(`${BASE}/billing/promo/validate`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ code, plan:'monthly' })
+  });
+  const d = await r.json();
+  if (d.ok) {
+    el.textContent = `✅ خصم ${d.promo.type==='percent' ? d.promo.value+'%' : (d.promo.value/100)+' ج.م'} محجوز!`;
+    el.className = 'promo-status ok';
+  } else {
+    el.textContent = '❌ ' + d.error;
+    el.className = 'promo-status err';
+  }
+}
+
+async function doRegister() {
+  const name         = document.getElementById('r-name').value.trim();
+  const company_name = document.getElementById('r-company').value.trim();
+  const slug         = document.getElementById('r-slug').value.trim().toLowerCase();
+  const email        = document.getElementById('r-email').value.trim().toLowerCase();
+  const phone        = document.getElementById('r-phone').value.trim();
+  const password     = document.getElementById('r-password').value;
+  const promo        = document.getElementById('r-promo').value.trim();
+  if (!name || !email || !password) return showMsg('الاسم والإيميل وكلمة السر مطلوبين');
+  if (!company_name) return showMsg('اسم الشركة مطلوب');
+  if (!slug || slug.length < 3) return showMsg('اسم الـ subdomain مطلوب (3 أحرف على الأقل)');
+  if (password.length < 6) return showMsg('كلمة السر على الأقل 6 أحرف');
+  const btn = document.getElementById('regBtn');
+  btn.disabled = true; btn.textContent = 'جاري إنشاء الحساب...';
+  try {
+    const r = await fetch(`${BASE}/auth/register`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name, company_name, slug, email, phone, password, promo_code: promo || undefined })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      localStorage.setItem('pro_token', d.token);
+      // Redirect to tenant subdomain dashboard
+      const slug = d.slug || document.getElementById('r-slug').value.trim().toLowerCase().replace(/[^a-z0-9-]/g,'');
+      if (slug) {
+        // Pass token via hash for cross-subdomain handoff
+        window.location.href = 'https://' + 'pro-' + slug + '.areejegypt.com/dashboard/#t=' + encodeURIComponent(d.token);
+      } else {
+        window.location.href = '/dashboard/';
+      }
+    } else {
+      showMsg(d.error || 'حصل خطأ — حاول تاني');
+      btn.disabled = false; btn.textContent = 'إنشاء الحساب ←';
+    }
+  } catch(e) {
+    showMsg('حصل خطأ — تحقق من الاتصال');
+    btn.disabled = false; btn.textContent = 'إنشاء الحساب ←';
+  }
+}
+
+// Auto-generate slug from company name
+function arabicToSlug(text) {
+  const map = {
+    'ا':'a','أ':'a','إ':'a','آ':'a','ء':'a',
+    'ب':'b','ت':'t','ث':'th','ج':'j','ح':'h','خ':'kh',
+    'د':'d','ذ':'z','ر':'r','ز':'z','س':'s','ش':'sh',
+    'ص':'s','ض':'d','ط':'t','ظ':'z','ع':'a','غ':'gh',
+    'ف':'f','ق':'q','ك':'k','ل':'l','م':'m','ن':'n',
+    'ه':'h','و':'w','ي':'y','ى':'a','ة':'a','ئ':'y',
+    ' ':'-','_':'-','،':'-','?':'','.':'-','(':'',' )':'','/':'-','&':'and'
+  };
+  return text.split('').map(ch => {
+    if (map[ch] !== undefined) return map[ch];
+    if (/[a-z0-9]/.test(ch)) return ch;
+    if (/[A-Z]/.test(ch)) return ch.toLowerCase();
+    return '';
+  }).join('').replace(/--+/g,'-').replace(/^-|-$/g,'');
+}
+
+async function autoSlug() {
+  const company = document.getElementById('r-company').value.trim();
+  if (!company) return;
+  if (document.getElementById('r-slug')._manualEdit) return;
+  let base = arabicToSlug(company.toLowerCase());
+  if (!base || base.length < 2) base = 'co';
+  let slug = base, suffix = 2;
+  while (suffix <= 99) {
+    try {
+      const r = await fetch('/api/auth/slug-check/' + encodeURIComponent(slug));
+      const d = await r.json();
+      if (d.available) {
+        document.getElementById('r-slug').value = slug;
+        document.getElementById('slug-status').innerHTML = '<span style="color:#16a34a">✅ متاح — رابطك: <strong>pro-' + slug + '.areejegypt.com</strong></span>';
+        break;
+      }
+      slug = base + '-' + suffix++;
+    } catch(e) { break; }
+  }
+}
+
+
+let slugTimer;
+function checkSlug() {
+  document.getElementById('r-slug')._manualEdit = true;
+  const slug = document.getElementById('r-slug').value.trim().toLowerCase();
+  const status = document.getElementById('slug-status');
+  clearTimeout(slugTimer);
+  if (!slug) { status.textContent = ''; return; }
+  if (slug.length < 3) { status.innerHTML = '<span style="color:#ef4444">⚠ 3 أحرف على الأقل</span>'; return; }
+  status.innerHTML = '<span style="color:#9ca3af">جاري التحقق...</span>';
+  slugTimer = setTimeout(async () => {
+    try {
+      const r = await fetch(`/api/auth/slug-check/${encodeURIComponent(slug)}`);
+      const d = await r.json();
+      if (d.available) {
+        status.innerHTML = `<span style="color:#16a34a">✅ متاح — رابطك: <strong>pro-${d.slug}.areejegypt.com</strong></span>`;
+      } else {
+        status.innerHTML = `<span style="color:#ef4444">❌ ${d.error || 'مش متاح — جرب اسم تاني'}</span>`;
+      }
+    } catch(e) { status.textContent = ''; }
+  }, 600);
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
+</script>
+</body>
+</html>

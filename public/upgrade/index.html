@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام أريج — اختر خطتك</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Cairo',sans-serif;background:#f4f4f4;min-height:100vh}
+.header{background:#1B5E30;color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:20px;font-weight:800}
+.header a{color:#F5A623;font-size:14px;text-decoration:none}
+.hero{background:linear-gradient(135deg,#1B5E30,#2e7d52);color:#fff;text-align:center;padding:40px 20px}
+.hero h2{font-size:28px;font-weight:800;margin-bottom:8px}
+.hero p{font-size:16px;opacity:.9}
+.plans{display:flex;gap:16px;padding:28px 20px;max-width:900px;margin:0 auto;flex-wrap:wrap;justify-content:center}
+.plan-card{background:#fff;border-radius:16px;padding:28px 24px;flex:1;min-width:240px;max-width:280px;box-shadow:0 2px 12px rgba(0,0,0,0.1);position:relative;transition:.2s}
+.plan-card.popular{border:3px solid #1B5E30;transform:scale(1.03)}
+.popular-badge{position:absolute;top:-14px;right:50%;transform:translateX(50%);background:#F5A623;color:#fff;font-size:12px;font-weight:800;padding:4px 16px;border-radius:20px;white-space:nowrap}
+.plan-card h3{font-size:20px;font-weight:800;color:#1B5E30;margin-bottom:6px}
+.plan-card .price{font-size:36px;font-weight:800;color:#222;margin:12px 0 4px}
+.plan-card .price span{font-size:16px;color:#666;font-weight:400}
+.plan-card .was{font-size:13px;color:#999;text-decoration:line-through;margin-bottom:12px}
+.plan-card ul{list-style:none;margin:16px 0}
+.plan-card li{font-size:13px;color:#444;padding:5px 0;border-bottom:1px solid #f5f5f5}
+.plan-card li:last-child{border:none}
+.plan-card li::before{content:'✅ ';font-size:11px}
+.btn-plan{width:100%;padding:13px;background:#1B5E30;color:#fff;border:none;border-radius:10px;font-family:'Cairo',sans-serif;font-size:16px;font-weight:700;cursor:pointer;margin-top:16px;transition:.2s}
+.btn-plan:hover{background:#155228}
+.promo-section{max-width:500px;margin:0 auto 28px;padding:0 20px}
+.promo-box{background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 6px rgba(0,0,0,0.08)}
+.promo-box h4{font-size:15px;font-weight:700;margin-bottom:10px;color:#333}
+.promo-row{display:flex;gap:8px}
+.promo-row input{flex:1;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-family:'Cairo',sans-serif;font-size:13px;outline:none}
+.promo-row input:focus{border-color:#1B5E30}
+.promo-row button{padding:10px 16px;background:#1B5E30;color:#fff;border:none;border-radius:8px;font-family:'Cairo',sans-serif;font-size:13px;cursor:pointer;font-weight:700}
+.promo-result{font-size:13px;margin-top:8px;color:#1B5E30;font-weight:600;display:none}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;display:none;align-items:center;justify-content:center;padding:16px}
+.modal{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:440px}
+.modal h3{font-size:18px;font-weight:700;margin-bottom:6px;color:#1B5E30}
+.modal .plan-summary{background:#f0f9f4;border-radius:10px;padding:14px;margin:14px 0;text-align:center}
+.modal .plan-summary .amt{font-size:32px;font-weight:800;color:#1B5E30}
+.wa-btn{display:block;background:#25D366;color:#fff;text-decoration:none;text-align:center;padding:14px;border-radius:10px;font-size:16px;font-weight:700;margin-top:12px}
+.close-btn{width:100%;padding:11px;background:#f5f5f5;color:#333;border:none;border-radius:10px;font-family:'Cairo',sans-serif;font-size:14px;cursor:pointer;margin-top:8px}
+.msg{padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px;display:none}
+.msg.error{background:#fef2f2;color:#c62828}
+.msg.success{background:#f0f9f4;color:#1B5E30}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🌿 نظام أريج</h1>
+  <a href="/dashboard">← رجوع للسيستم</a>
+</div>
+
+<div class="hero">
+  <h2>اشترك في نظام أريج 🚀</h2>
+  <p>16 أداة لإدارة براند الملابس بتاعك — مخزون، فواتير، CRM، خزينة، وأكتر</p>
+</div>
+
+<div class="promo-section">
+  <div class="promo-box">
+    <h4>🎁 عندك بروموكود؟</h4>
+    <div class="promo-row">
+      <input id="promo-input" type="text" placeholder="AREEJ20">
+      <button onclick="applyPromo()">تطبيق</button>
+    </div>
+    <div id="promo-result" class="promo-result"></div>
+  </div>
+</div>
+
+<div class="plans">
+  <div class="plan-card" id="card-monthly">
+    <h3>شهري</h3>
+    <div class="price">99 <span>ج.م/شهر</span></div>
+    <div class="was" id="was-monthly"></div>
+    <ul>
+      <li>كل الأدوات الـ 16</li>
+      <li>بياناتك الخاصة المعزولة</li>
+      <li>دعم فني على واتساب</li>
+      <li>تحديثات مجانية</li>
+    </ul>
+    <button class="btn-plan" onclick="choosePlan('monthly')">اشترك شهرياً</button>
+  </div>
+
+  <div class="plan-card popular" id="card-yearly">
+    <div class="popular-badge">⭐ الأوفر</div>
+    <h3>سنوي</h3>
+    <div class="price">799 <span>ج.م/سنة</span></div>
+    <div class="was" id="was-yearly"></div>
+    <ul>
+      <li>وفّر 389 ج.م مقارنة بالشهري</li>
+      <li>كل الأدوات الـ 16</li>
+      <li>بياناتك الخاصة المعزولة</li>
+      <li>أولوية في الدعم الفني</li>
+      <li>تحديثات مجانية</li>
+    </ul>
+    <button class="btn-plan" onclick="choosePlan('yearly')">اشترك سنوياً</button>
+  </div>
+
+  <div class="plan-card" id="card-lifetime">
+    <h3>مدى الحياة</h3>
+    <div class="price">1499 <span>ج.م</span></div>
+    <div class="was" id="was-lifetime"></div>
+    <ul>
+      <li>دفعة واحدة — للأبد</li>
+      <li>كل الأدوات الـ 16</li>
+      <li>كل التحديثات القادمة</li>
+      <li>بياناتك الخاصة المعزولة</li>
+      <li>دعم VIP على واتساب</li>
+    </ul>
+    <button class="btn-plan" onclick="choosePlan('lifetime')">اشترك مدى الحياة</button>
+  </div>
+</div>
+
+<!-- Checkout Modal -->
+<div id="checkout-modal" class="modal-bg" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal">
+    <h3>تفاصيل الاشتراك</h3>
+    <div class="plan-summary">
+      <div id="modal-plan-name" style="font-size:14px;color:#666;margin-bottom:4px"></div>
+      <div class="amt"><span id="modal-amount">—</span> ج.م</div>
+      <div id="modal-discount" style="font-size:12px;color:#999;margin-top:4px"></div>
+    </div>
+    <p style="font-size:13px;color:#555;line-height:1.8">
+      ابعت الرسالة دي على واتساب وهنأكد الدفع خلال دقائق وهيتفعّل حسابك فوراً.
+    </p>
+    <a id="wa-link" class="wa-btn" href="#" target="_blank">📱 تواصل على واتساب</a>
+    <div id="modal-msg" class="msg"></div>
+    <button class="close-btn" onclick="document.getElementById('checkout-modal').style.display='none'">إغلاق</button>
+  </div>
+</div>
+
+<script>
+const TOKEN = localStorage.getItem('pro_token') || '';
+const PLANS = { monthly: { price: 9900, label: 'شهري' }, yearly: { price: 79900, label: 'سنوي' }, lifetime: { price: 149900, label: 'مدى الحياة' } };
+let appliedPromo = null;
+let currentPaymentId = null;
+
+if (!TOKEN) window.location.href = '/';
+
+async function applyPromo() {
+  const code = document.getElementById('promo-input').value.trim().toUpperCase();
+  if (!code) return;
+  const r = await fetch('/api/billing/promo/validate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer '+TOKEN },
+    body: JSON.stringify({ code, plan: 'monthly' })
+  });
+  const d = await r.json();
+  const el = document.getElementById('promo-result');
+  el.style.display = 'block';
+  if (d.ok) {
+    appliedPromo = { id: d.promo.id, code: d.promo.code, type: d.promo.type, value: d.promo.value };
+    el.style.color = '#1B5E30';
+    el.textContent = `✅ كود صالح — خصم ${d.promo.type==='percent'?d.promo.value+'%':(d.promo.value/100)+' ج.م'} محجوز!`;
+    // Update plan card prices
+    Object.keys(PLANS).forEach(plan => {
+      const base = PLANS[plan].price;
+      let disc = appliedPromo.type === 'percent' ? Math.round(base * appliedPromo.value / 100) : Math.min(appliedPromo.value, base);
+      const final = base - disc;
+      document.getElementById('was-'+plan).textContent = 'بدل ' + (base/100).toFixed(0) + ' ج.م';
+      // Update price display
+      const priceEl = document.querySelector(`#card-${plan} .price`);
+      priceEl.innerHTML = `${(final/100).toFixed(0)} <span>ج.م${plan==='monthly'?'/شهر':plan==='yearly'?'/سنة':''}</span>`;
+    });
+  } else {
+    appliedPromo = null;
+    el.style.color = '#c62828';
+    el.textContent = '❌ ' + d.error;
+  }
+}
+
+async function choosePlan(plan) {
+  const r = await fetch('/api/billing/pay', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer '+TOKEN },
+    body: JSON.stringify({ plan, promo_code: appliedPromo?.code })
+  });
+  const d = await r.json();
+  if (!d.ok) { alert('❌ '+d.error); return; }
+
+  currentPaymentId = d.payment_id;
+  const planLabels = { monthly: 'شهري', yearly: 'سنوي', lifetime: 'مدى الحياة' };
+  document.getElementById('modal-plan-name').textContent = 'خطة ' + planLabels[plan];
+  document.getElementById('modal-amount').textContent = d.amount_display;
+  if (d.discount > 0) {
+    document.getElementById('modal-discount').textContent = `وفّرت ${(d.discount/100).toFixed(0)} ج.م بالبروموكود 🎉`;
+  }
+  document.getElementById('wa-link').href = d.instructions.whatsapp_url;
+  document.getElementById('checkout-modal').style.display = 'flex';
+}
+</script>
+</body>
+</html>

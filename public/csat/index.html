@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>تقييمك يهمنا</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',sans-serif;background:#f5f7fa;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,.1);padding:32px;max-width:420px;width:100%;text-align:center}
+.logo{font-size:40px;margin-bottom:8px}
+h1{font-size:18px;font-weight:900;color:#1B5E30;margin-bottom:6px}
+p{font-size:13px;color:#6b7280;margin-bottom:24px}
+.stars{display:flex;justify-content:center;gap:12px;margin-bottom:20px}
+.star{font-size:40px;cursor:pointer;transition:.2s;filter:grayscale(1)}
+.star.active,.star:hover{filter:grayscale(0);transform:scale(1.15)}
+textarea{width:100%;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:10px;font-family:'Cairo',sans-serif;font-size:13px;resize:vertical;margin-bottom:14px}
+.btn{width:100%;padding:13px;background:#1B5E30;color:#fff;border:none;border-radius:12px;font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;cursor:pointer}
+.success{background:#f0fdf4;border:2px solid #16a34a;border-radius:14px;padding:24px;text-align:center}
+.labels{display:flex;justify-content:space-between;font-size:11px;color:#9ca3af;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="logo">🌿</div>
+  <h1>تقييمك يهمنا</h1>
+  <p>كيف كانت تجربتك مع خدمة العملاء؟</p>
+  <div class="stars" id="stars">
+    <span class="star" onclick="setRating(1)" data-r="1">😞</span>
+    <span class="star" onclick="setRating(2)" data-r="2">😕</span>
+    <span class="star" onclick="setRating(3)" data-r="3">😐</span>
+    <span class="star" onclick="setRating(4)" data-r="4">😊</span>
+    <span class="star" onclick="setRating(5)" data-r="5">😍</span>
+  </div>
+  <div class="labels"><span>سيء جداً</span><span>ممتاز</span></div>
+  <textarea id="comment" rows="3" placeholder="أي تعليق إضافي... (اختياري)"></textarea>
+  <button class="btn" onclick="submitCSAT()" id="btn">إرسال التقييم</button>
+</div>
+<script>
+let selectedRating = 0;
+const token = location.pathname.split('/').pop();
+function setRating(r) {
+  selectedRating = r;
+  document.querySelectorAll('.star').forEach(s => s.classList.toggle('active', +s.dataset.r <= r));
+}
+async function submitCSAT() {
+  if (!selectedRating) { alert('اختار تقييماً'); return; }
+  const btn = document.getElementById('btn');
+  btn.disabled = true; btn.textContent = 'جاري الإرسال...';
+  const r = await fetch('/api/public/inbox/csat/'+token, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ rating: selectedRating, comment: document.getElementById('comment').value })
+  });
+  const d = await r.json();
+  if (d.ok) {
+    document.getElementById('card').innerHTML = '<div class="success"><div style="font-size:48px">🎉</div><h2 style="color:#16a34a;font-size:18px;font-weight:900;margin:12px 0 6px">شكراً جزيلاً!</h2><p style="color:#6b7280">تقييمك وصل — نسعى دائماً للتحسين</p></div>';
+  } else {
+    btn.disabled=false; btn.textContent='إرسال التقييم'; alert(d.message||'خطأ');
+  }
+}
+</script>
+</body>
+</html>

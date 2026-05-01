@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<link rel="manifest" href="/my/manifest.json">
+<meta name="theme-color" content="#1B5E30">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>بوابة الموظف — نظام أريج</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root { --brand: #1B5E30; --brand-light: #e8f5ec; --gold: #F5A623; }
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Cairo',sans-serif;background:#f0f4f0;color:#1a1a1a;min-height:100vh;max-width:480px;margin:0 auto}
+
+/* ── Header ── */
+.header{background:var(--brand);color:#fff;padding:16px 20px 12px;position:sticky;top:0;z-index:50;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.header-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
+.header h1{font-size:17px;font-weight:800}
+.header-sub{font-size:12px;opacity:.75}
+.logout-btn{background:rgba(255,255,255,.15);border:none;color:#fff;padding:5px 10px;border-radius:8px;font-family:Cairo,sans-serif;font-size:12px;cursor:pointer}
+
+/* ── Clock card ── */
+.clock-card{background:var(--brand);color:#fff;padding:24px 20px 28px;margin-bottom:0}
+.clock-time{font-size:52px;font-weight:900;text-align:center;letter-spacing:2px;line-height:1}
+.clock-date{font-size:14px;text-align:center;opacity:.8;margin-top:6px}
+
+/* ── Status pill ── */
+.status-pill{display:flex;align-items:center;justify-content:center;gap:8px;margin:16px 20px 0;background:rgba(255,255,255,.15);border-radius:30px;padding:8px 16px}
+.status-dot{width:10px;height:10px;border-radius:50%;background:#9ca3af;flex-shrink:0}
+.status-dot.present{background:#4ade80;box-shadow:0 0 8px #4ade80}
+.status-dot.late{background:#fb923c;box-shadow:0 0 8px #fb923c}
+.status-dot.done{background:#60a5fa;box-shadow:0 0 8px #60a5fa}
+.status-text{font-size:13px;font-weight:700}
+
+/* ── Action buttons ── */
+.action-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px 16px 0}
+.action-btn{border:none;border-radius:16px;padding:20px 12px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:800;font-size:15px;display:flex;flex-direction:column;align-items:center;gap:8px;transition:transform .1s,box-shadow .1s;box-shadow:0 3px 12px rgba(0,0,0,.12)}
+.action-btn:active{transform:scale(.96)}
+.action-btn .icon{font-size:32px}
+.btn-checkin{background:#fff;color:var(--brand)}
+.btn-checkout{background:var(--brand);color:#fff}
+.btn-checkin:disabled,.btn-checkout:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── Today summary ── */
+.today-card{background:#fff;border-radius:16px;margin:16px 16px 0;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,.07)}
+.today-card h3{font-size:14px;font-weight:700;color:#6b7280;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.today-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f3f4f6}
+.today-row:last-child{border:none;padding-bottom:0}
+.today-label{font-size:13px;color:#6b7280}
+.today-val{font-size:14px;font-weight:700;color:#1a1a1a}
+.today-val.green{color:var(--brand)}
+.today-val.orange{color:#ea580c}
+.today-val.blue{color:#2563eb}
+
+/* ── Month stats ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 16px 0}
+.stat-box{background:#fff;border-radius:12px;padding:12px 8px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.stat-num{font-size:22px;font-weight:900}
+.stat-label{font-size:11px;color:#6b7280;margin-top:2px}
+.stat-present .stat-num{color:var(--brand)}
+.stat-absent .stat-num{color:#ef4444}
+.stat-late .stat-num{color:#f59e0b}
+.stat-total .stat-num{color:#6b7280}
+
+/* ── History ── */
+.section-title{font-size:14px;font-weight:700;color:#6b7280;padding:16px 16px 8px;display:flex;align-items:center;gap:6px}
+.history-list{padding:0 16px 100px}
+.history-item{background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.history-date{min-width:44px;text-align:center}
+.history-day{font-size:20px;font-weight:900;line-height:1;color:#1a1a1a}
+.history-month{font-size:10px;color:#9ca3af}
+.history-info{flex:1}
+.history-times{font-size:13px;font-weight:600;color:#374151}
+.history-hours{font-size:12px;color:#9ca3af;margin-top:2px}
+.history-badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-present{background:#f0fdf4;color:#166534}
+.badge-absent{background:#fef2f2;color:#dc2626}
+.badge-late{background:#fff7ed;color:#c2410c}
+.badge-holiday{background:#eff6ff;color:#1d4ed8}
+
+/* ── Month picker ── */
+.month-picker{display:flex;align-items:center;justify-content:space-between;padding:0 16px 8px}
+.month-picker select{border:1.5px solid #e5e7eb;border-radius:8px;padding:6px 10px;font-family:Cairo,sans-serif;font-size:13px;background:#fff;color:#374151}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a1a;color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:700;z-index:999;transition:transform .3s ease;white-space:nowrap;max-width:90vw;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.success{background:var(--brand)}
+.toast.error{background:#ef4444}
+
+/* ── Loading ── */
+.loading{text-align:center;padding:40px;color:#9ca3af;font-size:14px}
+
+/* ── Login screen ── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(160deg,var(--brand),#2d7a47)}
+.login-card{background:#fff;border-radius:20px;padding:32px 24px;width:calc(100% - 40px);max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.login-card .logo{text-align:center;margin-bottom:20px}
+.login-card .logo-icon{font-size:48px;margin-bottom:8px}
+.login-card h2{font-size:20px;font-weight:800;color:var(--brand);text-align:center;margin-bottom:4px}
+.login-card p{font-size:13px;color:#9ca3af;text-align:center;margin-bottom:20px}
+.login-card input{width:100%;padding:12px 14px;border:1.5px solid #e5e7eb;border-radius:10px;font-family:Cairo,sans-serif;font-size:14px;margin-bottom:10px;outline:none}
+.login-card input:focus{border-color:var(--brand)}
+.login-card button{width:100%;padding:13px;background:var(--brand);color:#fff;border:none;border-radius:10px;font-family:Cairo,sans-serif;font-size:15px;font-weight:700;cursor:pointer}
+#login-err{color:#ef4444;font-size:13px;min-height:18px;text-align:center;margin-bottom:8px}
+
+#main-app{display:none}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="logo">
+      <div class="logo-icon">🌿</div>
+      <h2>بوابة الموظف</h2>
+      <p>سجّل دخولك للمتابعة</p>
+    </div>
+    <input id="l-email" type="email" placeholder="البريد الإلكتروني" autocomplete="email">
+    <input id="l-pass" type="password" placeholder="كلمة المرور" onkeydown="if(event.key==='Enter')doLogin()">
+    <div id="login-err"></div>
+    <button id="login-btn" onclick="doLogin()">دخول ←</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="main-app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <h1 id="emp-name">مرحباً!</h1>
+        <div class="header-sub" id="emp-role">نظام أريج</div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">خروج</button>
+    </div>
+  </div>
+
+  <!-- Clock + Status -->
+  <div class="clock-card">
+    <div class="clock-time" id="live-clock">00:00</div>
+    <div class="clock-date" id="live-date"></div>
+    <div class="status-pill">
+      <div class="status-dot" id="status-dot"></div>
+      <span class="status-text" id="status-text">لم تسجل حضورك بعد</span>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="action-row">
+    <button class="action-btn btn-checkin" id="btn-checkin" onclick="doCheckIn()">
+      <span class="icon">☀️</span>
+      <span>تسجيل حضور</span>
+    </button>
+    <button class="action-btn btn-checkout" id="btn-checkout" onclick="doCheckOut()">
+      <span class="icon">🌙</span>
+      <span>تسجيل انصراف</span>
+    </button>
+  </div>
+
+  <!-- Today Summary -->
+  <div class="today-card" id="today-card">
+    <h3>📅 اليوم</h3>
+    <div class="today-row">
+      <span class="today-label">وقت الحضور</span>
+      <span class="today-val green" id="t-checkin">—</span>
+    </div>
+    <div class="today-row">
+      <span class="today-label">وقت الانصراف</span>
+      <span class="today-val blue" id="t-checkout">—</span>
+    </div>
+    <div class="today-row">
+      <span class="today-label">ساعات العمل</span>
+      <span class="today-val" id="t-hours">—</span>
+    </div>
+  </div>
+
+  <!-- Month Stats -->
+  <div class="stats-grid">
+    <div class="stat-box stat-present">
+      <div class="stat-num" id="s-present">—</div>
+      <div class="stat-label">حضور</div>
+    </div>
+    <div class="stat-box stat-absent">
+      <div class="stat-num" id="s-absent">—</div>
+      <div class="stat-label">غياب</div>
+    </div>
+    <div class="stat-box stat-late">
+      <div class="stat-num" id="s-late">—</div>
+      <div class="stat-label">تأخير</div>
+    </div>
+    <div class="stat-box stat-total">
+      <div class="stat-num" id="s-total">—</div>
+      <div class="stat-label">إجمالي</div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="section-title">📋 سجل الحضور</div>
+  <div class="month-picker">
+    <select id="month-sel" onchange="loadHistory()"></select>
+    <span style="font-size:12px;color:#9ca3af" id="hist-count"></span>
+  </div>
+  <div class="history-list" id="history-list">
+    <div class="loading">جاري التحميل...</div>
+  </div>
+
+</div><!-- /main-app -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+const BASE = '/api';
+let TOKEN = localStorage.getItem('my_token') || '';
+
+// Arabic day names
+const AR_DAYS = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+const AR_MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+// ── Clock ─────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('live-clock').textContent = h + ':' + m;
+  document.getElementById('live-date').textContent =
+    AR_DAYS[now.getDay()] + '، ' + now.getDate() + ' ' + AR_MONTHS[now.getMonth()] + ' ' + now.getFullYear();
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ── Toast ─────────────────────────────────────────────────
+function toast(msg, type='success', ms=3500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type;
+  void t.offsetWidth;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+// ── Auth ──────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('l-email').value.trim();
+  const pass  = document.getElementById('l-pass').value;
+  const btn   = document.getElementById('login-btn');
+  const err   = document.getElementById('login-err');
+  if (!email || !pass) { err.textContent = 'أدخل الإيميل وكلمة السر'; return; }
+  btn.disabled = true; btn.textContent = 'جاري...';
+  err.textContent = '';
+
+  // Try staff login first (with slug from hostname)
+  const slug = window.location.hostname.replace('.areejegypt.com','').replace('www.','') || null;
+  try {
+    const r = await fetch(BASE + '/users/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass, slug })
+    }).then(x => x.json());
+
+    if (r.ok && !r.needs_otp) {
+      TOKEN = r.token;
+      localStorage.setItem('my_token', TOKEN);
+      showApp();
+      return;
+    }
+    if (r.ok && r.needs_otp) {
+      err.textContent = 'هذا الحساب يحتاج OTP — استخدم بوابة الأدمن';
+      btn.disabled = false; btn.textContent = 'دخول ←';
+      return;
+    }
+    err.textContent = r.error || 'بيانات غير صحيحة';
+  } catch(e) {
+    err.textContent = 'خطأ في الاتصال';
+  }
+  btn.disabled = false; btn.textContent = 'دخول ←';
+}
+
+function doLogout() {
+  localStorage.removeItem('my_token');
+  TOKEN = '';
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function hdr() {
+  return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN };
+}
+
+// ── Init ──────────────────────────────────────────────────
+async function init() {
+  // Check hash token (from dashboard redirect)
+  const hash = new URLSearchParams(window.location.hash.slice(1));
+  const hashTok = hash.get('t');
+  if (hashTok) {
+    TOKEN = hashTok;
+    localStorage.setItem('my_token', TOKEN);
+    history.replaceState(null, '', window.location.pathname);
+  }
+
+  if (!TOKEN) { showLogin(); return; }
+
+  // Verify token
+  try {
+    const r = await fetch(BASE + '/auth/me', { headers: hdr() }).then(x => x.json());
+    if (!r.ok) { showLogin(); return; }
+  } catch(e) { showLogin(); return; }
+
+  showApp();
+}
+
+function showLogin() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('main-app').style.display = 'none';
+}
+
+async function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  await loadProfile();
+  loadHistory();
+}
+
+// ── Profile + Today ───────────────────────────────────────
+async function loadProfile() {
+  try {
+    const d = await fetch(BASE + '/hr/my/profile', { headers: hdr() }).then(x => x.json());
+    if (!d.ok) {
+      // Not linked to an employee record — show limited view
+      const authMe = await fetch(BASE + '/auth/me', { headers: hdr() }).then(x => x.json());
+      if (authMe.ok) {
+        document.getElementById('emp-name').textContent = 'أهلاً، ' + (authMe.user?.name || '');
+        document.getElementById('emp-role').textContent = 'لم يتم ربط حسابك بملف موظف بعد';
+      }
+      disableAttendance('حسابك غير مرتبط بملف موظف');
+      return;
+    }
+
+    const emp = d.employee;
+    const todayAtt = d.today;
+    const month = d.month;
+
+    // Update header
+    document.getElementById('emp-name').textContent = 'أهلاً، ' + emp.name;
+    document.getElementById('emp-role').textContent = emp.job_title || emp.department || 'موظف';
+
+    // Update month stats
+    document.getElementById('s-present').textContent = month?.present || 0;
+    document.getElementById('s-absent').textContent  = month?.absent  || 0;
+    document.getElementById('s-late').textContent    = month?.late    || 0;
+    document.getElementById('s-total').textContent   = month?.total_days || 0;
+
+    // Update today card + buttons
+    updateTodayUI(todayAtt);
+
+  } catch(e) {
+    console.error('Profile error:', e);
+  }
+}
+
+function updateTodayUI(att) {
+  const dot  = document.getElementById('status-dot');
+  const text = document.getElementById('status-text');
+  const btnIn  = document.getElementById('btn-checkin');
+  const btnOut = document.getElementById('btn-checkout');
+
+  document.getElementById('t-checkin').textContent  = att?.check_in  || '—';
+  document.getElementById('t-checkout').textContent = att?.check_out || '—';
+
+  if (att?.check_in && att?.check_out) {
+    // Calculate hours
+    const [ih,im] = att.check_in.split(':').map(Number);
+    const [oh,om] = att.check_out.split(':').map(Number);
+    const hrs = ((oh*60+om) - (ih*60+im)) / 60;
+    document.getElementById('t-hours').textContent = hrs.toFixed(1) + ' ساعة';
+    dot.className  = 'status-dot done';
+    text.textContent = '✅ انتهى يومك — ' + att.check_in + ' → ' + att.check_out;
+    btnIn.disabled  = true;
+    btnOut.disabled = true;
+  } else if (att?.check_in) {
+    document.getElementById('t-hours').textContent = 'جارٍ...';
+    dot.className  = 'status-dot ' + (att.status === 'late' ? 'late' : 'present');
+    text.textContent = (att.status === 'late' ? '⚠️ حضور متأخر — ' : '✅ حاضر منذ ') + att.check_in;
+    btnIn.disabled  = true;
+    btnOut.disabled = false;
+  } else {
+    dot.className  = 'status-dot';
+    text.textContent = 'لم تسجل حضورك بعد';
+    btnIn.disabled  = false;
+    btnOut.disabled = true;
+  }
+}
+
+function disableAttendance(msg) {
+  document.getElementById('btn-checkin').disabled  = true;
+  document.getElementById('btn-checkout').disabled = true;
+  document.getElementById('status-text').textContent = msg;
+}
+
+// ── Attendance actions ────────────────────────────────────
+async function doCheckIn() {
+  const btn = document.getElementById('btn-checkin');
+  btn.disabled = true; btn.querySelector('span:last-child').textContent = 'جاري...';
+  try {
+    const d = await fetch(BASE + '/hr/my/checkin', { method: 'POST', headers: hdr() }).then(x => x.json());
+    if (d.ok) {
+      toast(d.message, 'success');
+      await loadProfile();
+    } else {
+      toast(d.error || 'خطأ', 'error');
+      btn.disabled = false;
+    }
+  } catch(e) { toast('خطأ في الاتصال', 'error'); btn.disabled = false; }
+  btn.querySelector('span:last-child').textContent = 'تسجيل حضور';
+}
+
+async function doCheckOut() {
+  const btn = document.getElementById('btn-checkout');
+  btn.disabled = true; btn.querySelector('span:last-child').textContent = 'جاري...';
+  try {
+    const d = await fetch(BASE + '/hr/my/checkout', { method: 'POST', headers: hdr() }).then(x => x.json());
+    if (d.ok) {
+      toast(d.message, 'success');
+      await loadProfile();
+    } else {
+      toast(d.error || 'خطأ', 'error');
+      btn.disabled = false;
+    }
+  } catch(e) { toast('خطأ في الاتصال', 'error'); btn.disabled = false; }
+  btn.querySelector('span:last-child').textContent = 'تسجيل انصراف';
+}
+
+// ── History ───────────────────────────────────────────────
+function buildMonthOptions() {
+  const sel = document.getElementById('month-sel');
+  const now = new Date();
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const val = d.toISOString().slice(0,7);
+    const label = AR_MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+    const opt = document.createElement('option');
+    opt.value = val; opt.textContent = label;
+    if (i === 0) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+async function loadHistory() {
+  const month = document.getElementById('month-sel').value;
+  const list = document.getElementById('history-list');
+  list.innerHTML = '<div class="loading">جاري التحميل...</div>';
+  try {
+    const d = await fetch(BASE + '/hr/my/history?month=' + month, { headers: hdr() }).then(x => x.json());
+    if (!d.ok) { list.innerHTML = '<div class="loading">' + (d.error||'خطأ') + '</div>'; return; }
+
+    document.getElementById('hist-count').textContent = d.data.length + ' يوم';
+
+    if (!d.data.length) {
+      list.innerHTML = '<div class="loading">لا يوجد سجلات لهذا الشهر</div>';
+      return;
+    }
+
+    list.innerHTML = d.data.map(r => {
+      const date = new Date(r.work_date);
+      const day = date.getDate();
+      const mon = AR_MONTHS[date.getMonth()].slice(0,3);
+      const dayName = AR_DAYS[date.getDay()];
+
+      let hours = '—';
+      if (r.check_in && r.check_out) {
+        const [ih,im] = r.check_in.split(':').map(Number);
+        const [oh,om] = r.check_out.split(':').map(Number);
+        hours = (((oh*60+om)-(ih*60+im))/60).toFixed(1) + ' ساعة';
+      }
+
+      const badgeClass = { present:'badge-present', absent:'badge-absent', late:'badge-late', holiday:'badge-holiday' }[r.status] || 'badge-present';
+      const badgeText  = { present:'حضور', absent:'غياب', late:'تأخير', holiday:'إجازة' }[r.status] || r.status;
+      const timesText  = r.check_in ? (r.check_in + (r.check_out ? ' → ' + r.check_out : ' (لم يُسجَّل انصراف)')) : '—';
+
+      return `<div class="history-item">
+        <div class="history-date">
+          <div class="history-day">${day}</div>
+          <div class="history-month">${mon}</div>
+        </div>
+        <div class="history-info">
+          <div class="history-times">${dayName} — ${timesText}</div>
+          <div class="history-hours">${hours}</div>
+        </div>
+        <span class="history-badge ${badgeClass}">${badgeText}</span>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML = '<div class="loading">خطأ في التحميل</div>';
+  }
+}
+
+buildMonthOptions();
+init();
+</script>
+<script>
+if('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/my/sw.js').catch(function(){});
+}
+</script>
+</body>
+</html>

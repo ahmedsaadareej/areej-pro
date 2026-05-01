@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>خطة الـ 90 يوم — نظام أريج</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',sans-serif;background:#f5f7fa;color:#1a1a1a;min-height:100vh}
+
+.nav{background:#1B5E30;color:#fff;padding:0 20px;display:flex;align-items:center;height:56px;gap:12px;position:sticky;top:0;z-index:100}
+.nav-brand{font-size:17px;font-weight:800}
+.nav-brand span{color:#F5A623}
+.nav-back{color:rgba(255,255,255,.8);text-decoration:none;font-size:14px;font-weight:600}
+.nav-back:hover{color:#fff}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,#1B5E30 0%,#2d7a47 100%);color:#fff;padding:40px 20px;text-align:center}
+.hero h1{font-size:28px;font-weight:800;margin-bottom:8px}
+.hero p{font-size:15px;opacity:.85;max-width:500px;margin:0 auto 24px}
+
+/* PROGRESS BAR */
+.progress-wrap{max-width:560px;margin:0 auto}
+.progress-label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;opacity:.9}
+.progress-bar{height:12px;background:rgba(255,255,255,.2);border-radius:20px;overflow:hidden}
+.progress-fill{height:100%;background:#F5A623;border-radius:20px;transition:.5s ease}
+.progress-pct{font-size:22px;font-weight:800;margin-top:10px}
+
+/* PHASE TABS */
+.phase-tabs{display:flex;gap:0;max-width:900px;margin:24px auto 0;padding:0 20px}
+.phase-tab{flex:1;padding:12px;border-radius:12px 12px 0 0;text-align:center;cursor:pointer;font-size:14px;font-weight:700;color:rgba(255,255,255,.7);border:none;background:rgba(255,255,255,.1);font-family:'Cairo',sans-serif;transition:.2s}
+.phase-tab.active{background:#fff;color:#1B5E30}
+.phase-tab .tab-pct{font-size:11px;font-weight:600;margin-top:2px;opacity:.8}
+
+/* MAIN */
+.main{max-width:900px;margin:0 auto;padding:20px}
+
+/* PHASE PANEL */
+.phase-panel{display:none}
+.phase-panel.active{display:block}
+
+/* PHASE HEADER */
+.phase-header{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.phase-title{font-size:18px;font-weight:800;color:#1B5E30;margin-bottom:4px}
+.phase-sub{font-size:13px;color:#6b7280}
+
+/* WEEK */
+.week-group{margin-bottom:20px}
+.week-title{font-size:13px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e5e7eb}
+
+/* TASK CARD */
+.task-card{background:#fff;border-radius:10px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,.05);cursor:pointer;transition:.15s;border:2px solid transparent}
+.task-card:hover{border-color:#d1fae5}
+.task-card.done{background:#f0fdf4;border-color:#86efac}
+.task-card.done .task-text{text-decoration:line-through;color:#9ca3af}
+
+.task-check{width:22px;height:22px;border-radius:6px;border:2px solid #d1d5db;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:.15s}
+.task-card.done .task-check{background:#1B5E30;border-color:#1B5E30}
+.task-check svg{display:none}
+.task-card.done .task-check svg{display:block}
+
+.task-content{flex:1}
+.task-text{font-size:14px;font-weight:600;line-height:1.5}
+.task-desc{font-size:12px;color:#9ca3af;margin-top:3px}
+.task-tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;margin-top:5px}
+.tag-content{background:#fef9c3;color:#854d0e}
+.tag-marketing{background:#dbeafe;color:#1e40af}
+.tag-ops{background:#fce7f3;color:#9d174d}
+.tag-sales{background:#dcfce7;color:#166534}
+.tag-brand{background:#ede9fe;color:#5b21b6}
+
+/* RESET BUTTON */
+.reset-btn{display:block;margin:30px auto 0;padding:10px 24px;background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;font-family:'Cairo',sans-serif;font-size:13px;font-weight:600;color:#9ca3af;cursor:pointer;transition:.2s}
+.reset-btn:hover{border-color:#ef4444;color:#ef4444}
+
+/* CELEBRATE */
+.celebrate{display:none;text-align:center;padding:40px 20px;background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(27,94,48,.15);margin-bottom:20px}
+.celebrate h2{font-size:24px;font-weight:800;color:#1B5E30;margin-bottom:8px}
+
+@media(max-width:600px){
+  .hero h1{font-size:22px}
+  .phase-tab{font-size:12px;padding:10px 6px}
+  .task-text{font-size:13px}
+}
+</style>
+
+<script>
+// Hide nav when rendered inside iframe (embedded in system)
+if (window.self !== window.top) {
+  document.addEventListener('DOMContentLoaded', function() {
+    var nav = document.querySelector('.nav');
+    if (nav) nav.style.display = 'none';
+  });
+}
+</script>
+</head>
+<body>
+
+<div class="nav">
+  <a href="/system/" class="nav-back">← نظام أريج</a>
+  <div class="nav-brand">خطة الـ <span>90</span> يوم</div>
+</div>
+
+<div class="hero">
+  <h1>🗓️ خطة البراند من الصفر للمبيعات</h1>
+  <p>90 يوم مقسّمين لـ 3 مراحل — كل مرحلة بتبني على اللي قبلها</p>
+  <div class="progress-wrap">
+    <div class="progress-label"><span>التقدم الإجمالي</span><span id="totalDone">0 / 0 مهمة</span></div>
+    <div class="progress-bar"><div class="progress-fill" id="totalFill" style="width:0%"></div></div>
+    <div class="progress-pct" id="totalPct">0%</div>
+  </div>
+</div>
+
+<div class="phase-tabs">
+  <button class="phase-tab active" onclick="showPhase(0,this)">
+    🔨 المرحلة الأولى<div class="tab-pct" id="pct0">يوم 1–30</div>
+  </button>
+  <button class="phase-tab" onclick="showPhase(1,this)">
+    📣 المرحلة الثانية<div class="tab-pct" id="pct1">يوم 31–60</div>
+  </button>
+  <button class="phase-tab" onclick="showPhase(2,this)">
+    🚀 المرحلة الثالثة<div class="tab-pct" id="pct2">يوم 61–90</div>
+  </button>
+</div>
+
+<div class="main">
+
+<!-- ══════════════ PHASE 1 ══════════════ -->
+<div class="phase-panel active" id="phase-0">
+  <div class="phase-header">
+    <div class="phase-title">🔨 المرحلة الأولى — البناء والتأسيس (يوم 1–30)</div>
+    <div class="phase-sub">الهدف: إنشاء البراند وخامات المحتوى وأول مبيعات</div>
+  </div>
+
+  <div class="week-group">
+    <div class="week-title">الأسبوع الأول — الهوية والمنتج</div>
+    <div class="task-card" onclick="toggle(this)" data-id="p1_01">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">حدّد نيشك بدقة — مين بالظبط بتبيع له؟</div><div class="task-desc">اكتب: العمر + الاهتمامات + مشكلته اللي انت بتحلها</div><span class="task-tag tag-brand">هوية البراند</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p1_02">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">صمّم الشعار والألوان الأساسية</div><div class="task-desc">Canva كافية — مش محتاج مصمم من أول يوم</div><span class="task-tag tag-brand">هوية البراند</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p1_03">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">حدّد أول 3 منتجات هتبدأ بيهم</div><div class="task-desc">مش أكتر — ركّز على اللي عندك طلب عليه أو تجربته</div><span class="task-tag tag-ops">العمليات</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p1_04">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">اطلب sample orders من الموردين</div><div class="task-desc">لازم تجرب جودة الطباعة على جسمك قبل ما تبيع</div><span class="task-tag tag-ops">العمليات</span></div>
+    </div>
+  </div>
+
+  <div class="week-group">
+    <div class="week-title">الأسبوع الثاني — المحتوى والبيزنس</div>
+    <div class="task-card" onclick="toggle(this)" data-id="p1_05">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">افتح حساب إنستجرام البيزنس باسم البراند</div><div class="task-desc">بايو واضح + رابط واحد + صورة بروفايل = شعار البراند</div><span class="task-tag tag-marketing">تسويق</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p1_06">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">صوّر المنتجات بنفسك (موبايل كافي)</div><div class="task-desc">خلفية بيضاء + إضاءة طبيعية = نتيجة احترافية</div><span class="task-tag tag-content">محتوى</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p1_07">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">احسب تسعيرة كل منتج بحاسبة التسعير</div><div class="task-desc">تكلفة + طباعة + شحن + هامش ربح = سعر نهائي</div><span class="task-tag tag-sales">مبيعات</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p1_08">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">ابدأ انشر 5 posts على إنستجرام (المنتجات + قصة البراند)</div><div class="task-desc">مش لازم تبيع من أول يوم — خلي الناس تعرفك أول</div><span class="task-tag tag-content">محتوى</span></div>
+    </div>
+  </div>
+
+  <div class="week-group">
+    <div class="week-title">الأسبوع الثالث — أول مبيعات</div>
+    <div class="task-card" onclick="toggle(this)" data-id="p1_09">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">أرسل لـ 10 أشخاص في دايرتك تعرض عليهم المنتج</div><div class="task-desc">مش إعلان — رسالة شخصية + صورة المنتج</div><span class="task-tag tag-sales">مبيعات</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p1_10">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">اعمل أول Story بوجهك بتشرح فيها البراند</div><div class="task-desc">الناس بتشتري منك انت — مش من منتج مجهول</div><span class="task-tag tag-marketing">تسويق</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p1_11">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">سجّل أول طلب في نظام العملاء (CRM)</div><div class="task-desc">حتى لو طلب واحد — ابدأ من الأول بالتنظيم</div><span class="task-tag tag-ops">العمليات</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p1_12">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">أخذ رأي أول 3 عملاء كتابياً</div><div class="task-desc">Feedback = ذهب — بيحسّن المنتج والتواصل</div><span class="task-tag tag-sales">مبيعات</span></div>
+    </div>
+  </div>
+
+  <div class="week-group">
+    <div class="week-title">الأسبوع الرابع — المراجعة والتحسين</div>
+    <div class="task-card" onclick="toggle(this)" data-id="p1_13">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">راجع: إيه المنتج الأكتر طلب؟ ليه؟</div><div class="task-desc">ركّز على اللي بيتباع — مش اللي بتحبه انت</div><span class="task-tag tag-ops">العمليات</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p1_14">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">حدّد المشاكل اللي ظهرت في التسليم أو الجودة</div><div class="task-desc">اكتبها واحدة واحدة وحدّد حل لكل منها</div><span class="task-tag tag-ops">العمليات</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p1_15">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">حضّر المرحلة الثانية — خطة المحتوى للشهر القادم</div><div class="task-desc">30 يوم × محتوى يومي = 30 فكرة بوست/ريلز/ستوري</div><span class="task-tag tag-content">محتوى</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ PHASE 2 ══════════════ -->
+<div class="phase-panel" id="phase-1">
+  <div class="phase-header">
+    <div class="phase-title">📣 المرحلة الثانية — المحتوى والمجتمع (يوم 31–60)</div>
+    <div class="phase-sub">الهدف: بناء جمهور حقيقي + زيادة المبيعات x3</div>
+  </div>
+
+  <div class="week-group">
+    <div class="week-title">الأسبوع الخامس — المحتوى اليومي</div>
+    <div class="task-card" onclick="toggle(this)" data-id="p2_01">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">نشر Reel واحد على الأقل كل يومين</div><div class="task-desc">Behind the scenes + المنتج + قصة العميل — الريلز بيوصل أكتر من الصور</div><span class="task-tag tag-content">محتوى</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p2_02">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">3 Stories يومياً على الأقل (polls + questions)</div><div class="task-desc">Stories = engagement = أكونت بيظهر أكتر في algorithm</div><span class="task-tag tag-content">محتوى</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p2_03">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">رد على كل كومنت وكل رسالة خلال ساعتين</div><div class="task-desc">السرعة في الرد = ثقة = مبيعات</div><span class="task-tag tag-sales">مبيعات</span></div>
+    </div>
+  </div>
+
+  <div class="week-group">
+    <div class="week-title">الأسبوع السادس — التسويق بالعملاء</div>
+    <div class="task-card" onclick="toggle(this)" data-id="p2_04">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">اطلب من 5 عملاء صور مع المنتج + نشرها</div><div class="task-desc">UGC (User Generated Content) = أقوى إعلان مجاني</div><span class="task-tag tag-marketing">تسويق</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p2_05">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">ابعت gift لأكتر عميل بيرشّح</div><div class="task-desc">Word of mouth = الأرخص والأقوى في مبيعات الملابس</div><span class="task-tag tag-marketing">تسويق</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p2_06">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">اعمل collaboration مع Nano-Influencer (3–30K followers)</div><div class="task-desc">مش محتاج ملايين — 5K followers في نيشك = نتيجة أحسن</div><span class="task-tag tag-marketing">تسويق</span></div>
+    </div>
+  </div>
+
+  <div class="week-group">
+    <div class="week-title">الأسبوع السابع — التوسع في المنتجات</div>
+    <div class="task-card" onclick="toggle(this)" data-id="p2_07">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">أضف منتجين جدد بناءً على طلبات العملاء</div><div class="task-desc">مش بناءً على إحساسك — بناءً على اللي بيطلبوه</div><span class="task-tag tag-ops">العمليات</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p2_08">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">اعمل Bundle (مجموعة منتجات بسعر خاص)</div><div class="task-desc">Bundle = متوسط قيمة الطلب بيتضاعف</div><span class="task-tag tag-sales">مبيعات</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p2_09">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">ابدأ بناء قايمة WhatsApp من العملاء الحاليين</div><div class="task-desc">WhatsApp Broadcast = إعلان مجاني لكل اللي اشتروا قبل كده</div><span class="task-tag tag-marketing">تسويق</span></div>
+    </div>
+  </div>
+
+  <div class="week-group">
+    <div class="week-title">الأسبوع الثامن — الأرقام والتحليل</div>
+    <div class="task-card" onclick="toggle(this)" data-id="p2_10">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">راجع: إيه أكتر محتوى جاب مبيعات؟</div><div class="task-desc">Reels / Stories / Posts — افهم اللي بيشتغل وكرّره</div><span class="task-tag tag-ops">العمليات</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p2_11">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">احسب هامش ربحك الفعلي بعد شهرين</div><div class="task-desc">إيرادات - تكاليف فعلية = الرقم الحقيقي</div><span class="task-tag tag-ops">العمليات</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p2_12">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">حضّر ميزانية الإعلانات للمرحلة الثالثة</div><div class="task-desc">مش لازم كتير — 500–1000 ج.م/شهر كافي للبداية</div><span class="task-tag tag-marketing">تسويق</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ PHASE 3 ══════════════ -->
+<div class="phase-panel" id="phase-2">
+  <div class="phase-header">
+    <div class="phase-title">🚀 المرحلة الثالثة — التسكيل والنمو (يوم 61–90)</div>
+    <div class="phase-sub">الهدف: بناء ماكينة مبيعات مستدامة</div>
+  </div>
+
+  <div class="week-group">
+    <div class="week-title">الأسبوع التاسع — الإعلانات المدفوعة</div>
+    <div class="task-card" onclick="toggle(this)" data-id="p3_01">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">شغّل أول Meta Ad بـ 100 ج.م تجربة</div><div class="task-desc">Story ad على أكتر post جاب engagement — مش post ترقية</div><span class="task-tag tag-marketing">تسويق</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p3_02">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">ابني Lookalike Audience من قايمة عملائك</div><div class="task-desc">أرسل أرقام وأيميلات عملائك لـ Meta → يلاقيهم أشباه</div><span class="task-tag tag-marketing">تسويق</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p3_03">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">اعمل Retargeting لمن زاروا البروفايل ولم يشتروا</div><div class="task-desc">دول أسهل ناس تتحوّل — عارفينك بس محتاجين push</div><span class="task-tag tag-marketing">تسويق</span></div>
+    </div>
+  </div>
+
+  <div class="week-group">
+    <div class="week-title">الأسبوع العاشر — الأنظمة والتفويض</div>
+    <div class="task-card" onclick="toggle(this)" data-id="p3_04">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">اعمل SOP (إجراء مكتوب) لكل عملية في البيزنس</div><div class="task-desc">الطلب → الإنتاج → التغليف → التسليم — خطوة خطوة</div><span class="task-tag tag-ops">العمليات</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p3_05">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">أتمت الردود المتكررة على الواتساب</div><div class="task-desc">Quick Replies = وفّر 2–3 ساعات يومياً</div><span class="task-tag tag-ops">العمليات</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p3_06">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">فكّر في أول موظف أو Freelancer تعمل معاه</div><div class="task-desc">تصوير / تغليف / خدمة عملاء — إيه اللي بياخد من وقتك أكتر؟</div><span class="task-tag tag-ops">العمليات</span></div>
+    </div>
+  </div>
+
+  <div class="week-group">
+    <div class="week-title">الأسبوع الحادي عشر — الولاء والتكرار</div>
+    <div class="task-card" onclick="toggle(this)" data-id="p3_07">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">ابعت لعملاء الشهر الأول عرض Loyalty خاص</div><div class="task-desc">خصم 15% للطلب الثاني = عملاء متكررين = تكلفة اقتناء = 0</div><span class="task-tag tag-sales">مبيعات</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p3_08">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">اعمل Referral Program — اجيب صاحب واخد خصم</div><div class="task-desc">أبسط نظام: "اللي بيجيبلك عميل جديد = 50 ج.م رصيد"</div><span class="task-tag tag-sales">مبيعات</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p3_09">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">ابني Email/WhatsApp list من كل العملاء الـ 90 يوم</div><div class="task-desc">دي asset قيمتها في الوقت — مش followers على سوشيال</div><span class="task-tag tag-marketing">تسويق</span></div>
+    </div>
+  </div>
+
+  <div class="week-group">
+    <div class="week-title">الأسبوع الثاني عشر — المراجعة والخطة التالية</div>
+    <div class="task-card" onclick="toggle(this)" data-id="p3_10">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">راجع كل أرقام الـ 90 يوم: إيرادات + عملاء + هامش</div><div class="task-desc">مقارنة شهر 1 vs شهر 3 = شوف النمو الحقيقي</div><span class="task-tag tag-ops">العمليات</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p3_11">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">حدّد الـ 20% من المنتجات اللي جابت 80% من الإيراد</div><div class="task-desc">Pareto rule — ركّز عليهم في الـ 90 يوم الجاية</div><span class="task-tag tag-ops">العمليات</span></div>
+    </div>
+    <div class="task-card" onclick="toggle(this)" data-id="p3_12">
+      <div class="task-check"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L5 9L12 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-content"><div class="task-text">اكتب أهداف الـ 90 يوم الجاية</div><div class="task-desc">بالأرقام — مش "هكبر" — "هوصل لـ X طلب شهرياً"</div><span class="task-tag tag-brand">هوية البراند</span></div>
+    </div>
+  </div>
+
+  <div class="celebrate" id="celebrate">
+    <div style="font-size:56px;margin-bottom:12px">🎉</div>
+    <h2>مبروك! أنهيت خطة الـ 90 يوم</h2>
+    <p style="color:#6b7280;margin-top:8px">البراند اللي بنيته في 90 يوم = أساس شركة حقيقية</p>
+  </div>
+</div>
+
+<button class="reset-btn" onclick="resetAll()">🔄 إعادة تعيين كل التقدم</button>
+
+</div><!-- /main -->
+
+<script>
+const STORAGE_KEY = 'areej_plan90_v1';
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+}
+function saveState(state) { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+function toggle(card) {
+  const id = card.dataset.id;
+  const state = loadState();
+  state[id] = !state[id];
+  saveState(state);
+  card.classList.toggle('done', !!state[id]);
+  updateProgress();
+}
+
+function applyState() {
+  const state = loadState();
+  document.querySelectorAll('.task-card').forEach(card => {
+    card.classList.toggle('done', !!state[card.dataset.id]);
+  });
+  updateProgress();
+}
+
+function updateProgress() {
+  const cards = document.querySelectorAll('.task-card');
+  const total = cards.length;
+  const done = document.querySelectorAll('.task-card.done').length;
+  const pct = total ? Math.round(done / total * 100) : 0;
+  document.getElementById('totalFill').style.width = pct + '%';
+  document.getElementById('totalPct').textContent = pct + '%';
+  document.getElementById('totalDone').textContent = done + ' / ' + total + ' مهمة';
+
+  // Per-phase
+  [0,1,2].forEach(i => {
+    const phaseCards = document.querySelectorAll('#phase-'+i+' .task-card');
+    const phaseDone = document.querySelectorAll('#phase-'+i+' .task-card.done').length;
+    const phasePct = phaseCards.length ? Math.round(phaseDone / phaseCards.length * 100) : 0;
+    document.getElementById('pct'+i).textContent = phasePct + '% مكتمل';
+  });
+
+  // Celebrate
+  if (pct === 100) document.getElementById('celebrate').style.display = 'block';
+}
+
+function showPhase(idx, btn) {
+  document.querySelectorAll('.phase-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.phase-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('phase-'+idx).classList.add('active');
+  btn.classList.add('active');
+}
+
+function resetAll() {
+  if (!confirm('إعادة تعيين كل التقدم؟ لن يمكن التراجع')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  document.querySelectorAll('.task-card').forEach(c => c.classList.remove('done'));
+  document.getElementById('celebrate').style.display = 'none';
+  updateProgress();
+}
+
+applyState();
+</script>
+</body>
+</html>

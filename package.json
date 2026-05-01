@@ -1,0 +1,8 @@
+{
+  "name": "areej-pro-root",
+  "description": "Root workspace — server code is in /server/",
+  "private": true,
+  "dependencies": {
+    "compression": "^1.8.1"
+  }
+}

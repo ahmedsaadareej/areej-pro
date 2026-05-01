@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>أريج Pro — لوحة الأدمن</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',sans-serif;background:#f0f4f8;color:#1a1a1a;min-height:100vh}
+.nav{background:#1B5E30;color:#fff;padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.nav-brand{font-size:17px;font-weight:800}.nav-brand span{color:#F5A623}
+.nav-tabs{display:flex;gap:4px}
+.nav-tab{background:transparent;border:none;color:rgba(255,255,255,.7);padding:6px 14px;border-radius:8px;cursor:pointer;font-family:Cairo,sans-serif;font-size:13px;font-weight:600;transition:.15s}
+.nav-tab:hover,.nav-tab.active{background:rgba(255,255,255,.15);color:#fff}
+.nav-right{display:flex;align-items:center;gap:10px;font-size:13px}
+.page{display:none;padding:24px;max-width:1200px;margin:0 auto}.page.active{display:block}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:24px}
+.stat-card{background:#fff;border-radius:12px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.stat-num{font-size:28px;font-weight:800;color:#1B5E30}
+.stat-label{font-size:12px;color:#6b7280;margin-top:2px}
+.card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:20px}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.card-header h2{font-size:16px;font-weight:700}
+.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-family:Cairo,sans-serif;font-size:13px;font-weight:600;transition:.15s}
+.btn-green{background:#1B5E30;color:#fff}.btn-green:hover{background:#145228}
+.btn-gold{background:#F5A623;color:#fff}.btn-gold:hover{background:#d4901e}
+.btn-red{background:#ef4444;color:#fff}.btn-red:hover{background:#dc2626}
+.btn-gray{background:#e5e7eb;color:#374151}.btn-gray:hover{background:#d1d5db}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:6px}
+.search-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.search-bar input,.search-bar select{padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px;outline:none}
+.search-bar input:focus,.search-bar select:focus{border-color:#1B5E30}
+table{width:100%;border-collapse:collapse}
+th{background:#f9fafb;padding:10px 12px;text-align:right;font-size:12px;color:#6b7280;font-weight:700;border-bottom:1px solid #f0f0f0}
+td{padding:10px 12px;font-size:13px;border-bottom:1px solid #f9fafb;vertical-align:middle}
+tr:hover td{background:#fafafa}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-trial{background:#fff7ed;color:#c2410c}
+.badge-active{background:#f0fdf4;color:#16a34a}
+.badge-expired{background:#fef2f2;color:#dc2626}
+.badge-suspended{background:#f3f4f6;color:#6b7280}
+.badge-lifetime{background:#eff6ff;color:#2563eb}
+.days-ok{color:#16a34a;font-weight:700}
+.days-warn{color:#F5A623;font-weight:700}
+.days-crit{color:#ef4444;font-weight:700}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:17px;font-weight:700;margin-bottom:16px}
+.form-row{margin-bottom:12px}
+.form-row label{display:block;font-size:12px;font-weight:600;color:#6b7280;margin-bottom:4px}
+.form-row input,.form-row select{width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px;outline:none}
+.form-row input:focus,.form-row select:focus{border-color:#1B5E30}
+.modal-btns{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1B5E30;color:#fff;padding:10px 20px;border-radius:10px;font-size:14px;z-index:999;display:none}
+input[type=number]{direction:ltr}
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#1B5E30,#2d7a47)}
+.login-card{background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.2);text-align:center}
+.login-card h2{font-size:22px;font-weight:800;color:#1B5E30;margin-bottom:4px}
+.login-card p{font-size:13px;color:#9ca3af;margin-bottom:24px}
+.login-card input{width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:10px;font-family:Cairo,sans-serif;font-size:14px;margin-bottom:12px;outline:none;box-sizing:border-box}
+.login-card input:focus{border-color:#1B5E30}
+.login-card button{width:100%;padding:12px;background:#1B5E30;color:#fff;border:none;border-radius:10px;font-family:Cairo,sans-serif;font-size:15px;font-weight:700;cursor:pointer}
+.login-card button:hover{background:#145228}
+#login-err{color:#ef4444;font-size:13px;margin-bottom:8px;min-height:18px}
+#main-app{display:none}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div style="font-size:36px;margin-bottom:8px">👑</div>
+    <h2>أريج Pro — أدمن</h2>
+    <p>لوحة تحكم المالك — دخول مقيّد</p>
+    <input id="login-email" type="email" placeholder="البريد الإلكتروني" autocomplete="email">
+    <input id="login-pass" type="password" placeholder="كلمة المرور" onkeydown="if(event.key==='Enter')doAdminLogin()">
+    <div id="login-err"></div>
+    <button id="login-btn" onclick="doAdminLogin()">دخول</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="main-app">
+<nav class="nav">
+  <div class="nav-brand">أريج <span>Pro</span> — أدمن</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('users',this)">👥 المستخدمين</button>
+    <button class="nav-tab" onclick="showPage('payments',this)">💳 المدفوعات</button>
+    <button class="nav-tab" onclick="showPage('promos',this)">🎟 البرومو كود</button>
+    <button class="nav-tab" onclick="showPage('notify',this)">🔔 إشعارات</button>
+    <button class="nav-tab" onclick="showPage('health',this)">🛡️ الحماية</button>
+  </div>
+  <div class="nav-right">
+    <span id="admin-name" style="opacity:.8"></span>
+    <button class="btn btn-gray btn-sm" onclick="doLogout()">خروج</button>
+  </div>
+</nav>
+
+<!-- USERS PAGE -->
+<div id="page-users" class="page active">
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat-card"><div class="stat-num" id="s-total">-</div><div class="stat-label">إجمالي الحسابات</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-trial" style="color:#c2410c">-</div><div class="stat-label">تجريبي</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-active" style="color:#16a34a">-</div><div class="stat-label">نشط</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-expired" style="color:#ef4444">-</div><div class="stat-label">منتهي</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-revenue" style="color:#2563eb">-</div><div class="stat-label">إجمالي الإيراد (ج.م)</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>👥 قائمة المستخدمين</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-gold" onclick="openCreateModal()">+ إنشاء حساب</button>
+        <button class="btn btn-green btn-sm" onclick="loadUsers()">🔄 تحديث</button>
+      </div>
+    </div>
+    <div class="search-bar">
+      <input id="u-search" placeholder="بحث بالاسم أو الإيميل أو السب دومين..." style="flex:1;min-width:200px" oninput="loadUsers()">
+      <select id="u-status" onchange="loadUsers()">
+        <option value="all">كل الحالات</option>
+        <option value="trial">تجريبي</option>
+        <option value="active">نشط</option>
+        <option value="expired">منتهي</option>
+        <option value="suspended">موقوف</option>
+      </select>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th>#</th><th>الاسم</th><th>الإيميل</th><th>السب دومين</th>
+          <th>الحالة</th><th>الخطة</th><th>الأيام المتبقية</th><th>تاريخ التسجيل</th><th>إجراءات</th>
+        </tr></thead>
+        <tbody id="users-tbody"><tr><td colspan="9" style="text-align:center;padding:30px;color:#9ca3af">جاري التحميل...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENTS PAGE -->
+<div id="page-payments" class="page">
+  <div class="card">
+    <div class="card-header">
+      <h2>💳 المدفوعات المعلقة</h2>
+      <button class="btn btn-green btn-sm" onclick="loadPayments()">🔄 تحديث</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>#</th><th>المستخدم</th><th>الخطة</th><th>المبلغ</th><th>الحالة</th><th>التاريخ</th><th>إجراء</th></tr></thead>
+        <tbody id="payments-tbody"><tr><td colspan="7" style="text-align:center;padding:30px;color:#9ca3af">جاري التحميل...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PROMOS PAGE -->
+<div id="page-promos" class="page">
+  <div class="card">
+    <div class="card-header">
+      <h2>🎟 البرومو كودات</h2>
+      <button class="btn btn-green" onclick="openPromoModal()">+ إنشاء كود جديد</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>الكود</th><th>الخصم</th><th>الاستخدامات</th><th>الحد الأقصى</th><th>انتهاء</th><th>الحالة</th><th>إجراء</th></tr></thead>
+        <tbody id="promos-tbody"><tr><td colspan="7" style="text-align:center;padding:30px;color:#9ca3af">جاري التحميل...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT USER MODAL -->
+<div class="modal-bg" id="edit-modal">
+  <div class="modal">
+    <h3>✏️ تعديل المستخدم</h3>
+    <input type="hidden" id="edit-id">
+    <div class="form-row"><label>الاسم</label><input id="edit-name" type="text"></div>
+    <div class="form-row"><label>الإيميل</label><input id="edit-email" type="email"></div>
+    <div class="form-row"><label>الهاتف</label><input id="edit-phone" type="text"></div>
+    <div class="form-row"><label>اسم الشركة</label><input id="edit-company" type="text"></div>
+    <div class="form-row"><label>السب دومين (slug)</label><input id="edit-slug" type="text"></div>
+    <div class="form-row"><label>الحالة</label>
+      <select id="edit-status">
+        <option value="trial">تجريبي</option>
+        <option value="active">نشط</option>
+        <option value="expired">منتهي</option>
+        <option value="suspended">موقوف</option>
+      </select>
+    </div>
+    <div class="form-row"><label>الخطة</label>
+      <select id="edit-plan">
+        <option value="">— لا يوجد —</option>
+        <option value="monthly">شهري</option>
+        <option value="annual">سنوي</option>
+        <option value="lifetime">مدى الحياة</option>
+      </select>
+    </div>
+    <hr style="margin:12px 0;border:none;border-top:1px solid #f0f0f0">
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#374151">⏱ تمديد الاشتراك</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="ext-plan" style="flex:1;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px">
+        <option value="monthly">شهري (+30 يوم)</option>
+        <option value="annual">سنوي (+365 يوم)</option>
+        <option value="lifetime">مدى الحياة</option>
+      </select>
+      <button class="btn btn-gold" onclick="extendUser()">تمديد</button>
+    </div>
+    <hr style="margin:12px 0;border:none;border-top:1px solid #f0f0f0">
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#374151">🔑 إدارة كلمة السر وبيانات الدخول</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn btn-gold" onclick="resetUserPassword()">🔑 تغيير كلمة السر + إرسال</button>
+      <button class="btn" style="background:#eff6ff;color:#2563eb" onclick="resendUserCredentials()">📧 إعادة إرسال رابط الدخول</button>
+      <button class="btn" style="background:#f0fdf4;color:#166534" onclick="backupTenantNow()">💾 نسخ بيانات العميل</button>
+      <a id="export-tenant-link" href="#" target="_blank" style="background:#f5f3ff;color:#7c3aed;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none">📥 تصدير بياناته</a>
+    </div>
+    <div id="pwd-result" style="font-size:12px;margin-bottom:8px"></div>
+    <div class="modal-btns">
+      <button class="btn btn-red" onclick="deleteUser()">🗑 حذف الحساب</button>
+      <button class="btn btn-gray" onclick="closeModal('edit-modal')">إلغاء</button>
+      <button class="btn btn-green" onclick="saveUser()">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE PROMO MODAL -->
+<div class="modal-bg" id="promo-modal">
+  <div class="modal">
+    <h3>🎟 إنشاء برومو كود جديد</h3>
+    <div class="form-row"><label>الكود (أحرف وأرقام فقط)</label>
+      <div style="display:flex;gap:8px">
+        <input id="p-code" type="text" placeholder="RAMADAN30" style="flex:1;text-transform:uppercase">
+        <button class="btn btn-gray" onclick="genCode()">توليد</button>
+      </div>
+    </div>
+    <div class="form-row"><label>نوع الخصم</label>
+      <select id="p-type">
+        <option value="percent">نسبة مئوية (%)</option>
+        <option value="fixed">مبلغ ثابت (ج.م)</option>
+        <option value="trial_days">أيام تجريبية إضافية</option>
+      </select>
+    </div>
+    <div class="form-row"><label>القيمة</label><input id="p-value" type="number" min="1" placeholder="30"></div>
+    <div class="form-row"><label>الحد الأقصى للاستخدام (0 = غير محدود)</label><input id="p-max" type="number" min="0" value="0"></div>
+    <div class="form-row"><label>تاريخ الانتهاء (اختياري)</label><input id="p-expires" type="date"></div>
+    <div class="modal-btns">
+      <button class="btn btn-gray" onclick="closeModal('promo-modal')">إلغاء</button>
+      <button class="btn btn-green" onclick="createPromo()">✅ إنشاء</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// Token fetched dynamically in hdr()
+const B = '/api/billing';
+
+function hdr() { const t = window._adminToken || localStorage.getItem('pro_token') || ''; return { 'Content-Type':'application/json', 'Authorization':'Bearer '+t }; }
+
+async function init() {
+  // Check URL hash for token (passed from login form)
+  const hash = new URLSearchParams(window.location.hash.slice(1));
+  const hashTok = hash.get('t');
+  if (hashTok) {
+    localStorage.setItem('pro_token', hashTok);
+    history.replaceState(null,'',window.location.pathname);
+  }
+
+  const tok = localStorage.getItem('pro_token');
+  if (!tok) { showLoginScreen(); return; }
+
+  const r = await fetch('/api/auth/me', { headers: { 'Content-Type':'application/json','Authorization':'Bearer '+tok } }).then(x=>x.json()).catch(()=>({ok:false}));
+  if (!r.ok || r.user.role !== 'admin') { showLoginScreen('بيانات غير صحيحة أو صلاحية منتهية'); return; }
+
+  // Show dashboard
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  document.getElementById('admin-name').textContent = r.user.name;
+  window._adminToken = tok;
+  loadStats();
+  loadUsers();
+}
+
+function showLoginScreen(err='') {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('main-app').style.display = 'none';
+  if (err) document.getElementById('login-err').textContent = err;
+}
+
+async function doAdminLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const btn   = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = 'جاري...';
+  try {
+    const r = await fetch('/api/auth/login', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password: pass })
+    }).then(x=>x.json());
+
+    if (!r.ok) { document.getElementById('login-err').textContent = r.error||'بيانات غير صحيحة'; btn.disabled=false; btn.textContent='دخول'; return; }
+    if (r.user?.role !== 'admin') { document.getElementById('login-err').textContent = 'هذا الحساب ليس أدمن'; btn.disabled=false; btn.textContent='دخول'; return; }
+
+    localStorage.setItem('pro_token', r.token);
+    location.reload();
+  } catch(e) {
+    document.getElementById('login-err').textContent = 'خطأ في الاتصال';
+    btn.disabled=false; btn.textContent='دخول';
+  }
+}
+
+function doLogout() { localStorage.removeItem('pro_token'); window._adminToken=''; showLoginScreen(); }
+
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(name==='users') { loadStats(); loadUsers(); }
+  if(name==='payments') loadPayments();
+  if(name==='promos') loadPromos();
+  if(name==='health') loadHealth();
+  if(name==='notify') loadNotifyUsers();
+}
+
+function toast(msg, err=false) {
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.style.background=err?'#ef4444':'#1B5E30';
+  t.style.display='block';
+  setTimeout(()=>t.style.display='none',3000);
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+
+// ── Stats ──────────────────────────────────────────────────
+async function loadStats() {
+  const d = await fetch(B+'/admin/stats', { headers: hdr() }).then(r=>r.json());
+  if (!d.ok) return;
+  const s = d.data;
+  document.getElementById('s-total').textContent = s.total;
+  document.getElementById('s-trial').textContent = s.trial;
+  document.getElementById('s-active').textContent = s.active;
+  document.getElementById('s-expired').textContent = s.expired;
+  document.getElementById('s-revenue').textContent = Number(s.revenue).toLocaleString('ar-EG');
+}
+
+// ── Users ──────────────────────────────────────────────────
+async function loadUsers() {
+  const search = document.getElementById('u-search').value;
+  const status = document.getElementById('u-status').value;
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  if (status && status !== 'all') params.set('status', status);
+
+  const d = await fetch(B+'/admin/users/detail?'+params, { headers: hdr() }).then(r=>r.json());
+  const tbody = document.getElementById('users-tbody');
+  if (!d.ok || !d.data.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:#9ca3af">لا يوجد مستخدمون</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = d.data.map((u,i) => {
+    const statusBadge = {
+      trial: '<span class="badge badge-trial">تجريبي</span>',
+      active: '<span class="badge badge-active">نشط</span>',
+      expired: '<span class="badge badge-expired">منتهي</span>',
+      suspended: '<span class="badge badge-suspended">موقوف</span>'
+    }[u.status] || u.status;
+
+    const planBadge = u.plan === 'lifetime'
+      ? '<span class="badge badge-lifetime">مدى الحياة</span>'
+      : (u.plan || '—');
+
+    let daysHtml = '—';
+    if (u.plan === 'lifetime') {
+      daysHtml = '<span class="days-ok">♾ دائم</span>';
+    } else if (u.days_left !== null) {
+      const cls = u.days_left > 7 ? 'days-ok' : u.days_left > 2 ? 'days-warn' : 'days-crit';
+      daysHtml = '<span class="'+cls+'">'+u.days_left+' يوم</span>';
+    }
+
+    const created = u.created_at ? new Date(u.created_at).toLocaleDateString('ar-EG') : '—';
+    const subdomain = u.slug ? '<a href="https://'+u.slug+'.areejegypt.com" target="_blank" style="color:#1B5E30;text-decoration:none;font-size:11px">'+u.slug+'</a>' : '—';
+
+    const uJson = encodeURIComponent(JSON.stringify(u));
+    return `<tr style="cursor:pointer" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+      <td style="color:#9ca3af">${i+1}</td>
+      <td onclick="openUserProfile(decodeURIComponent('${uJson}'))" style="cursor:pointer">
+        <div style="font-weight:700;color:#1B5E30;text-decoration:underline">${u.name||'—'}</div>
+        <small style="color:#9ca3af">${u.company_name||''}</small>
+      </td>
+      <td style="font-size:12px;direction:ltr">${u.email||'—'}</td>
+      <td>${subdomain}</td>
+      <td>${statusBadge}</td>
+      <td>${planBadge}</td>
+      <td>${daysHtml}</td>
+      <td style="font-size:12px;color:#6b7280">${created}</td>
+      <td onclick="event.stopPropagation()">
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <button class="btn btn-green btn-sm" onclick="openUserProfile('${uJson}')" title="بروفايل">👤</button>
+          <button class="btn btn-gold btn-sm" onclick="quickResetPwd(${u.id},'${u.email}')" title="تغيير كلمة السر">🔑</button>
+          <button class="btn btn-sm" style="background:#eff6ff;color:#2563eb" onclick="quickResend(${u.id},'${u.email}')" title="إعادة إرسال رابط الدخول">📧</button>
+          <button class="btn btn-sm" style="background:#f0fdf4;color:#166534" onclick="quickBackup(${u.id})" title="نسخ احتياطي">💾</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Edit User Modal ────────────────────────────────────────
+function openEditModal(u) {
+  document.getElementById('edit-id').value = u.id;
+  document.getElementById('edit-name').value = u.name || '';
+  document.getElementById('edit-email').value = u.email || '';
+  document.getElementById('edit-phone').value = u.phone || '';
+  document.getElementById('edit-company').value = u.company_name || '';
+  document.getElementById('edit-slug').value = u.slug || '';
+  document.getElementById('edit-status').value = u.status || 'trial';
+  document.getElementById('edit-plan').value = u.plan || '';
+  // Export link
+  const exportLink = document.getElementById('export-tenant-link');
+  if (exportLink) exportLink.href = '/api/billing/admin/export-tenant/'+u.id+'?_t='+localStorage.getItem('pro_token');
+  // Reset result
+  const pwdRes = document.getElementById('pwd-result');
+  if (pwdRes) pwdRes.textContent = '';
+  openModal('edit-modal');
+}
+
+async function saveUser() {
+  const id = document.getElementById('edit-id').value;
+  const body = {
+    name: document.getElementById('edit-name').value,
+    email: document.getElementById('edit-email').value,
+    phone: document.getElementById('edit-phone').value,
+    company_name: document.getElementById('edit-company').value,
+    slug: document.getElementById('edit-slug').value,
+    status: document.getElementById('edit-status').value,
+    plan: document.getElementById('edit-plan').value || null,
+  };
+  const r = await fetch(B+'/admin/users/'+id, { method:'PUT', headers:hdr(), body:JSON.stringify(body) }).then(x=>x.json());
+  if (r.ok) { toast('✅ تم الحفظ'); closeModal('edit-modal'); loadUsers(); }
+  else toast('❌ '+r.error, true);
+}
+
+async function extendUser() {
+  const id = document.getElementById('edit-id').value;
+  const plan = document.getElementById('ext-plan').value;
+  const r = await fetch(B+'/admin/users/'+id+'/extend', { method:'POST', headers:hdr(), body:JSON.stringify({ plan }) }).then(x=>x.json());
+  if (r.ok) { toast('✅ تم التمديد'); loadUsers(); }
+  else toast('❌ '+r.error, true);
+}
+
+async function resetUserPassword() {
+  if (!currentUser) return;
+  const res = document.getElementById('pwd-result');
+  res.textContent = 'جاري تغيير كلمة السر...';
+  const d = await fetch('/api/billing/admin/reset-password/'+currentUser.id, { method:'POST', headers: hdr() }).then(r=>r.json());
+  if (d.ok) {
+    res.innerHTML = '<span style="color:#16a34a">✅ تم تغيير كلمة السر وإرسالها بالإيميل | كلمة السر الجديدة: <code>'+d.new_password+'</code></span>';
+  } else {
+    res.innerHTML = '<span style="color:#CC2200">❌ خطأ: '+(d.error||'?')+'</span>';
+  }
+}
+
+async function resendUserCredentials() {
+  if (!currentUser) return;
+  const res = document.getElementById('pwd-result');
+  res.textContent = 'جاري الإرسال...';
+  const d = await fetch('/api/billing/admin/resend-credentials/'+currentUser.id, { method:'POST', headers: hdr() }).then(r=>r.json());
+  if (d.ok) res.innerHTML = '<span style="color:#16a34a">✅ تم إرسال رابط الدخول لـ '+currentUser.email+'</span>';
+  else res.innerHTML = '<span style="color:#CC2200">❌ '+(d.error||'?')+'</span>';
+}
+
+async function backupTenantNow() {
+  if (!currentUser) return;
+  const res = document.getElementById('pwd-result');
+  res.textContent = 'جاري أخذ نسخة...';
+  const d = await fetch('/api/billing/admin/backup-tenant/'+currentUser.id, { method:'POST', headers: hdr() }).then(r=>r.json());
+  if (d.ok) res.innerHTML = '<span style="color:#16a34a">✅ تم حفظ نسخة (حجم: '+d.size_kb+' KB)</span>';
+  else res.innerHTML = '<span style="color:#CC2200">❌ '+(d.error||'?')+'</span>';
+}
+
+// ── Quick Actions (from table) ─────────────────────────────
+async function quickResetPwd(userId, email) {
+  if (!confirm('تغيير كلمة سر ' + email + '؟ سيتم إرسالها بالإيميل.')) return;
+  const d = await fetch(B+'/admin/reset-password/'+userId, { method:'POST', headers: hdr() }).then(r=>r.json());
+  if (d.ok) toast('✅ تم إرسال كلمة السر الجديدة | ' + d.new_password);
+  else toast('❌ ' + (d.error||'خطأ'));
+}
+
+async function quickResend(userId, email) {
+  const d = await fetch(B+'/admin/resend-credentials/'+userId, { method:'POST', headers: hdr() }).then(r=>r.json());
+  if (d.ok) toast('✅ تم إرسال رابط الدخول لـ ' + email);
+  else toast('❌ ' + (d.error||'خطأ'));
+}
+
+async function quickBackup(userId) {
+  const d = await fetch(B+'/admin/backup-tenant/'+userId, { method:'POST', headers: hdr() }).then(r=>r.json());
+  if (d.ok) toast('✅ تم النسخ الاحتياطي (' + d.size_kb + ' KB)');
+  else toast('❌ ' + (d.error||'خطأ'));
+}
+
+// ── User Profile Panel ─────────────────────────────────────
+let profileUser = null;
+
+function openUserProfile(uJson) {
+  try {
+    const u = typeof uJson === 'string' ? JSON.parse(uJson) : uJson;
+    profileUser = u;
+  } catch(e) { return; }
+  const u = profileUser;
+
+  let panel = document.getElementById('user-profile-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'user-profile-panel';
+    panel.style.cssText = 'position:fixed;top:0;right:0;width:min(640px,100vw);height:100vh;background:#f5f7fa;z-index:9999;overflow-y:auto;box-shadow:-4px 0 30px rgba(0,0,0,.18);transform:translateX(100%);transition:.3s';
+    document.body.appendChild(panel);
+  }
+
+  const statusColors = { trial:'#F5A623', active:'#16a34a', expired:'#ef4444', suspended:'#9ca3af' };
+  const statusLabels = { trial:'تجريبي', active:'نشط', expired:'منتهي', suspended:'موقوف' };
+  const sc = statusColors[u.status]||'#9ca3af';
+  const sl = statusLabels[u.status]||u.status;
+  const subdomain = u.slug ? 'https://'+u.slug+'.areejegypt.com' : '';
+
+  panel.innerHTML =
+    '<div style="background:#1B5E30;padding:16px 20px;position:sticky;top:0;z-index:1">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center">'
+    + '<div><div style="color:#fff;font-size:17px;font-weight:900">' + (u.name||'—') + '</div>'
+    + '<div style="color:rgba(255,255,255,.7);font-size:12px">' + (u.company_name||'') + ' | ' + (u.email||'') + '</div></div>'
+    + '<button onclick="document.getElementById(\'user-profile-panel\').style.transform=\'translateX(100%)\'" style="color:#fff;background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:6px 12px;font-size:18px;cursor:pointer">✕</button>'
+    + '</div></div>'
+    + '<div style="padding:16px" id="up-body">'
+
+    // Status + Plan
+    + '<div style="background:#fff;border-radius:12px;padding:14px;margin-bottom:12px;border:1.5px solid #e5e7eb">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+    + '<span style="background:'+sc+'20;color:'+sc+';padding:5px 12px;border-radius:8px;font-weight:700;font-size:13px">'+sl+'</span>'
+    + '<span style="font-size:13px;font-weight:700;color:#374151">' + (u.plan==='lifetime'?'♾ مدى الحياة':(u.plan||'—')) + '</span>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px">'
+    + '<div style="background:#f9fafb;border-radius:8px;padding:8px;text-align:center"><div style="color:#9ca3af">الباقي</div><div style="font-weight:700">'+(u.days_left!==null?u.days_left+' يوم':'—')+'</div></div>'
+    + '<div style="background:#f9fafb;border-radius:8px;padding:8px;text-align:center"><div style="color:#9ca3af">تاريخ الإنشاء</div><div style="font-weight:700">'+(u.created_at||'—').substring(0,10)+'</div></div>'
+    + (subdomain ? '<div style="background:#f9fafb;border-radius:8px;padding:8px;text-align:center"><div style="color:#9ca3af">الرابط</div><a href="'+subdomain+'" target="_blank" style="font-weight:700;color:#1B5E30;font-size:11px;word-break:break-all">'+u.slug+'</a></div>' : '')
+    + '</div></div>'
+
+    // Quick Actions
+    + '<div style="background:#fff;border-radius:12px;padding:14px;margin-bottom:12px;border:1.5px solid #e5e7eb">'
+    + '<div style="font-size:13px;font-weight:800;margin-bottom:10px">⚡ إجراءات سريعة</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    + '<button onclick="quickResetPwd('+u.id+',\''+u.email+'\')" style="background:#fef9c3;border:none;color:#92400e;padding:10px;border-radius:8px;font-family:Cairo,sans-serif;font-size:12px;font-weight:700;cursor:pointer">🔑 تغيير كلمة السر + إرسال</button>'
+    + '<button onclick="quickResend('+u.id+',\''+u.email+'\')" style="background:#eff6ff;border:none;color:#2563eb;padding:10px;border-radius:8px;font-family:Cairo,sans-serif;font-size:12px;font-weight:700;cursor:pointer">📧 إعادة إرسال رابط الدخول</button>'
+    + '<button onclick="quickBackup('+u.id+')" style="background:#f0fdf4;border:none;color:#166534;padding:10px;border-radius:8px;font-family:Cairo,sans-serif;font-size:12px;font-weight:700;cursor:pointer">💾 نسخ احتياطي الآن</button>'
+    + '<a href="'+B+'/admin/export-tenant/'+u.id+'?_t='+localStorage.getItem('pro_token')+'" target="_blank" style="background:#f5f3ff;color:#7c3aed;padding:10px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;text-align:center;display:block">📥 تصدير بيانات JSON</a>'
+    + '</div></div>'
+
+    // Subscription Management
+    + '<div style="background:#fff;border-radius:12px;padding:14px;margin-bottom:12px;border:1.5px solid #e5e7eb">'
+    + '<div style="font-size:13px;font-weight:800;margin-bottom:10px">💳 إدارة الاشتراك</div>'
+    + '<div style="display:flex;gap:8px;margin-bottom:8px">'
+    + '<select id="up-plan" style="flex:1;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px">'
+    + '<option value="monthly"'+(u.plan==='monthly'?' selected':'')+'>شهري</option>'
+    + '<option value="annual"'+(u.plan==='annual'?' selected':'')+'>سنوي</option>'
+    + '<option value="lifetime"'+(u.plan==='lifetime'?' selected':'')+'>مدى الحياة</option>'
+    + '</select>'
+    + '<button onclick="extendFromProfile('+u.id+')" style="background:#F5A623;border:none;color:#fff;padding:8px 14px;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px;font-weight:700;cursor:pointer">⏱ تمديد</button>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px">'
+    + '<select id="up-status" style="flex:1;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px">'
+    + '<option value="trial"'+(u.status==='trial'?' selected':'')+'>تجريبي</option>'
+    + '<option value="active"'+(u.status==='active'?' selected':'')+'>نشط</option>'
+    + '<option value="expired"'+(u.status==='expired'?' selected':'')+'>منتهي</option>'
+    + '<option value="suspended"'+(u.status==='suspended'?' selected':'')+'>موقوف</option>'
+    + '</select>'
+    + '<button onclick="updateStatusFromProfile('+u.id+')" style="background:#1B5E30;border:none;color:#fff;padding:8px 14px;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px;font-weight:700;cursor:pointer">✅ تحديث الحالة</button>'
+    + '</div></div>'
+
+    // Edit Info
+    + '<div style="background:#fff;border-radius:12px;padding:14px;margin-bottom:12px;border:1.5px solid #e5e7eb">'
+    + '<div style="font-size:13px;font-weight:800;margin-bottom:10px">✏️ تعديل البيانات</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    + '<input id="up-name" value="'+(u.name||'')+'" placeholder="الاسم" style="padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px">'
+    + '<input id="up-email" value="'+(u.email||'')+'" placeholder="الإيميل" style="padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px">'
+    + '<input id="up-company" value="'+(u.company_name||'')+'" placeholder="اسم الشركة" style="padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px">'
+    + '<input id="up-phone" value="'+(u.phone||'')+'" placeholder="الهاتف" style="padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px">'
+    + '</div>'
+    + '<button onclick="saveFromProfile('+u.id+')" style="background:#1B5E30;border:none;color:#fff;padding:9px;width:100%;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px">💾 حفظ التعديلات</button>'
+    + '</div>'
+
+    // Danger Zone
+    + '<div style="background:#fff;border-radius:12px;padding:14px;border:1.5px solid #fee2e2">'
+    + '<div style="font-size:13px;font-weight:800;color:#ef4444;margin-bottom:10px">⚠️ منطقة الخطر</div>'
+    + '<button onclick="deleteFromProfile('+u.id+',\''+u.name+'\')" style="background:#fee2e2;border:none;color:#ef4444;padding:9px 16px;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px;font-weight:700;cursor:pointer">🗑️ حذف الحساب نهائياً</button>'
+    + '</div>'
+
+    + '</div>';
+
+  panel.style.transform = 'translateX(0)';
+}
+
+async function extendFromProfile(userId) {
+  const plan = document.getElementById('up-plan').value;
+  const d = await fetch(B+'/admin/users/'+userId+'/extend', { method:'POST', headers:{...hdr(),'Content-Type':'application/json'}, body:JSON.stringify({plan}) }).then(r=>r.json());
+  toast(d.ok ? '✅ تم التمديد' : '❌ '+(d.error||'خطأ'));
+  if (d.ok) { loadUsers(); }
+}
+
+async function updateStatusFromProfile(userId) {
+  const status = document.getElementById('up-status').value;
+  const d = await fetch(B+'/admin/users/'+userId, { method:'PUT', headers:{...hdr(),'Content-Type':'application/json'}, body:JSON.stringify({status}) }).then(r=>r.json());
+  toast(d.ok ? '✅ تم تحديث الحالة' : '❌ '+(d.error||'خطأ'));
+  if (d.ok) { loadUsers(); }
+}
+
+async function saveFromProfile(userId) {
+  const body = {
+    name: document.getElementById('up-name').value.trim(),
+    email: document.getElementById('up-email').value.trim(),
+    company_name: document.getElementById('up-company').value.trim(),
+    phone: document.getElementById('up-phone').value.trim(),
+  };
+  const d = await fetch(B+'/admin/users/'+userId, { method:'PUT', headers:{...hdr(),'Content-Type':'application/json'}, body:JSON.stringify(body) }).then(r=>r.json());
+  toast(d.ok ? '✅ تم الحفظ' : '❌ '+(d.error||'خطأ'));
+  if (d.ok) loadUsers();
+}
+
+async function deleteFromProfile(userId, userName) {
+  if (!confirm('حذف حساب "'+userName+'" نهائياً؟\n\nهذا الإجراء لا يمكن التراجع عنه!')) return;
+  const d = await fetch(B+'/admin/users/'+userId, { method:'DELETE', headers: hdr() }).then(r=>r.json());
+  if (d.ok) {
+    toast('✅ تم الحذف');
+    document.getElementById('user-profile-panel').style.transform = 'translateX(100%)';
+    loadUsers();
+    loadStats();
+  } else toast('❌ '+(d.error||'خطأ'));
+}
+
+async function deleteUser() {
+  const id = document.getElementById('edit-id').value;
+  const name = document.getElementById('edit-name').value;
+  if (!confirm('هتحذف حساب ' + name + '؟ مش هيتعافى بعدين!')) return;
+  const r = await fetch(B+'/admin/users/'+id, { method:'DELETE', headers:hdr() }).then(x=>x.json());
+  if (r.ok) { toast('✅ تم الحذف'); closeModal('edit-modal'); loadUsers(); loadStats(); }
+  else toast('❌ '+r.error, true);
+}
+
+// ── Payments ───────────────────────────────────────────────
+async function loadPayments() {
+  const d = await fetch(B+'/admin/payments', { headers:hdr() }).then(r=>r.json());
+  const tbody = document.getElementById('payments-tbody');
+  if (!d.ok || !d.data?.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:#9ca3af">لا يوجد مدفوعات معلقة</td></tr>';
+    return;
+  }
+  tbody.innerHTML = d.data.map(p => `<tr>
+    <td>${p.id}</td>
+    <td>${p.user_name||'—'} <small style="color:#9ca3af">${p.user_email||''}</small></td>
+    <td>${p.plan||'—'}</td>
+    <td style="font-weight:700">${p.amount} ج.م</td>
+    <td><span class="badge ${p.status==='paid'?'badge-active':'badge-trial'}">${p.status==='paid'?'مدفوع':'معلق'}</span></td>
+    <td style="font-size:12px">${p.created_at?new Date(p.created_at).toLocaleDateString('ar-EG'):'—'}</td>
+    <td>${p.status!=='paid'?'<button class="btn btn-green btn-sm" onclick="confirmPay('+p.id+')">✅ تأكيد</button>':'—'}</td>
+  </tr>`).join('');
+}
+
+async function confirmPay(id) {
+  const r = await fetch(B+'/admin/confirm-payment/'+id, { method:'POST', headers:hdr() }).then(x=>x.json());
+  if (r.ok) { toast('✅ تم تأكيد الدفع'); loadPayments(); loadStats(); }
+  else toast('❌ '+r.error, true);
+}
+
+// ── Promos ─────────────────────────────────────────────────
+async function loadPromos() {
+  const d = await fetch(B+'/admin/promos', { headers:hdr() }).then(r=>r.json());
+  const tbody = document.getElementById('promos-tbody');
+  if (!d.ok || !d.data?.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:#9ca3af">لا يوجد كودات</td></tr>';
+    return;
+  }
+  tbody.innerHTML = d.data.map(p => `<tr>
+    <td><strong style="font-family:monospace;letter-spacing:1px">${p.code}</strong></td>
+    <td>${p.type==='percent'?p.value+'%':p.type==='fixed'?p.value+' ج.م':p.value+' يوم'}</td>
+    <td>${p.used_count||0}</td>
+    <td>${p.max_uses||'∞'}</td>
+    <td style="font-size:12px">${p.expires_at?new Date(p.expires_at).toLocaleDateString('ar-EG'):'—'}</td>
+    <td><span class="badge ${p.active?'badge-active':'badge-suspended'}">${p.active?'نشط':'متوقف'}</span></td>
+    <td>
+      <button class="btn ${p.active?'btn-gray':'btn-green'} btn-sm" onclick="togglePromo(${p.id},${p.active})">${p.active?'إيقاف':'تفعيل'}</button>
+    </td>
+  </tr>`).join('');
+}
+
+function openPromoModal() {
+  document.getElementById('p-code').value = '';
+  document.getElementById('p-value').value = '';
+  document.getElementById('p-max').value = '0';
+  document.getElementById('p-expires').value = '';
+  openModal('promo-modal');
+}
+
+function genCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i=0;i<8;i++) code += chars[Math.floor(Math.random()*chars.length)];
+  document.getElementById('p-code').value = code;
+}
+
+async function createPromo() {
+  const code = document.getElementById('p-code').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if (!code || code.length < 3) { toast('❌ الكود قصير جداً', true); return; }
+  const body = {
+    code,
+    type: document.getElementById('p-type').value,
+    value: parseFloat(document.getElementById('p-value').value),
+    max_uses: parseInt(document.getElementById('p-max').value) || 0,
+    expires_at: document.getElementById('p-expires').value || null,
+  };
+  const r = await fetch(B+'/admin/promos', { method:'POST', headers:hdr(), body:JSON.stringify(body) }).then(x=>x.json());
+  if (r.ok) { toast('✅ تم إنشاء الكود: '+code); closeModal('promo-modal'); loadPromos(); }
+  else toast('❌ '+r.error, true);
+}
+
+async function togglePromo(id, active) {
+  await fetch(B+'/admin/promos/'+id, { method:'PUT', headers:hdr(), body:JSON.stringify({ active:!active }) });
+  loadPromos();
+}
+
+// ── Close modal on bg click ────────────────────────────────
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if(e.target===bg) bg.classList.remove('open'); });
+});
+
+
+// ── Create Account ─────────────────────────────────────────
+function openCreateModal() {
+  document.getElementById('c-name').value='';
+  document.getElementById('c-email').value='';
+  document.getElementById('c-pass').value='';
+  document.getElementById('c-company').value='';
+  document.getElementById('c-slug').value='';
+  document.getElementById('c-days').value='14';
+  document.getElementById('c-type').value='trial';
+  document.getElementById('create-result').style.display='none';
+  document.getElementById('create-btn').style.display='inline-block';
+  openModal('create-modal');
+  genPass();
+}
+
+function genPass() {
+  const chars='abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789@#!';
+  let p=''; for(let i=0;i<10;i++) p+=chars[Math.floor(Math.random()*chars.length)];
+  document.getElementById('c-pass').value=p;
+}
+
+function setDays(n) { document.getElementById('c-days').value=n; }
+
+function autoCreateSlug() {
+  const company = document.getElementById('c-company').value.trim();
+  if (!company) return;
+  const map={'ا':'a','أ':'a','إ':'a','آ':'a','ء':'a','ب':'b','ت':'t','ث':'th','ج':'j','ح':'h','خ':'kh','د':'d','ذ':'z','ر':'r','ز':'z','س':'s','ش':'sh','ص':'s','ض':'d','ط':'t','ظ':'z','ع':'a','غ':'gh','ف':'f','ق':'q','ك':'k','ل':'l','م':'m','ن':'n','ه':'h','و':'w','ي':'y','ى':'a','ة':'a',' ':'-'};
+  const slug = company.toLowerCase().split('').map(ch=>map[ch]!==undefined?map[ch]:/[a-z0-9]/.test(ch)?ch:/[A-Z]/.test(ch)?ch.toLowerCase():' '===ch?'-':'').join('').replace(/--+/g,'-').replace(/^-|-$/g,'').substring(0,20);
+  if (slug) document.getElementById('c-slug').value = slug;
+}
+
+async function createAccount() {
+  const name    = document.getElementById('c-name').value.trim();
+  const email   = document.getElementById('c-email').value.trim();
+  const pass    = document.getElementById('c-pass').value.trim();
+  const company = document.getElementById('c-company').value.trim();
+  const slug    = document.getElementById('c-slug').value.trim();
+  const days    = parseInt(document.getElementById('c-days').value) || 14;
+
+  if (!name || !email || !pass) { toast('❌ الاسم والإيميل وكلمة السر مطلوبين', true); return; }
+  if (days < 1 || days > 3650) { toast('❌ عدد الأيام غير صحيح', true); return; }
+
+  const btn = document.getElementById('create-btn');
+  btn.disabled=true; btn.textContent='جاري...';
+
+  const r = await fetch('/api/billing/admin/create-account', {
+    method:'POST', headers:hdr(),
+    body: JSON.stringify({ name, email, password: pass, company_name: company||name, slug, days })
+  }).then(x=>x.json());
+
+  btn.disabled=false; btn.textContent='✅ إنشاء الحساب';
+
+  if (!r.ok) { toast('❌ '+r.error, true); return; }
+
+  // Show result
+  const res = document.getElementById('create-result');
+  document.getElementById('cr-link').href = r.login_url;
+  document.getElementById('cr-link').textContent = r.login_url;
+  document.getElementById('cr-email').textContent = email;
+  document.getElementById('cr-pass').textContent = pass;
+  document.getElementById('cr-days').textContent = r.user.days;
+  res.style.display='block';
+  btn.style.display='none';
+  toast('✅ تم إنشاء الحساب: '+r.user.slug);
+  loadUsers(); loadStats();
+}
+
+function copyCredentials() {
+  const link = document.getElementById('cr-link').textContent;
+  const email = document.getElementById('cr-email').textContent;
+  const pass = document.getElementById('cr-pass').textContent;
+  const days = document.getElementById('cr-days').textContent;
+  const text = 'رابط الدخول: ' + link + '\nالإيميل: ' + email + '\nكلمة السر: ' + pass + '\nالأيام: ' + days + ' يوم';
+  navigator.clipboard.writeText(text).then(()=>toast('✅ تم النسخ'));
+}
+
+
+// ── Notifications ─────────────────────────────────────
+async function loadNotifyUsers() {
+  const d = await fetch('/api/billing/admin/users/detail', { headers: hdr() }).then(r=>r.json()).catch(()=>({}));
+  const sel = document.getElementById('notify-user');
+  if (!sel) return;
+  if (d.ok && d.users) {
+    d.users.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.id;
+      opt.textContent = (u.name || u.email) + ' (' + (u.company_name||'—') + ')';
+      sel.appendChild(opt);
+    });
+  }
+}
+
+async function sendNotification() {
+  const title = document.getElementById('notify-title').value.trim();
+  const body = document.getElementById('notify-body').value.trim();
+  const type = document.getElementById('notify-type').value;
+  const user_id = document.getElementById('notify-user').value;
+  const res = document.getElementById('notify-result');
+  if (!title) { res.innerHTML = '<span style="color:#CC2200">✖ العنوان مطلوب</span>'; return; }
+  res.innerHTML = 'جاري الإرسال...';
+  const payload = { title, body, type };
+  if (user_id) payload.user_id = parseInt(user_id);
+  const d = await fetch('/api/billing/admin/notify', {
+    method: 'POST',
+    headers: { ...hdr(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).then(r=>r.json()).catch(()=>({}));
+  if (d.ok) {
+    res.innerHTML = '<span style="color:#16a34a">✔ تم الإرسال لـ ' + (d.sent||0) + ' عميل</span>';
+    document.getElementById('notify-title').value = '';
+    document.getElementById('notify-body').value = '';
+  } else {
+    res.innerHTML = '<span style="color:#CC2200">✖ خطأ: ' + (d.error||'?') + '</span>';
+  }
+}
+
+// ── Health & Backup ────────────────────────────────────
+async function loadHealth() {
+  const d = await fetch('/api/billing/admin/health', { headers: hdr() }).then(r=>r.json());
+  if (!d.ok) return;
+
+  // Stats
+  const upt = d.server.uptime_seconds;
+  const h = Math.floor(upt/3600), m = Math.floor((upt%3600)/60);
+  document.getElementById('h-uptime').textContent = h+'h '+m+'m';
+  document.getElementById('h-mem').textContent = d.server.memory_mb + ' MB';
+  document.getElementById('h-disk-free').textContent = d.disk?.free || '—';
+  document.getElementById('h-backups').textContent = d.backups_count;
+
+  // Backups table
+  const tbody = document.getElementById('backups-tbody');
+  if (!d.backups?.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:20px;color:#9ca3af">لا يوجد نسخ احتياطية بعد</td></tr>';
+  } else {
+    tbody.innerHTML = d.backups.slice(0,15).map(b => {
+      const date = new Date(b.created).toLocaleString('ar-EG');
+      const isLatest = b === d.backups[0];
+      return '<tr>'
+        + '<td><strong style="font-family:monospace;font-size:12px">' + b.name + '</strong>'
+        + (isLatest ? ' <span class="badge badge-active" style="font-size:10px">الأحدث</span>' : '') + '</td>'
+        + '<td style="font-size:12px">' + b.size_kb + ' KB</td>'
+        + '<td style="font-size:12px;color:#6b7280">' + date + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  // Log
+  document.getElementById('backup-log').textContent = d.last_log || 'لا يوجد سجلات بعد';
+}
+
+async function triggerBackup() {
+  const btn = document.getElementById('backup-now-btn');
+  btn.disabled = true; btn.textContent = '⏳ جاري...';
+  const d = await fetch('/api/billing/admin/backup-now', { method:'POST', headers: hdr() }).then(r=>r.json());
+  btn.disabled = false; btn.textContent = '🚀 نسخ الآن';
+  if (d.ok) { toast('✅ تم إنشاء نسخة احتياطية'); loadHealth(); }
+  else toast('❌ ' + (d.error||'خطأ'), true);
+}
+
+init();
+</script>
+
+<!-- CREATE ACCOUNT MODAL -->
+<div class="modal-bg" id="create-modal">
+  <div class="modal">
+    <h3>➕ إنشاء حساب جديد</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-row"><label>الاسم *</label><input id="c-name" type="text" placeholder="محمد علي"></div>
+      <div class="form-row"><label>الإيميل *</label><input id="c-email" type="email" placeholder="mo@company.com"></div>
+    </div>
+    <div class="form-row"><label>كلمة السر *</label>
+      <div style="display:flex;gap:8px">
+        <input id="c-pass" type="text" placeholder="كلمة سر قوية" style="flex:1">
+        <button class="btn btn-gray" onclick="genPass()">توليد</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-row"><label>اسم الشركة</label><input id="c-company" type="text" placeholder="متجر محمد" oninput="autoCreateSlug()"></div>
+      <div class="form-row"><label>السب دومين</label>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="font-size:12px;color:#9ca3af;white-space:nowrap">pro-</span>
+          <input id="c-slug" type="text" placeholder="mo-store" style="flex:1">
+          <span style="font-size:12px;color:#9ca3af;white-space:nowrap">.areejegypt.com</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-row"><label>عدد الأيام *</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+          <button class="btn btn-gray btn-sm" onclick="setDays(3)">3 أيام</button>
+          <button class="btn btn-gray btn-sm" onclick="setDays(7)">أسبوع</button>
+          <button class="btn btn-gray btn-sm" onclick="setDays(14)">14 يوم</button>
+          <button class="btn btn-gray btn-sm" onclick="setDays(30)">شهر</button>
+        </div>
+        <input id="c-days" type="number" min="1" value="14" placeholder="عدد الأيام">
+      </div>
+      <div class="form-row"><label>نوع الحساب</label>
+        <select id="c-type">
+          <option value="trial">تجريبي (Trial)</option>
+          <option value="demo">ديمو (Demo)</option>
+          <option value="gift">هدية</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Result box (shown after creation) -->
+    <div id="create-result" style="display:none;background:#f0fdf4;border:1.5px solid #16a34a;border-radius:10px;padding:14px;margin-top:12px">
+      <div style="font-weight:700;color:#16a34a;margin-bottom:8px">✅ تم إنشاء الحساب!</div>
+      <div style="font-size:13px;margin-bottom:4px">🔗 رابط الدخول: <a id="cr-link" href="#" target="_blank" style="color:#1B5E30;font-weight:700"></a></div>
+      <div style="font-size:13px;margin-bottom:4px">📧 الإيميل: <span id="cr-email" style="font-family:monospace"></span></div>
+      <div style="font-size:13px;margin-bottom:8px">🔑 الباسورد: <span id="cr-pass" style="font-family:monospace;font-weight:700"></span></div>
+      <div style="font-size:12px;color:#6b7280">⏱ الأيام المتبقية: <span id="cr-days"></span> يوم</div>
+      <button class="btn btn-green btn-sm" style="margin-top:10px" onclick="copyCredentials()">📋 نسخ البيانات</button>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn btn-gray" onclick="closeModal('create-modal')">إغلاق</button>
+      <button class="btn btn-green" id="create-btn" onclick="createAccount()">✅ إنشاء الحساب</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- HEALTH PAGE -->
+<!-- NOTIFY PAGE -->
+<div id="page-notify" class="page">
+  <div class="card">
+    <div class="card-header"><h2>🔔 إرسال إشعار للعملاء</h2></div>
+    <div style="padding:20px">
+      <div class="form-group" style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">المستلم</label>
+        <select id="notify-user" style="width:100%;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px">
+          <option value="">👥 الكل (جميع العملاء)</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">نوع الإشعار</label>
+        <select id="notify-type" style="width:100%;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px">
+          <option value="info">🔔 عادي (info)</option>
+          <option value="success">✅ نجاح (success)</option>
+          <option value="warning">⚠️ تحذير (warning)</option>
+          <option value="error">❌ خطأ (error)</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">العنوان *</label>
+        <input id="notify-title" type="text" placeholder="عنوان الإشعار" style="width:100%;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px">
+      </div>
+      <div class="form-group" style="margin-bottom:16px">
+        <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">النص</label>
+        <textarea id="notify-body" rows="3" placeholder="نص الإشعار..." style="width:100%;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px;resize:vertical"></textarea>
+      </div>
+      <button onclick="sendNotification()" class="btn btn-primary">🔔 إرسال الإشعار</button>
+      <div id="notify-result" style="margin-top:12px;font-size:13px"></div>
+    </div>
+  </div>
+</div>
+
+<div id="page-health" class="page">
+  <div class="stats-grid" style="margin-bottom:20px">
+    <div class="stat-card"><div class="stat-num" id="h-uptime" style="color:#2563eb;font-size:20px">—</div><div class="stat-label">وقت التشغيل</div></div>
+    <div class="stat-card"><div class="stat-num" id="h-mem" style="color:#7c3aed;font-size:20px">—</div><div class="stat-label">الذاكرة (MB)</div></div>
+    <div class="stat-card"><div class="stat-num" id="h-disk-free" style="color:#16a34a;font-size:20px">—</div><div class="stat-label">مساحة متاحة</div></div>
+    <div class="stat-card"><div class="stat-num" id="h-backups" style="color:#F5A623;font-size:20px">—</div><div class="stat-label">نسخ احتياطية</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>💾 النسخ الاحتياطية</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-gold" onclick="triggerBackup()" id="backup-now-btn">🚀 نسخ الآن</button>
+        <button class="btn btn-green btn-sm" onclick="loadHealth()">🔄 تحديث</button>
+      </div>
+    </div>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;color:#166534">
+      ✅ النسخ الاحتياطي يعمل تلقائياً مرتين يومياً — 12 صباحاً و12 ظهراً
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>اسم الملف</th><th>الحجم</th><th>التاريخ</th></tr></thead>
+        <tbody id="backups-tbody"><tr><td colspan="3" style="text-align:center;padding:20px;color:#9ca3af">جاري التحميل...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>📋 آخر سجلات الـ Backup</h2></div>
+    <pre id="backup-log" style="background:#1a1a1a;color:#4ade80;padding:16px;border-radius:8px;font-size:12px;font-family:monospace;overflow-x:auto;white-space:pre-wrap;max-height:250px;overflow-y:auto">جاري التحميل...</pre>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>🛡️ حالة الحماية</h2></div>
+    <div style="display:grid;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:#f9fafb;border-radius:8px">
+        <span style="font-size:13px">✅ pm2 auto-restart</span>
+        <span class="badge badge-active">مفعّل</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:#f9fafb;border-radius:8px">
+        <span style="font-size:13px">✅ Watchdog (كل 5 دقائق)</span>
+        <span class="badge badge-active">مفعّل</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:#f9fafb;border-radius:8px">
+        <span style="font-size:13px">✅ Backup تلقائي (12AM + 12PM)</span>
+        <span class="badge badge-active">مفعّل</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:#f9fafb;border-radius:8px">
+        <span style="font-size:13px">✅ احتفاظ بالنسخ (آخر 30 يوم)</span>
+        <span class="badge badge-active">مفعّل</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:#f9fafb;border-radius:8px">
+        <span style="font-size:13px">✅ Memory limit (400MB → auto-restart)</span>
+        <span class="badge badge-active">مفعّل</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:#fff7ed;border-radius:8px">
+        <span style="font-size:13px">⚠️ Offsite backup (Cloudflare R2)</span>
+        <span class="badge badge-trial">قريباً</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main-app -->
+</body>
+</html>
