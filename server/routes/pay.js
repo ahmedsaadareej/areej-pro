@@ -238,13 +238,8 @@ router.get('/status/:token', async (req, res) => {
       const creds = getGatewayCredentials(db, 'fawaterk');
       if (creds) {
         const result = await fawaterk.getInvoiceStatus(creds, link.invoice_ref);
-        if (result.status === 'paid') {
-          db.prepare(`UPDATE payment_links SET status='paid', paid_at=datetime('now') WHERE token=?`).run(linkToken);
-          // تحديث الفاتورة لو مرتبطة
-          if (link.invoice_id) {
-            db.prepare(`UPDATE sys_invoices SET status='paid', paid_at=datetime('now') WHERE id=?`)
-              .run(link.invoice_id);
-          }
+        if (result.status === 'paid' && link.status !== 'paid') {
+          await handlePaymentSuccess(db, link, 'fawaterk');
         }
         return res.json({ ok: true, status: result.status });
       }
