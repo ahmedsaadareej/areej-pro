@@ -13,6 +13,7 @@ const { validate } = require('../middleware/validate');
 const master      = require('../db-master');
 const crypto      = require('crypto');
 const multer      = require('multer');
+const waQR        = require('../whatsapp-qr-service');
 const path        = require('path');
 const fs          = require('fs');
 const https       = require('https');
@@ -2584,7 +2585,7 @@ router.post('/inbox/send-invoice', requireAuth, async (req, res) => {
 });
 
 // ═══ WhatsApp QR Routes ═══
-// [moved to header]: const waQR = require('../whatsapp-qr-service');
+// waQR loaded at top of file
 
 // POST /api/system/inbox/whatsapp-qr/start
 router.post('/inbox/whatsapp-qr/start', requireAuth, async (req, res) => {

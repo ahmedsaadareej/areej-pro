@@ -42,7 +42,15 @@ async function startSession(userId) {
     }),
     puppeteer: {
       headless: true,
-      executablePath: '/usr/bin/google-chrome',
+      executablePath: (() => {
+        // Prefer puppeteer bundled Chrome; fallback to system chromium
+        try {
+          const p = require('puppeteer');
+          const ep = p.executablePath();
+          if (require('fs').existsSync(ep)) return ep;
+        } catch(_) {}
+        return '/usr/bin/chromium-browser';
+      })(),
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
