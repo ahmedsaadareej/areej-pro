@@ -2,9 +2,47 @@
  * inbox-api.js — Areej Pro Inbox v3
  * كل الـ API calls للـ Inbox
  * آخر تحديث: 2026-05-02
+ * ملاحظة: كل الـ calls تمر عبر apiFetch (من core.js) لإرسال Authorization header تلقائياً
  */
 
 const IV3_API = {
+
+  // ── helper داخلي للـ fetch مع auth ──────────────────────────
+  async _get(url) {
+    if (typeof apiFetch === 'function') return apiFetch(url);
+    const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('pro_token') || '') } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  },
+
+  async _post(url, body) {
+    if (typeof apiFetch === 'function') return apiFetch(url, { method: 'POST', body: JSON.stringify(body) });
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('pro_token') || '') },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  },
+
+  async _put(url, body) {
+    if (typeof apiFetch === 'function') return apiFetch(url, { method: 'PUT', body: JSON.stringify(body) });
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('pro_token') || '') },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  },
+
+  async _delete(url) {
+    if (typeof apiFetch === 'function') return apiFetch(url, { method: 'DELETE' });
+    const res = await fetch(url, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('pro_token') || '') } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  },
 
   // ── المحادثات ──────────────────────────────────────────────
 
@@ -16,154 +54,134 @@ const IV3_API = {
     if (params.search)    q.set('search', params.search);
     if (params.page)      q.set('page', params.page);
     if (params.limit)     q.set('limit', params.limit || 30);
-    const res = await fetch(`/api/system/inbox/conversations?${q}`);
-    if (!res.ok) throw new Error('فشل تحميل المحادثات');
-    return res.json();
+    const data = await this._get(`/api/system/inbox/conversations?${q}`);
+    if (!data && data !== 0) throw new Error('فشل تحميل المحادثات');
+    return data;
   },
 
   async getMessages(convId) {
-    const res = await fetch(`/api/system/inbox/messages/${convId}`);
-    if (!res.ok) throw new Error('فشل تحميل الرسائل');
-    return res.json();
+    const data = await this._get(`/api/system/inbox/messages/${convId}`);
+    if (!data) throw new Error('فشل تحميل الرسائل');
+    return data;
   },
 
   async sendMessage(convId, text, mode = 'reply') {
-    const res = await fetch('/api/system/inbox/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ conv_id: convId, message: text, mode })
-    });
-    if (!res.ok) throw new Error('فشل إرسال الرسالة');
-    return res.json();
+    const data = await this._post('/api/system/inbox/send', { conv_id: convId, message: text, mode });
+    if (!data) throw new Error('فشل إرسال الرسالة');
+    return data;
   },
 
   async sendMedia(convId, file) {
+    // FormData — لا يمكن استخدام apiFetch العادية
     const form = new FormData();
     form.append('file', file);
     form.append('conv_id', convId);
-    const res = await fetch('/api/system/inbox/send-media', { method: 'POST', body: form });
+    const res = await fetch('/api/system/inbox/send-media', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('pro_token') || '') },
+      body: form
+    });
     if (!res.ok) throw new Error('فشل إرسال الملف');
     return res.json();
   },
 
   async changeStatus(convId, status) {
-    const res = await fetch(`/api/system/inbox/conversations/${convId}/status`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
-    });
-    if (!res.ok) throw new Error('فشل تغيير الحالة');
-    return res.json();
+    const data = await this._put(`/api/system/inbox/conversations/${convId}/status`, { status });
+    if (!data) throw new Error('فشل تغيير الحالة');
+    return data;
   },
 
   async assignConv(convId, userId) {
-    const res = await fetch(`/api/system/inbox/conversations/${convId}/assign`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: userId })
-    });
-    if (!res.ok) throw new Error('فشل التعيين');
-    return res.json();
+    const data = await this._post(`/api/system/inbox/conversations/${convId}/assign`, { user_id: userId });
+    if (!data) throw new Error('فشل التعيين');
+    return data;
   },
 
   // ── Labels ─────────────────────────────────────────────────
 
   async getLabels() {
-    const res = await fetch('/api/system/inbox/labels');
-    if (!res.ok) throw new Error('فشل تحميل التسميات');
-    return res.json();
+    const data = await this._get('/api/system/inbox/labels');
+    if (!data) throw new Error('فشل تحميل التسميات');
+    return data;
   },
 
   async addLabel(convId, labelId) {
-    const res = await fetch(`/api/system/inbox/conversations/${convId}/labels/${labelId}`, { method: 'POST' });
-    if (!res.ok) throw new Error('فشل إضافة التسمية');
-    return res.json();
+    const data = await this._post(`/api/system/inbox/conversations/${convId}/labels/${labelId}`, {});
+    if (!data) throw new Error('فشل إضافة التسمية');
+    return data;
   },
 
   async removeLabel(convId, labelId) {
-    const res = await fetch(`/api/system/inbox/conversations/${convId}/labels/${labelId}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('فشل حذف التسمية');
-    return res.json();
+    const data = await this._delete(`/api/system/inbox/conversations/${convId}/labels/${labelId}`);
+    if (!data) throw new Error('فشل حذف التسمية');
+    return data;
   },
 
   // ── Notes ──────────────────────────────────────────────────
 
   async getNotes(convId) {
-    const res = await fetch(`/api/system/inbox/conversations/${convId}/notes`);
-    if (!res.ok) throw new Error('فشل تحميل الملاحظات');
-    return res.json();
+    const data = await this._get(`/api/system/inbox/conversations/${convId}/notes`);
+    if (!data) throw new Error('فشل تحميل الملاحظات');
+    return data;
   },
 
   async addNote(convId, text) {
-    const res = await fetch(`/api/system/inbox/conversations/${convId}/notes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ note: text })
-    });
-    if (!res.ok) throw new Error('فشل إضافة الملاحظة');
-    return res.json();
+    const data = await this._post(`/api/system/inbox/conversations/${convId}/notes`, { note: text });
+    if (!data) throw new Error('فشل إضافة الملاحظة');
+    return data;
   },
 
   // ── Templates ──────────────────────────────────────────────
 
   async getTemplates() {
-    const res = await fetch('/api/system/inbox/templates');
-    if (!res.ok) throw new Error('فشل تحميل الردود الجاهزة');
-    return res.json();
+    const data = await this._get('/api/system/inbox/templates');
+    if (!data) throw new Error('فشل تحميل الردود الجاهزة');
+    return data;
   },
 
   // ── Agents & Me ────────────────────────────────────────────
 
   async getMe() {
-    const res = await fetch('/api/system/inbox/me');
-    if (!res.ok) throw new Error('فشل تحميل بيانات المستخدم');
-    return res.json();
+    const data = await this._get('/api/system/inbox/me');
+    if (!data) throw new Error('فشل تحميل بيانات المستخدم');
+    return data;
   },
 
   async getAgents() {
-    const res = await fetch('/api/system/inbox/agents');
-    if (!res.ok) throw new Error('فشل تحميل الموظفين');
-    return res.json();
+    const data = await this._get('/api/system/inbox/agents');
+    if (!data) throw new Error('فشل تحميل الموظفين');
+    return data;
   },
 
   // ── Unread Count ───────────────────────────────────────────
 
   async getUnreadCount() {
-    const res = await fetch('/api/system/inbox/unread-count');
-    if (!res.ok) return { count: 0 };
-    return res.json();
+    const data = await this._get('/api/system/inbox/unread-count');
+    return data || { count: 0 };
   },
 
   // ── AI Reply ───────────────────────────────────────────────
 
   async getAISuggestions(convId) {
-    const res = await fetch('/api/system/inbox/ai-reply', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ conv_id: convId })
-    });
-    if (!res.ok) throw new Error('فشل الـ AI');
-    return res.json();
+    const data = await this._post('/api/system/inbox/ai-reply', { conv_id: convId });
+    if (!data) throw new Error('فشل الـ AI');
+    return data;
   },
 
   // ── Invoice ────────────────────────────────────────────────
 
   async sendInvoice(convId, invoiceId) {
-    const res = await fetch('/api/system/inbox/send-invoice', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ conv_id: convId, invoice_id: invoiceId })
-    });
-    if (!res.ok) throw new Error('فشل إرسال الفاتورة');
-    return res.json();
+    const data = await this._post('/api/system/inbox/send-invoice', { conv_id: convId, invoice_id: invoiceId });
+    if (!data) throw new Error('فشل إرسال الفاتورة');
+    return data;
   },
 
   // ── Search ─────────────────────────────────────────────────
 
   async search(query) {
-    const res = await fetch(`/api/system/inbox/search?q=${encodeURIComponent(query)}`);
-    if (!res.ok) throw new Error('فشل البحث');
-    return res.json();
+    const data = await this._get(`/api/system/inbox/search?q=${encodeURIComponent(query)}`);
+    if (!data) throw new Error('فشل البحث');
+    return data;
   },
 
 };
