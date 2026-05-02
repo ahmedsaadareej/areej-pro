@@ -1519,3 +1519,115 @@
   flex-shrink: 0;
   white-space: nowrap;
 }
+
+/* ── Bulk Actions ───────────────────────────────────────── */
+.iv3-bulk-toggle-btn {
+  background: none;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  padding: 3px 6px;
+  cursor: pointer;
+  color: #6B7280;
+  display: flex;
+  align-items: center;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.iv3-bulk-toggle-btn:hover,
+.iv3-bulk-toggle-btn.active {
+  color: var(--brand, #1B5E30);
+  border-color: var(--brand, #1B5E30);
+  background: #F0FDF4;
+}
+
+/* شريط Bulk Bar */
+.iv3-bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #F0FDF4;
+  border-bottom: 1px solid #D1FAE5;
+  gap: 8px;
+  flex-wrap: wrap;
+  animation: iv3QuoteFadeIn .15s ease;
+}
+.iv3-bulk-bar-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #374151;
+  font-weight: 500;
+}
+.iv3-bulk-selall {
+  background: var(--brand, #1B5E30);
+  border: none;
+  border-radius: 4px;
+  padding: 3px 5px;
+  cursor: pointer;
+  color: #fff;
+  display: flex;
+  align-items: center;
+}
+.iv3-bulk-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.iv3-bulk-action-btn {
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.iv3-bulk-action-btn:hover:not(:disabled) {
+  background: #F0FDF4;
+  border-color: var(--brand, #1B5E30);
+  color: var(--brand, #1B5E30);
+}
+.iv3-bulk-action-btn:disabled { opacity: .4; cursor: not-allowed; }
+.iv3-bulk-action-btn.cancel {
+  color: #EF4444;
+  border-color: #EF4444;
+  font-size: 14px;
+  padding: 2px 7px;
+}
+.iv3-bulk-action-btn.cancel:hover { background: #FEE2E2; }
+
+/* Checkbox في conv item */
+.iv3-conv-check {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #D1D5DB;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-left: 8px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  position: relative;
+}
+.iv3-conv-check.checked {
+  background: var(--brand, #1B5E30);
+  border-color: var(--brand, #1B5E30);
+}
+.iv3-conv-check.checked::after {
+  content: '';
+  position: absolute;
+  left: 3px; top: 1px;
+  width: 6px; height: 9px;
+  border: 2px solid #fff;
+  border-top: none; border-left: none;
+  transform: rotate(45deg);
+}
+/* conv item محدد */
+.iv3-conv-item.bulk-selected {
+  background: #F0FDF4 !important;
+  border-right: 3px solid var(--brand, #1B5E30);
+}

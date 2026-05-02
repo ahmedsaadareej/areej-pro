@@ -55,4 +55,8 @@ const IV3 = {
 
   // ── Timeline ───────────────────────────────────────
   timeline: [],         // أحداث المحادثة الحالية ({ id, event_type, actor_name, meta, created_at })
+
+  // ── Bulk Actions ────────────────────────────────────
+  bulkMode: false,      // وضع التحديد الجماعي
+  selectedIds: new Set(), // IDs المحادثات المحددة
 };

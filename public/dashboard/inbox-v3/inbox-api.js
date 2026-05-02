@@ -207,4 +207,10 @@ const IV3_API = {
     return data;
   },
 
+  async bulkAction(ids, action, payload = {}) {
+    const data = await this._post('/api/system/inbox/conversations/bulk-action', { ids, action, payload });
+    if (!data?.ok) throw new Error(data?.error || 'فشل التنفيذ');
+    return data;
+  },
+
 };

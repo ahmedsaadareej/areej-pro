@@ -2025,6 +2025,55 @@ router.get('/inbox/snooze-wakeup', requireAuth, (req, res) => {
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
+// POST /api/system/inbox/conversations/bulk-action
+// body: { ids: [1,2,3], action: 'close'|'open'|'waiting'|'assign'|'label', payload: {} }
+router.post('/inbox/conversations/bulk-action', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { ids, action, payload = {} } = req.body;
+    if (!Array.isArray(ids) || !ids.length) return res.json({ ok: false, error: 'لا توجد IDs' });
+    const safeIds = ids.map(Number).filter(n => n > 0);
+    if (!safeIds.length) return res.json({ ok: false, error: 'IDs غير صالحة' });
+    const ph = safeIds.map(() => '?').join(',');
+    const actor = req.user?.name || req.user?.email || null;
+
+    switch (action) {
+      case 'close':
+      case 'open':
+      case 'waiting': {
+        const status = action === 'close' ? 'closed' : action;
+        db.prepare(`UPDATE inbox_conversations SET status=? WHERE id IN (${ph})`).run(status, ...safeIds);
+        safeIds.forEach(id => logTimeline(db, id, 'status_changed', { actor, status }));
+        break;
+      }
+      case 'assign': {
+        const { user_id, user_name } = payload;
+        db.prepare(`UPDATE inbox_conversations SET assigned_to_id=?, assigned_to_name=? WHERE id IN (${ph})`)
+          .run(user_id || null, user_name || null, ...safeIds);
+        const evtType = user_id ? 'assigned' : 'unassigned';
+        safeIds.forEach(id => logTimeline(db, id, evtType, { actor, to_name: user_name || null }));
+        break;
+      }
+      case 'label': {
+        const { label_id } = payload;
+        if (!label_id) return res.json({ ok: false, error: 'لا يوجد label_id' });
+        // إضافة التسمية لكل محادثة لو ما كانتش موجودة
+        const addLabel = db.prepare(
+          `INSERT OR IGNORE INTO inbox_conversation_labels (conversation_id, label_id) VALUES (?,?)`
+        );
+        safeIds.forEach(id => {
+          try { addLabel.run(id, label_id); } catch(e) { /* تجاهل */ }
+        });
+        break;
+      }
+      default:
+        return res.json({ ok: false, error: 'فعل غير مدعوم' });
+    }
+
+    res.json({ ok: true, affected: safeIds.length });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
 // GET /api/system/inbox/search?q=xxx
 router.get('/inbox/search', requireAuth, (req, res) => {
   const db = req.db;

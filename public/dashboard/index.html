@@ -2296,7 +2296,38 @@
         <!-- Title row -->
         <div class="iv3-sidebar-titlerow">
           <span class="iv3-sidebar-title">المحادثات</span>
-          <span class="iv3-sidebar-count" id="iv3-conv-count">0</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="iv3-sidebar-count" id="iv3-conv-count">0</span>
+            <button class="iv3-bulk-toggle-btn" id="iv3-bulk-toggle"
+              onclick="iv3ToggleBulkMode()" title="تحديد جماعي">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="4" height="4" rx="1"/><rect x="3" y="11" width="4" height="4" rx="1"/><rect x="3" y="17" width="4" height="4" rx="1"/><line x1="11" y1="7" x2="21" y2="7"/><line x1="11" y1="13" x2="21" y2="13"/><line x1="11" y1="19" x2="21" y2="19"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Bulk Actions Bar -->
+        <div class="iv3-bulk-bar" id="iv3-bulk-bar" style="display:none">
+          <div class="iv3-bulk-bar-info">
+            <button class="iv3-bulk-selall" onclick="iv3SelectAll()" title="تحديد الكل">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>
+            <span id="iv3-bulk-count">لا يوجد تحديد</span>
+          </div>
+          <div class="iv3-bulk-bar-actions">
+            <button class="iv3-bulk-action-btn" onclick="iv3BulkClose()" title="إغلاق المحددة" disabled>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              إغلاق
+            </button>
+            <button class="iv3-bulk-action-btn" onclick="iv3BulkOpen()" title="فتح المحددة" disabled>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              فتح
+            </button>
+            <button class="iv3-bulk-action-btn" onclick="iv3BulkAssign()" title="تعيين المحددة" disabled>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              تعيين
+            </button>
+            <button class="iv3-bulk-action-btn cancel" onclick="iv3ToggleBulkMode()">×</button>
+          </div>
         </div>
 
         <!-- Agent filter (owner only) -->
