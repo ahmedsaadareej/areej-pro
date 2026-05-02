@@ -2,6 +2,20 @@
 
 ---
 
+## Session 2026-05-02 16:00 UTC
+- الحالة: تم الإكمال
+- ما تم إنجازه:
+  - `inbox-context.js`: `iv3ConvertToOrder()` modal كامل (name/phone/type/total/notes) + `iv3SubmitOrder()` ترسل لـ `POST /api/system/orders` + تعبيئ textarea برسالة تأكيد للعميل بعد الإنشاء + `iv3CtxNewOrder()` تستدعيها
+  - `inbox.css`: CSS للـ order form (input/textarea/label)
+- قرارات تقنية:
+  - لا تعديل في الـ backend (ـ `POST /api/system/orders` جاهز ويقبل كل الحقول)
+  - المعلومات تُملأ تلقائياً من `IV3.activeConv` (name, phone, lead_id)
+  - بعد الإنشاء يُعبّأ الـ textarea برسالة تأكيد جاهزة للعميل (يمكن تعديلها قبل الإرسال)
+- آخر Commit: `5c18915` — feat: تحويل لأوردر
+- نقطة البداية القادمة: `inbox-context.js` + `inbox-reply.js` — Payment Link (زر في Context Panel ينشئ رابط دفع ويرسله للعميل)
+
+---
+
 ## Session 2026-05-02 15:56 UTC
 - الحالة: تم الإكمال
 - ما تم إنجازه:
