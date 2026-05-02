@@ -35,6 +35,22 @@
 ## سجل الجلسات (الأحدث في الأعلى)
 
 ---
+## Session 2026-05-02 14:04 UTC
+- الحالة: تم الإكمال
+- ما تم إنجازه:
+  1. إزالة `showInboxSettings()` من `inbox-init.js` — كانت تطغى على الدالة الشغالة في `inbox.js`
+  2. إخفاء `inboxSettingsModal` القديم بـ `display:none!important` — كان يظهر فوق الـ inbox
+  3. توحيد IDs في صفحة إعدادات الرسائل — `is-auto-welcome-*` أصبحت `auto-welcome-*`، الـ legacy IDs أُضيف لها prefix `_lgcy_`، وربط `loadAutoMessages()` بفتح الـ section
+- قرارات تقنية:
+  - الـ modal القديم (`inboxSettingsModal`) يُبقى في الـ DOM مخفياً (لا يُحذف) لأن `_legacyShowInboxSettings` و `showSettingsTab` لا يزالان يرجعان إليه
+  - المرجع الوحيد للإعدادات هو `page-inbox-settings` عبر `sbShowPage('inbox-settings',...)`
+  - IDs الـ auto-messages الكانونية: `auto-welcome-active`, `auto-welcome-msg`, `auto-away-active`, `auto-away-start`, `auto-away-end`, `auto-away-msg`
+- آخر Commit: 6b2adb4 — fix: unify auto-messages IDs
+- نقطة البداية القادمة: `index.html` + `inbox-settings.js` — إضافة away message fields للـ section (start/end time + status feedback) أو الانتقال لإصلاح section التحليلات
+
+---
+
+---
 ## جلسة 2026-05-02 11:43 UTC — bug fixes بعد التقييم
 
 ### وقفت عند:
