@@ -1678,3 +1678,42 @@
   animation: iv3QuoteFadeIn .2s ease;
   direction: rtl;
 }
+
+/* ── Convert to Order Modal Form ────────────────────────── */
+.iv3-order-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 4px 0;
+}
+.iv3-order-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.iv3-order-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+.iv3-modal-input,
+.iv3-modal-textarea {
+  border: 1.5px solid #E5E7EB;
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color .15s;
+  background: #fff;
+  color: #111827;
+  width: 100%;
+  box-sizing: border-box;
+  direction: rtl;
+}
+.iv3-modal-input:focus,
+.iv3-modal-textarea:focus {
+  border-color: var(--brand, #1B5E30);
+  box-shadow: 0 0 0 3px rgba(27,94,48,.08);
+}
+.iv3-modal-textarea { resize: none; }

@@ -1,7 +1,7 @@
 /**
  * inbox-context.js — Areej Pro Inbox v3
- * Contact Panel: بيانات العميل، فواتيره، أوردراته، Labels، Notes
- * آخر تحديث: 2026-05-02 (v2 — متوافق مع IDs في inbox.html)
+ * Contact Panel: بيانات العميل، فواتيره، أوردراته، Labels، Notes، تحويل لأوردر
+ * آخر تحديث: 2026-05-02
  */
 
 // ── تحديث الـ Context Panel ─────────────────────────────────
@@ -273,8 +273,132 @@ function iv3CtxNewInvoice() {
 }
 
 function iv3CtxNewOrder() {
-  if (IV3.activeConv) {
-    window.open(`/dashboard#p=orders&new=1`, '_blank');
+  // استدعاء نموذج الأوردر بمعلومات المحادثة الحالية
+  iv3ConvertToOrder();
+}
+
+// ── تحويل لأوردر ───────────────────────────────────────────────────
+
+function iv3ConvertToOrder() {
+  if (!IV3.activeConv) return;
+
+  const conv     = IV3.activeConv;
+  const name     = conv.sender_name || '';
+  const phone    = iv3ExtractPhone(conv.sender_id) || '';
+  const contactId = conv.lead_id || '';
+
+  const orderTypes = [
+    { value: 'stock',      label: 'مخزون (جاهز)' },
+    { value: 'production', label: 'طباعة (تصنيع)' },
+    { value: 'external',   label: 'خارجي' },
+  ];
+  const typeOpts = orderTypes.map(t =>
+    `<option value="${t.value}">${iv3EscHtml(t.label)}</option>`
+  ).join('');
+
+  const html = `
+    <div class="iv3-modal-overlay" id="iv3-order-modal" onclick="iv3CloseModal('iv3-order-modal')">
+      <div class="iv3-modal" onclick="event.stopPropagation()" style="max-width:400px">
+        <div class="iv3-modal-title">🛎️ تحويل لأوردر</div>
+
+        <div class="iv3-order-form">
+          <div class="iv3-order-field">
+            <label>اسم العميل <span style="color:#EF4444">*</span></label>
+            <input type="text" id="iv3-ord-name" value="${iv3EscHtml(name)}"
+              placeholder="اسم العميل" class="iv3-modal-input">
+          </div>
+          <div class="iv3-order-field">
+            <label>رقم التليفون</label>
+            <input type="text" id="iv3-ord-phone" value="${iv3EscHtml(phone)}"
+              placeholder="01xxxxxxxxx" class="iv3-modal-input">
+          </div>
+          <div class="iv3-order-field">
+            <label>نوع الطلب</label>
+            <select id="iv3-ord-type" class="iv3-modal-select">${typeOpts}</select>
+          </div>
+          <div class="iv3-order-field">
+            <label>الإجمالي (ج.م)</label>
+            <input type="number" id="iv3-ord-total" value="0" min="0" step="0.5"
+              class="iv3-modal-input" placeholder="0">
+          </div>
+          <div class="iv3-order-field">
+            <label>ملاحظات</label>
+            <textarea id="iv3-ord-notes" class="iv3-modal-textarea" rows="2"
+              placeholder="تفاصيل إضافية..."></textarea>
+          </div>
+        </div>
+
+        <div id="iv3-order-error" style="color:#EF4444;font-size:12px;display:none;margin-top:6px"></div>
+
+        <div class="iv3-modal-actions">
+          <button onclick="iv3CloseModal('iv3-order-modal')" class="iv3-modal-cancel">إلغاء</button>
+          <button onclick="iv3SubmitOrder(${contactId || 'null'})" class="iv3-modal-confirm" id="iv3-order-submit-btn">✅ إنشاء الطلب</button>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+async function iv3SubmitOrder(contactId) {
+  const nameEl  = document.getElementById('iv3-ord-name');
+  const phoneEl = document.getElementById('iv3-ord-phone');
+  const typeEl  = document.getElementById('iv3-ord-type');
+  const totalEl = document.getElementById('iv3-ord-total');
+  const notesEl = document.getElementById('iv3-ord-notes');
+  const errEl   = document.getElementById('iv3-order-error');
+  const btn     = document.getElementById('iv3-order-submit-btn');
+
+  const name  = nameEl?.value?.trim();
+  const phone = phoneEl?.value?.trim();
+  const type  = typeEl?.value || 'stock';
+  const total = parseFloat(totalEl?.value) || 0;
+  const notes = notesEl?.value?.trim();
+
+  if (!name) {
+    if (errEl) { errEl.textContent = 'اسم العميل مطلوب'; errEl.style.display = ''; }
+    if (nameEl) nameEl.focus();
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+  if (errEl) errEl.style.display = 'none';
+
+  try {
+    const payload = {
+      client_name:  name,
+      client_phone: phone || null,
+      order_type:   type,
+      total,
+      notes: notes || `تحويل من محادثة ${IV3.activeConv?.platform || ''} — ${IV3.activeConv?.sender_name || ''}`,
+    };
+    if (contactId) payload.contact_id = contactId;
+
+    const result = await apiFetch('/api/system/orders', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    if (!result?.ok) throw new Error(result?.error || 'فشل إنشاء الطلب');
+
+    iv3CloseModal('iv3-order-modal');
+    const orderNo = result.order_no || result.id || '';
+    iv3Toast(`✅ تم إنشاء طلب ${orderNo ? '#'+orderNo : ''} بنجاح`, 'success');
+
+    // إرسال رسالة تأكيد للعميل في المحادثة
+    if (IV3.activeConvId && orderNo) {
+      const confirmText = `شكراً يا ${iv3EscHtml(name)}، تم تسجيل طلبك برقم ${orderNo} بنجاح. سنتواصل معك قريباً.`;
+      const textarea = document.getElementById('iv3-textarea');
+      if (textarea) {
+        textarea.value = confirmText;
+        if (typeof iv3ResizeTextarea === 'function') iv3ResizeTextarea(textarea);
+        textarea.focus();
+      }
+    }
+
+  } catch(e) {
+    if (errEl) { errEl.textContent = e.message; errEl.style.display = ''; }
+    if (btn) btn.disabled = false;
   }
 }
 
