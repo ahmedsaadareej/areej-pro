@@ -35,6 +35,25 @@
 ## سجل الجلسات (الأحدث في الأعلى)
 
 ---
+## جلسة 2026-05-02 09:24 UTC
+
+### وقفت عند:
+- الملف: `public/dashboard/js/inbox.js`
+- آخر تغيير: حذف `loadInbox()` القديم من سطر الـ inbox في `showPage` — كان يسبب polling مزدوج مع v3
+
+### قرارات تقنية:
+- `loadInbox()` (v2) كان يشتغل على `/api/system/inbox/...` + يشغّل `startInboxPolling()` القديم بالتوازي مع `iv3OnPageShow()` → تعارض مؤكد
+- `iv3OnPageShow()` الآن هو المسؤول الوحيد عن init + polling عند فتح الـ inbox
+- `stopInboxPolling()` (v2) و `iv3OnPageHide()` (v3) لا يتعارضان — كل واحد يوقف الـ timer الخاص بيه
+- كل الـ backend endpoints موجودة وشغّالة (`/api/inbox/me`, `/api/inbox/agents`, `/api/inbox/conversations/:id/status`, إلخ)
+- ترتيب الـ scripts في `index.html` صحيح (state → api → conv → chat → reply → context → init)
+
+### المهمة الأولى للجلسة القادمة:
+- اختبار حي من المتصفح على `pro-test.areejegypt.com` — فتح قسم الرسائل ومراقبة الـ console عن أي errors متبقية
+
+---
+
+---
 
 ## جلسة 2026-05-02 09:30 UTC
 
