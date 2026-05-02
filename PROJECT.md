@@ -262,6 +262,11 @@ inbox_team_members        -- أعضاء الفرق
 - [x] **iv3UpdateCharCount** — دالة عد الحروف مربوطة بالـ textarea
 - [x] **اختبار حي (Chromium headless)** — UI يظهر صح، 3 panels، لا errors جديدة
 
+- [x] **Notes Panel كامل** — عرض + إضافة + حذف في Context Panel (commit: 790ee9e)
+- [x] **Voice Recording كامل** — MediaRecorder + رفع + إرسال + UI نبضة (commit: 56904a6)
+- [x] **إضافة Notes section في index.html** — كان مفقوداً (commit: bc6cfe3)
+- [x] **اختبار حي** — كل العناصر موجودة، Notes form يفتح صح
+
 **الخطوة التالية (تحتاج تدخّل أحمد):** ربط WhatsApp QR بـ pro-test وإرسال رسالة تجريبية لاختبار العرض الكامل
 
 ### المرحلة 2: الـ Core Features
