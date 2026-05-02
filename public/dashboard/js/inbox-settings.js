@@ -367,6 +367,26 @@ async function testWhatsAppConnection() {
   }
 }
 
+// WhatsApp API scenario toggle
+function waSetScenario(scenario) {
+  const blockExisting = document.getElementById('wa-block-existing');
+  const blockNew = document.getElementById('wa-block-new');
+  const btnExisting = document.getElementById('wa-scenario-existing');
+  const btnNew = document.getElementById('wa-scenario-new');
+  if (!blockExisting || !blockNew) return;
+  if (scenario === 'existing') {
+    blockExisting.style.display = 'block';
+    blockNew.style.display = 'none';
+    if (btnExisting) { btnExisting.style.background='#1B5E30'; btnExisting.style.color='#fff'; btnExisting.style.borderColor='#1B5E30'; }
+    if (btnNew) { btnNew.style.background='#f9fafb'; btnNew.style.color='#374151'; btnNew.style.borderColor='#e5e7eb'; }
+  } else {
+    blockExisting.style.display = 'none';
+    blockNew.style.display = 'block';
+    if (btnNew) { btnNew.style.background='#1B5E30'; btnNew.style.color='#fff'; btnNew.style.borderColor='#1B5E30'; }
+    if (btnExisting) { btnExisting.style.background='#f9fafb'; btnExisting.style.color='#374151'; btnExisting.style.borderColor='#e5e7eb'; }
+  }
+}
+
 // WhatsApp QR functions
 async function startWhatsAppQR() {
   const statusEl = document.getElementById('wa-qr-status');

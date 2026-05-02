@@ -1,7 +1,7 @@
 # 📋 PROJECT.md — مرجع مشروع Areej Pro
 > **قاعدة ذهبية:** هذا الملف يُحدَّث بعد كل خطوة بدون استثناء.
 > أي جلسة جديدة تبدأ بقراءة هذا الملف أولاً قبل أي شيء.
-> آخر تحديث: 2026-05-02 17:21 UTC
+> آخر تحديث: 2026-05-02 19:39 UTC
 
 ---
 
@@ -242,28 +242,75 @@ payment_gateways (
 ### ✅ منظومة الدفع مكتملة بالكامل
 → ACU-1 → ACU-5 + ACU-A + ACU-B + ACU-C كلها مُنجزة
 
-### 🔴 الأولوية القصوى (ابدأ هنا)
-→ **Customer Lifetime Value Badge** — `inbox-context.js` — "12 فاتورة / 4,500 ج.م" يظهر تلقائياً في Context Panel لكل محادثة
+### ✅ Inbox v3 Features الأساسية مكتملة
+→ CLV Badge + Catalog + Bulk Actions + Keyboard Shortcuts + Collision Detection
 
-### 🟢 تضيف قيمة تنافسية فريدة
+---
 
-#### Customer Lifetime Value Badge
-**الوصف:** في Context Panel — "12 فاتورة / 4,500 جنيه" يظهر تلقائياً
-**الملفات:** `inbox-context.js`
-**التقدير:** 1-2 ساعة
+## 🔴 المهام القادمة — مرتبة بالأولوية
+
+### 🔴 المرحلة الأولى — WhatsApp API Channel Management
+
+#### WA-1 — صفحة إعدادات WhatsApp API (الربط)
+**الوصف:** صفحة إعدادات كاملة تشرح خطوتين:
+- لو عندك رقم API موجود: حقول Phone Number ID + Access Token + Webhook Token
+- لو معندكش رقم: خطوات إنشاء حساب Meta Business + ربط رقم
+- زر "اختبار الاتصال" يتحقق إن الـ token صح
+- عرض حالة الاتصال ✅ / ❌
+**الملفات:** `index.html` + `inbox-settings.js` + `server/routes/inbox.js`
+**التقدير:** 2 ساعة
+**الحالة:** 🔴 التالية
+
+#### WA-2 — Template Manager
+**الوصف:** تبويب كامل لإدارة WhatsApp Templates من جوا المنظومة:
+- قايمة كل templates مع حالتها (✅ معتمد / ⏳ قيد المراجعة / ❌ مرفوض)
+- إنشاء template جديد (form: اسم + لغة + نوع + محتوى + متغيرات)
+- تعديل / حذف
+- معاينة شكل الرسالة قبل الإرسال
+- في Inbox: Reply box → زر Templates → يعرض المعتمدة فقط
+**الملفات:** `index.html` + `inbox-settings.js` + `inbox-reply.js` + `server/routes/inbox.js`
+**التقدير:** 3-4 ساعات
+**الحالة:** ⏳ بعد WA-1
+
+#### WA-3 — Analytics Dashboard للواتساب
+**الوصف:** تبويب تحليلات داخل إعدادات WhatsApp API:
+- حد الرسائل الشهري + tier حالي (1K / 10K / 100K / Unlimited)
+- رسائل اليوم / الأسبوع / الشهر
+- عدد العملاء اللي اتكلمنا معاهم
+- متوسط وقت الرد (First Response Time)
+- تقسيم حسب نوع المحادثة (Marketing / Utility / Service)
+- تكلفة تقديرية للشهر الحالي
+- **ميزة فريدة:** محادثة → فاتورة → دفع (WA Conversion Rate من ERP)
+**الملفات:** `index.html` + `inbox-settings.js` + `server/routes/inbox.js`
+**التقدير:** 2-3 ساعات
+**الحالة:** ⏳ بعد WA-2 + ربط الرقم
+
+---
+
+### 🟡 مهام أخرى (أولوية متوسطة)
 
 #### Catalog العرض السريع
 **الوصف:** زر في Reply box → يعرض المنتجات من المخزون → موظف يختار ويبعت
 **الملفات:** `inbox-reply.js` + ربط بـ inventory API
 **التقدير:** 4-5 ساعات
 
+#### اختبار بوابات الدفع (Sandbox)
+**الوصف:** smoke test + اختبار دورة الدفع الكاملة بـ test credentials
+**الملفات:** `server/routes/pay.js` + `server/modules/payment/`
+**التقدير:** 1-2 ساعة (يحتاج test API keys من أحمد)
+
+---
+
 ### ⚪ يحتاج تدخّل أحمد
 
+#### ربط WhatsApp API
+**المطلوب:** Phone Number ID + Access Token من Meta Business Suite
+
 #### ربط WhatsApp QR
-**المطلوب من أحمد:** فتح صفحة الإعدادات → قنوات التواصل → واتساب QR → مسح الـ QR
+**المطلوب:** فتح إعدادات → قنوات التواصل → واتساب QR → مسح الـ QR
 
 #### ربط Telegram Bot
-**المطلوب من أحمد:** 5 دقائق فقط — Token في إعدادات قنوات التواصل
+**المطلوب:** 5 دقائق — Token في إعدادات قنوات التواصل
 
 ---
 

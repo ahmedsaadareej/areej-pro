@@ -3316,6 +3316,43 @@
           <h3 style="margin:0;font-size:15px;font-weight:800">📱 واتساب Business API</h3>
         </div>
 
+        <!-- ── Scenario Toggle ── -->
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button id="wa-scenario-existing" onclick="waSetScenario('existing')" style="flex:1;padding:10px 6px;border-radius:8px;font-size:12px;font-weight:800;font-family:Cairo,sans-serif;cursor:pointer;border:2px solid #1B5E30;background:#1B5E30;color:#fff">✅ عندي رقم API موجود</button>
+          <button id="wa-scenario-new" onclick="waSetScenario('new')" style="flex:1;padding:10px 6px;border-radius:8px;font-size:12px;font-weight:800;font-family:Cairo,sans-serif;cursor:pointer;border:2px solid #e5e7eb;background:#f9fafb;color:#374151">🆕 محتاج أنشئ رقم جديد</button>
+        </div>
+
+        <!-- ── Scenario A: Already have API number ── -->
+        <div id="wa-block-existing">
+          <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px;margin-bottom:16px">
+            <div style="font-size:13px;font-weight:800;color:#166534;margin-bottom:10px">🎯 عندك رقم — محتاج 3 حاجات بس</div>
+            <div style="display:flex;gap:10px;margin-bottom:10px">
+              <div style="width:22px;height:22px;border-radius:50%;background:#16a34a;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+              <div>
+                <div style="font-size:12px;font-weight:700;color:#111827">Phone Number ID</div>
+                <div style="font-size:11px;color:#4b5563;line-height:1.6">افتح <a href="https://business.facebook.com" target="_blank" style="color:#1B5E30;font-weight:700">Meta Business Suite</a> → اختار حساب WhatsApp → <strong>API Setup</strong> → هتلاقي الـ Phone Number ID</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-bottom:10px">
+              <div style="width:22px;height:22px;border-radius:50%;background:#16a34a;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+              <div>
+                <div style="font-size:12px;font-weight:700;color:#111827">Access Token (Permanent)</div>
+                <div style="font-size:11px;color:#4b5563;line-height:1.6"><strong>Business Settings → System Users</strong> → أنشئ System User أو استخدم موجود → Generate Token → حدّد صلاحية <strong>whatsapp_business_messaging</strong></div>
+                <a href="https://business.facebook.com/settings/system-users" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-top:5px;font-size:11px;font-weight:700;color:#1B5E30;text-decoration:none;background:#dcfce7;padding:3px 10px;border-radius:6px;border:1px solid #86efac">🔗 System Users ↗</a>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px">
+              <div style="width:22px;height:22px;border-radius:50%;background:#16a34a;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+              <div>
+                <div style="font-size:12px;font-weight:700;color:#111827">اضبط الـ Webhook (مرة واحدة بس)</div>
+                <div style="font-size:11px;color:#4b5563;line-height:1.6">في Meta Developers → تطبيقك → WhatsApp → Configuration → Webhook → أدخل الـ Callback URL والـ Verify Token من الأسفل → Verify and Save → فعّل <strong>messages</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Scenario B: New number ── -->
+        <div id="wa-block-new" style="display:none">
         <!-- Requirements -->
         <div class="is-requirements-box">
           <h4 style="margin:0 0 10px;font-size:13px;font-weight:800;color:#92400e">📋 المتطلبات قبل البدء</h4>
@@ -3402,6 +3439,8 @@
           </div>
         </div>
 
+        </div><!-- /wa-block-new -->
+
         <!-- Fields -->
         <div style="border-top:1.5px solid #e5e7eb;padding-top:16px;margin-top:4px">
           <h4 style="font-size:13px;font-weight:800;color:#111827;margin:0 0 12px">⚙️ إعدادات الربط</h4>
@@ -3424,7 +3463,7 @@
               <input id="wa-token" class="is-field-input" type="password" placeholder="EAABxxxx..." style="padding-left:70px" />
               <button onclick="var f=document.getElementById('wa-token');f.type=f.type==='password'?'text':'password'" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:10px;color:#6b7280;cursor:pointer;font-family:Cairo,sans-serif">عرض</button>
             </div>
-            <div style="font-size:10px;color:#f59e0b;margin-top:3px">⚠️ Token المؤقت صالح 24 ساعة فقط — استخدم System User Token للإنتاج</div>
+            <div style="font-size:10px;color:#f59e0b;margin-top:3px">⚠️ Token المؤقت صالح 24 ساعة فقط — <strong>للإنتاج: استخدم System User Token الدائم</strong> من Business Settings → System Users</div>
           </div>
 
           <div class="is-field-group">
