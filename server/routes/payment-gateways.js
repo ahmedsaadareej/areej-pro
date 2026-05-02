@@ -94,10 +94,18 @@ function ensureTable(db) {
       enabled          INTEGER DEFAULT 0,
       credentials_json TEXT,
       config_json      TEXT,
+      wallet_id        INTEGER DEFAULT NULL,
+      commission_pct   REAL    DEFAULT 0,
+      commission_fixed REAL    DEFAULT 0,
       created_at       TEXT DEFAULT (datetime('now')),
       updated_at       TEXT DEFAULT (datetime('now'))
     )
   `).run();
+  // lazy migration للجداول القديمة
+  const cols = db.prepare('PRAGMA table_info(payment_gateways)').all().map(c => c.name);
+  if (!cols.includes('wallet_id'))        db.prepare('ALTER TABLE payment_gateways ADD COLUMN wallet_id INTEGER DEFAULT NULL').run();
+  if (!cols.includes('commission_pct'))   db.prepare('ALTER TABLE payment_gateways ADD COLUMN commission_pct REAL DEFAULT 0').run();
+  if (!cols.includes('commission_fixed')) db.prepare('ALTER TABLE payment_gateways ADD COLUMN commission_fixed REAL DEFAULT 0').run();
 }
 
 // ── Helper: قراءة بوابة من DB ────────────────────────────────────────────────
@@ -149,10 +157,19 @@ router.get('/payment-gateways', (req, res) => {
         methods:         def.methods,
         fields:          def.fields.map(f => ({ key: f.key, label: f.label, secret: f.secret })),
         credentials:     sanitizeCredentials(creds, name),
+        wallet_id:       row?.wallet_id        || null,
+        commission_pct:  row?.commission_pct   || 0,
+        commission_fixed:row?.commission_fixed || 0,
       };
     });
 
-    res.json({ ok: true, gateways: result });
+    // أضف قائمة الخزن للـ frontend
+    let wallets = [];
+    try {
+      wallets = db.prepare("SELECT id, name, type FROM sys_wallets WHERE active=1 ORDER BY name").all();
+    } catch {}
+
+    res.json({ ok: true, gateways: result, wallets });
   } catch (err) {
     console.error('payment-gateways GET error:', err.message);
     res.status(500).json({ ok: false, error: err.message });
@@ -180,16 +197,25 @@ router.get('/payment-gateways/:name', (req, res) => {
       } catch {}
     }
 
+    let wallets = [];
+    try {
+      wallets = db.prepare("SELECT id, name, type FROM sys_wallets WHERE active=1 ORDER BY name").all();
+    } catch {}
+
     res.json({
-      ok:           true,
-      gateway_name: name,
-      display_name: def.display_name,
-      icon:         def.icon,
-      enabled:      row ? !!row.enabled : false,
-      configured:   Object.keys(creds).length > 0,
-      methods:      def.methods,
-      fields:       def.fields,
-      credentials:  sanitizeCredentials(creds, name),
+      ok:              true,
+      gateway_name:    name,
+      display_name:    def.display_name,
+      icon:            def.icon,
+      enabled:         row ? !!row.enabled : false,
+      configured:      Object.keys(creds).length > 0,
+      methods:         def.methods,
+      fields:          def.fields,
+      credentials:     sanitizeCredentials(creds, name),
+      wallet_id:       row?.wallet_id        || null,
+      commission_pct:  row?.commission_pct   || 0,
+      commission_fixed:row?.commission_fixed || 0,
+      wallets,
     });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
@@ -231,17 +257,22 @@ router.post('/payment-gateways/:name', (req, res) => {
 
     const encCreds = encrypt(JSON.stringify(newCreds));
 
+    // wallet_id + commission
+    const walletId       = req.body.wallet_id        ? parseInt(req.body.wallet_id)         : null;
+    const commissionPct  = req.body.commission_pct   ? parseFloat(req.body.commission_pct)  : 0;
+    const commissionFixed= req.body.commission_fixed ? parseFloat(req.body.commission_fixed): 0;
+
     if (row) {
       db.prepare(`
         UPDATE payment_gateways
-        SET enabled=?, credentials_json=?, updated_at=datetime('now')
+        SET enabled=?, credentials_json=?, wallet_id=?, commission_pct=?, commission_fixed=?, updated_at=datetime('now')
         WHERE gateway_name=?
-      `).run(enabled, encCreds, name);
+      `).run(enabled, encCreds, walletId, commissionPct, commissionFixed, name);
     } else {
       db.prepare(`
-        INSERT INTO payment_gateways (gateway_name, display_name, enabled, credentials_json)
-        VALUES (?, ?, ?, ?)
-      `).run(name, def.display_name, enabled, encCreds);
+        INSERT INTO payment_gateways (gateway_name, display_name, enabled, credentials_json, wallet_id, commission_pct, commission_fixed)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(name, def.display_name, enabled, encCreds, walletId, commissionPct, commissionFixed);
     }
 
     res.json({ ok: true, message: `تم حفظ إعدادات ${def.display_name} بنجاح` });
@@ -363,7 +394,28 @@ function getGatewayCredentials(db, gatewayName) {
   }
 }
 
+// ── Helper: جلب إعدادات البوابة كاملة (credentials + wallet + commission) ──────
+function getGatewayConfig(db, gatewayName) {
+  ensureTable(db);
+  const row = getGateway(db, gatewayName);
+  if (!row || !row.enabled || !row.credentials_json) return null;
+  try {
+    const dec   = decrypt(row.credentials_json);
+    const creds = dec ? JSON.parse(dec) : null;
+    if (!creds) return null;
+    return {
+      creds,
+      wallet_id:        row.wallet_id        || null,
+      commission_pct:   row.commission_pct   || 0,
+      commission_fixed: row.commission_fixed || 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
 module.exports = router;
 module.exports.getGatewayCredentials  = getGatewayCredentials;
+module.exports.getGatewayConfig       = getGatewayConfig;
 module.exports.SUPPORTED_GATEWAYS     = SUPPORTED_GATEWAYS;
 module.exports.ensureTable            = ensureTable;
