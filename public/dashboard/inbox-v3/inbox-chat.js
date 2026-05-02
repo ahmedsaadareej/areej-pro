@@ -133,7 +133,7 @@ function iv3BuildMsgBubble(msg) {
 
 function iv3BuildMediaContent(msg) {
   const url = msg.media_url || `/api/system/inbox/media-proxy/${msg.id}`;
-  const mimeType = msg.mime_type || msg.media_type || '';
+  const mimeType = msg.media_type || msg.mime_type || '';  // media_type هو الحقل الفعلي في الـ schema
 
   if (mimeType.startsWith('image/')) {
     return `<img class="iv3-msg-img" src="${url}" onclick="iv3PreviewImg('${url}')" loading="lazy">`;

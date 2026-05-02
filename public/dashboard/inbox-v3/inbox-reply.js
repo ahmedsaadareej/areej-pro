@@ -411,6 +411,12 @@ async function iv3ToggleVoice() {
     return;
   }
 
+  // إيقاف أي تسجيل قديم لم يُغلق نظيفاً
+  if (_iv3MediaRecorder && _iv3MediaRecorder.stream) {
+    _iv3MediaRecorder.stream.getTracks().forEach(t => t.stop());
+    _iv3MediaRecorder = null;
+  }
+
   let stream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -427,6 +433,7 @@ async function iv3ToggleVoice() {
 
   _iv3AudioChunks = [];
   _iv3MediaRecorder = new MediaRecorder(stream, { mimeType });
+  _iv3MediaRecorder.stream = stream;  // نحتفظ بالـ stream لإغلاقه لاحقاً
 
   _iv3MediaRecorder.ondataavailable = e => {
     if (e.data.size > 0) _iv3AudioChunks.push(e.data);

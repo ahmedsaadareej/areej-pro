@@ -126,7 +126,7 @@ const IV3_API = {
   },
 
   async addNote(convId, text) {
-    const data = await this._post(`/api/system/inbox/conversations/${convId}/notes`, { note: text });
+    const data = await this._post(`/api/system/inbox/conversations/${convId}/notes`, { content: text });
     if (!data) throw new Error('فشل إضافة الملاحظة');
     return data;
   },
