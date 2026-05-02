@@ -1,7 +1,7 @@
 # 📋 PROJECT.md — مرجع مشروع Areej Pro
 > **قاعدة ذهبية:** هذا الملف يُحدَّث بعد كل خطوة بدون استثناء.
 > أي جلسة جديدة تبدأ بقراءة هذا الملف أولاً قبل أي شيء.
-> آخر تحديث: 2026-05-02 09:24 UTC (جلسة ثانية)
+> آخر تحديث: 2026-05-02 15:23 UTC
 
 ---
 
@@ -18,86 +18,18 @@
 
 ---
 
-## 🎯 الرؤية الكاملة للمشروع (من أحمد مباشرة)
+## 🎯 الرؤية الكاملة للمشروع
 
 ### المشكلة التي يحلّها Areej Pro:
-أحمد كان يشتغل على أكثر من نظام في نفس الوقت:
+أحمد يعمل بنظامين منفصلين:
 - **دفترة** (ERP): حسابات، مخزون، مبيعات، مشتريات، HR
-- **Respond.io**: إدارة قنوات التواصل الاجتماعي (WhatsApp, Messenger, Instagram)
+- **Respond.io**: إدارة قنوات التواصل (WhatsApp, Messenger, Instagram)
 
-**المشكلة الجوهرية:** لا يوجد ربط بين الأنظمة.
-- لما بيكلم عميل على WhatsApp → مش شايف تاريخه أو فواتيره أو أوامر شغله
-- عشان يبعت فاتورة → لازم يفتح نظام تاني، يحملها، يبعتها يدوياً
-- الموظفين بيردوا على WhatsApp بدون ما يشوفوا أي سياق عن العميل
+**المشكلة الجوهرية:** لا ربط بين الأنظمة.
 
 ### الحل = Areej Pro:
-نظام واحد متكامل يجمع:
-1. **ERP** — مبيعات، مخزون، حسابات، HR
-2. **CRM** — إدارة العملاء والعلاقات
-3. **Inbox** — إدارة كل قنوات التواصل الاجتماعي
-4. **منصة بيع** — متجر إلكتروني
-5. **منصة موردين** — عرض وشراء من الموردين
-6. **منصة دفع** — استقبال وإرسال مدفوعات
-7. **منصة تعليمية** — محتوى، موردين، مصانع، أخبار الصناعة
-
-### ما يجعله فريداً:
-- **موجّه لصناعة بعينها** (ملابس + طباعة) — مش نظام عام
-- **كل شيء في مكان واحد** — لا تنقل بين برامج
-- **مناسب لكل الأحجام** — من فرد لـ 20+ موظف
-
----
-
-## 👥 العملاء المستهدفون
-
-### الفئة الأساسية:
-- أصحاب محلات ملابس وطباعة في مصر
-- من يعمل في صناعة الملابس أو طباعة الملابس
-- عملاء أونلاين صغار (بيبيعوا من البيت / إنستجرام)
-
-### حجم الفريق:
-- **صغير:** 1-3 موظفين (الغالبية)
-- **متوسط:** 5-10 موظفين
-- **كبير:** 20+ موظف
-
-### استراتيجية اكتساب العملاء (Lead Magnet):
-- PDF/كتاب مجاني: "كيف تبدأ براند ملابس من الصفر"
-  - مصادر تيشرتات، أنواع طباعة، أنواع قماش
-  - أسماء موردين ومصانع
-  - خطوات عملية للمبتدئ
-- العميل يسجل باسمه ورقمه → يحمل الدليل
-- بعدها: يتحول لاشتراك مدفوع في Areej Pro
-
-### نموذج التحويل:
-المشاكل التي يواجهها العميل بعد القراءة:
-- مش عارف ربحه كام (يحتاج ERP)
-- مش عارف يتواصل مع عملاه (يحتاج Inbox + CRM)
-- مش عارف يدير إعلاناته (يحتاج Content module)
-- مش عارف يجيب موردين (يحتاج Supplier platform)
-
----
-
-## 💰 نظام الباقات (سيتحدد التسعير لاحقاً)
-
-### المستويات المقترحة:
-
-| الباقة | المستهدف | الميزات الرئيسية |
-|---|---|---|
-| **Starter** | فرد / 1-3 موظفين | Inbox + CRM أساسي + فواتير |
-| **Growth** | 5-10 موظفين | Starter + أتمتة + تقارير + API |
-| **Pro** | 20+ موظف | Growth + موردين + تعليم + كل شيء |
-
-> ملاحظة: التسعير الفعلي سيتحدد بعد اكتمال النظام.
-
----
-
-## 🔑 الـ Pain Points الحقيقية (أولوية التطوير)
-
-### ترتيب حسب الأهمية لأحمد:
-1. **ربط الرسائل بسياق العميل** — لما موظف بيرد، يشوف الفواتير والأوردرات فوراً
-2. **إرسال فاتورة من داخل المحادثة** — بضغطة واحدة
-3. **صلاحيات منفصلة للـ Inbox** — نوعان: users النظام + agents الرسائل
-4. **تتبع أوامر الشغل** — من استلام الطلب للتسليم والدفع
-5. **Onboarding wizard** — لما عميل يسجل، يعرف يبدأ فين
+نظام واحد يجمع: ERP + CRM + Inbox + متجر + موردين + دفع + تعليم
+موجّه لصناعة الملابس والطباعة في مصر — Arabic-first — من فرد لـ 20+ موظف
 
 ---
 
@@ -113,37 +45,62 @@
 | **Process** | PM2 — `areej-pro` (id: 1) على port 3002 |
 | **Reverse Proxy** | Caddy → `/etc/caddy/Caddyfile` |
 | **Domains** | `pro.areejegypt.com` (prod) + `pro-test.areejegypt.com` (test) |
+| **Git** | GitHub: areej-pro repo — branch: main |
 
-### الملفات الرئيسية للـ Inbox:
-```
-server/routes/inbox.js            ← Backend كامل (2400+ سطر)
-server/routes-inbox-webhook.js    ← Webhooks الواردة
-server/routes/team-settings.js    ← إعدادات الفريق والتوزيع
-server/whatsapp-qr-service.js     ← خدمة WhatsApp QR (Baileys)
-server/inbox-distributor.js       ← توزيع المحادثات التلقائي
-public/dashboard/js/inbox.js      ← Frontend كامل (3300+ سطر)
-public/dashboard/css/inbox-v2.css ← CSS الجديد (1006 سطر)
-public/dashboard/index.html       ← HTML الرئيسي (4694 سطر)
-```
+### اعتبارات السيرفر:
+- لا تشغّل builds ثقيلة وقت الذروة
+- استخدم `pm2 reload areej-pro` للـ deploy (لا restart)
+- `pro-test.areejegypt.com` للاختبار فقط — لا تكسر prod
 
 ---
 
-## 📊 قاعدة البيانات — Inbox Tables
+## 📁 هيكل ملفات الـ Inbox v3
+
+```
+public/dashboard/inbox-v3/
+├── inbox-state.js      ← IV3 object — الـ State المركزي
+├── inbox-api.js        ← IV3_API object — كل الـ API calls
+├── inbox-conv.js       ← قائمة المحادثات + render + فلاتر
+├── inbox-chat.js       ← Chat window + messages + header actions
+├── inbox-reply.js      ← Reply box + templates + AI + media + voice
+├── inbox-context.js    ← Context Panel + ERP + labels + notes
+├── inbox-init.js       ← Init + Polling + Toast + Sound
+└── inbox.css           ← CSS كامل
+
+public/dashboard/js/
+├── inbox.js            ← showPage routing + legacy functions (3300+ سطر)
+├── inbox-settings.js   ← إعدادات الرسائل (554 سطر)
+└── core.js             ← apiFetch + NAV_PERM_MAP + auth
+
+public/dashboard/index.html  ← المصدر الوحيد للـ HTML (4700+ سطر)
+  ↳ page-inbox              ← سطر ~2237
+  ↳ page-inbox-settings     ← سطر ~2992
+  ↳ inboxSettingsModal      ← legacy مخفي (display:none!important)
+
+server/routes/inbox.js       ← Backend كامل (2400+ سطر، 116 endpoint)
+```
+
+### قواعد الكود:
+- **`apiFetch(url, opts)`** في `core.js` — تُضيف Bearer تلقائاً وترجع JSON مباشرة
+- **`IV3_API`** لكل calls، لا تكتب `fetch` مباشرة في ملفات أخرى
+- **`IV3.activeConvId`** هو الـ state الأساسي — تحقق منه قبل أي action
+- **`iv3Toast(msg, type)`** للإشعارات — type: success/error/info/warning
+- **`index.html` هو المصدر** — `inbox.html` مجرد reference، أي تعديل يكون في index.html
+
+---
+
+## 📊 Schema الـ Inbox
 
 ```sql
-inbox_conversations       -- المحادثات (platform, sender, status, assigned_to_id)
-inbox_messages            -- الرسائل (direction in/out, media_url, file_id)
-inbox_settings            -- إعدادات المنصات (tokens, active flags)
-inbox_labels              -- التسميات الملوّنة
-inbox_conversation_labels -- ربط محادثات بتسميات
-inbox_notes               -- ملاحظات داخلية على المحادثات
-inbox_templates           -- الردود الجاهزة
-inbox_keywords            -- ردود تلقائية بالكلمات المفتاحية
-inbox_broadcasts          -- حملات الإرسال الجماعي
-inbox_chatbot_flows       -- شجرة الشات بوت
-inbox_drip_campaigns      -- حملات Drip التلقائية
-inbox_agent_status        -- حالة كل موظف (online/offline)
-inbox_team_members        -- أعضاء الفرق
+inbox_conversations  (id, platform, sender_id, sender_name, status, assigned_to_id, unread_count, last_message_at)
+inbox_messages       (id, conversation_id, direction, content, sent_at, media_url, media_type, is_note, status)
+inbox_notes          (id, conversation_id, content, author_id, user_name, created_at)
+inbox_templates      (id, name, content)
+inbox_labels         (id, name, color)
+inbox_settings       (id, telegram_token, telegram_active, welcome_active, welcome_message, away_active, ...)
+inbox_keywords       (id, word, reply)
+inbox_broadcasts     (id, title, status, sent_count)
+inbox_agent_status   (id, user_id, status)
 ```
 
 ---
@@ -153,152 +110,132 @@ inbox_team_members        -- أعضاء الفرق
 | المنصة | الحالة | الملاحظات |
 |---|---|---|
 | Telegram | ✅ شغّال | Bot Token في inbox_settings |
-| WhatsApp QR | ✅ شغّال | Baileys — session per user |
+| WhatsApp QR | ✅ شغّال | Baileys — يحتاج مسح QR من أحمد |
 | WhatsApp API | ⚠️ جزئي | 360dialog / Meta — يحتاج token |
 | Facebook Messenger | ⚠️ جزئي | Meta webhook موجود |
 | Instagram DM | ⚠️ جزئي | Meta webhook موجود |
 
 ---
 
-## ✅ ما تم إنجازه (جلسة 2026-05-01)
+## ✅ ما تم إنجازه حتى الآن (2026-05-02)
 
-- [x] دراسة الباكب الكامل وفهم المنظومة
-- [x] إنشاء workspace + SECRETS.md + system-overview.md
-- [x] ربط GitHub repos (areej-shop, areej-pro, areej-payment, areej-website)
-- [x] إصلاح SSL 525 لـ shop, pay, pro + إضافة pro-test في Caddyfile
-- [x] دراسة كاملة للكود (inbox backend + frontend)
-- [x] إنشاء inbox-v2.css (1006 سطر) — تصميم جديد
-- [x] استبدال HTML قسم الـ inbox بـ v2 layout (3 أعمدة)
-- [x] تحديث renderInboxConvList + setInboxFilter + switchInboxPlatform
-- [x] تحديث contact panel helpers
-- [x] إضافة تاب "🔐 الصلاحيات" + Permissions UI كامل
-- [x] إضافة POST /api/system/inbox/user-perms endpoint
-- [x] إضافة PROJECT.md كمرجع دائم
+### Inbox v3 — البنية الكاملة
+- [x] CSS كامل (inbox.css — 1328+ سطر)
+- [x] JS مقسّم 7 ملفات — كلها syntax OK وموجودة في index.html
+- [x] 3-panel layout (محادثات + chat + context) شغّال ✅
+- [x] Polling كل 8 ثواني شغّال ✅
+- [x] API calls كلها مع Bearer token ✅
 
-## ✅ ما تم إنجازه (جلسة 2026-05-02 — الصبح)
+### Inbox v3 — الـ Features المكتملة
+- [x] قائمة المحادثات مع فلترة (منصة / حالة / موظف / بحث)
+- [x] Infinite scroll + Skeleton loading
+- [x] Unread badges + Title badge
+- [x] فتح محادثة + تحميل رسائل
+- [x] Bubbles (in/out) + فاصل يومي + Media rendering
+- [x] Lightbox للصور
+- [x] Tick status (✓ ✓✓ 🔵 ✗)
+- [x] Internal Notes (🔒) في الرسائل
+- [x] تغيير حالة المحادثة (open/waiting/closed)
+- [x] تعيين لموظف
+- [x] Labels — عرض في القائمة
+- [x] Context Panel — CRM data (رصيد + فواتير + أوردرات)
+- [x] Notes Panel — إضافة + حذف + عرض
+- [x] Voice Recording — MediaRecorder + رفع + إرسال
+- [x] Slash command `/` لفتح Templates
+- [x] AI suggestions
+- [x] إرفاق ملفات مع preview
+- [x] Internal Notes mode في صندوق الرد
+- [x] إرسال فاتورة من المحادثة
+- [x] Quick actions (ملف عميل / فاتورة / أوردر جديد)
+- [x] Sound toggle
+- [x] Toast notifications
 
-- [x] مراجعة PROJECT.md وتحديثه بالحالة الكاملة
-- [x] تأكيد الخطوة التالية: بناء inbox-v3/inbox.js
-- [x] الجلسة الجديدة ستبدأ من inbox.js مباشرةً
+### إعدادات الرسائل (page-inbox-settings)
+- [x] صفحة منفصلة كاملة (مش modal) — شغّالة ✅
+- [x] قنوات التواصل: Telegram / WhatsApp QR / Messenger / Instagram
+- [x] رسائل تلقائية (ترحيب + خارج أوقات العمل) — شغّالة ✅
+- [x] كلمات مفتاحية — شغّالة ✅
+- [x] Labels — شغّالة ✅
+- [x] ردود جاهزة — شغّالة ✅
+- [x] التحليلات — شغّالة (cards + platform breakdown) ✅
+- [x] فريق الرد (team-management) — موجود
+
+### Bug Fixes هامة
+- [x] `#page-inbox { display:flex }` كان يظهر الـ inbox فوق الإعدادات → تصحيح لـ `#page-inbox.active`
+- [x] `page-inbox-settings` ظاهر مع inbox → إضافة `display:none` في inline style
+- [x] `showInboxSettings()` stub في inbox-init.js كان يطغى على الدالة الشغّالة → حُذف
+- [x] `addNote` كانت ترسل `{note}` والـ API يتوقع `{content}` → إصلاح
+- [x] Legacy modal IDs مكررة مع page-inbox-settings → توحيد
 
 ---
 
-## 🚧 القرار الاستراتيجي الحالي
+## 🎯 المهام القادمة — مرتبة بالأولوية
 
-### إعادة بناء موديول الـ Inbox من الصفر
+### 🔴 الأولوية القصوى (ابدأ هنا)
 
-**السبب:** التعديل على كود قديم يحدّ الناتج. البناء من الصفر يضمن تفوقاً حقيقياً.
+#### 1. Quote/Reply على رسالة محددة
+**الوصف:** المستخدم يضغط على رسالة → يظهر زر Reply → يُرسل الرد مقتبساً منها
+**الملفات:** `inbox-chat.js` + `inbox-reply.js` + `index.html`
+**التقدير:** 2-3 ساعات
 
-**ما يُحتفظ به (Backend):**
-- كل API endpoints ✅
-- قاعدة البيانات ✅
-- منطق webhooks + distributor ✅
+#### 2. Snooze المحادثة
+**الوصف:** زر Snooze في header المحادثة → يختار وقت (30 دق / ساعة / 3 ساعات / غداً) → المحادثة تختفي وترجع تلقائياً
+**الملفات:** `inbox-chat.js` + `inbox-init.js` (polling يتحقق من snooze) + `server/routes/inbox.js` (endpoint جديد)
+**التقدير:** 3-4 ساعات
 
-**ما يُعاد بناؤه (Frontend):**
-- HTML layout جديد كامل
-- CSS جديد من الصفر
-- JS منظم ومقسّم لملفات
+#### 3. Conversation Timeline
+**الوصف:** سجل أحداث داخل المحادثة — "تم التعيين لـ X" / "تم الإغلاق" / "تم تغيير الحالة"
+**الملفات:** `inbox-chat.js` + `server/routes/inbox.js`
+**التقدير:** 2-3 ساعات
 
----
+#### 4. زر "تحويل لأوردر" من المحادثة
+**الوصف:** زر في Context Panel → يفتح نموذج أوردر بمعلومات العميل جاهزة
+**الملفات:** `inbox-context.js` + ربط بـ orders module
+**التقدير:** 3-4 ساعات
 
-## 📋 خطة العمل — Inbox v3 (من الصفر)
+#### 5. Payment Link من المحادثة
+**الوصف:** زر في Context Panel أو Reply box → ينشئ رابط دفع ويرسله للعميل
+**الملفات:** `inbox-context.js` + `inbox-reply.js`
+**التقدير:** 2-3 ساعات
 
-### المرحلة 0: البحث والتصميم ✅ مكتملة
-- [x] بحث على Respond.io + Wati + ManyChat + Chatwoot
-- [x] تحديد الفيتشرز الأفضل من كل منافس
-- [x] رسم wireframe للـ layout الجديد (INBOX_V3_DESIGN.md)
-- [x] تحديد الفرص التنافسية
+### 🟡 الأولوية العالية
 
-**الفرص المحددة على المنافسين:**
-- Customer Context (فواتير+أوردرات+ذمم) داخل الـ inbox — مفيش عند أي منافس
-- إرسال فاتورة + رابط دفع بضغطة واحدة — حصري
-- ERP + CRM + Inbox في نظام واحد — مفيش في العالم
-- Arabic-first + موجّه لصناعة الملابس — كل المنافسين generic
-- نأخذ من Respond.io: Lifecycle view
-- نأخذ من Chatwoot: Private Notes + @mentions
-- نأخذ من ManyChat: Flow builder بصري سهل
+#### 6. Bulk Actions
+**الوصف:** checkbox على كل محادثة → إغلاق / تعيين / label دفعة واحدة
+**الملفات:** `inbox-conv.js` + `inbox-chat.js` + `index.html`
+**التقدير:** 4-5 ساعات
 
-### المرحلة 1: الـ Layout الجديد — جاري
-- [x] CSS كامل من الصفر: `public/dashboard/inbox-v3/inbox.css` (1238 سطر)
-- [x] HTML skeleton كامل: `public/dashboard/inbox-v3/inbox.html` (375 سطر)
-- [x] JS مقسّم لملفات منظمة (7 ملفات، كلها syntax OK):
-  - [x] `inbox-v3/inbox-state.js` — الـ State المركزي
-  - [x] `inbox-v3/inbox-api.js` — كل الـ API calls
-  - [x] `inbox-v3/inbox-conv.js` — قائمة المحادثات + render + فلاتر
-  - [x] `inbox-v3/inbox-chat.js` — Chat window + messages + actions
-  - [x] `inbox-v3/inbox-reply.js` — Reply box + templates + AI + media
-  - [x] `inbox-v3/inbox-context.js` — Contact panel + ERP context + labels + notes
-  - [x] `inbox-v3/inbox-init.js` — Init + Polling + Toast + Sound
-- [x] دمج في index.html و تفعيل ← **تمّ ✅**
-  - [x] إضافة inbox-v3/inbox.css في رأس الصفحة
-  - [x] استبدال page-inbox القديم (v2) بـ inbox.html (v3)
-  - [x] إضافة الـ 7 JS modules في نهاية index.html
-  - [x] pm2 reload — سيرفر شغال بدون errors
+#### 7. Collision Detection
+**الوصف:** "أحمد يرد على هذه المحادثة الآن" — يمنع ردين في نفس الوقت
+**الملفات:** `inbox-init.js` (polling) + `inbox-chat.js` + `server/routes/inbox.js`
+**التقدير:** 3-4 ساعات
 
-- [x] ربط iv3 مع نظام التنقل `sbShowPage` — `iv3OnPageShow/Hide` في inbox.js
-- [x] إصلاح inbox-context.js ليتوافق مع IDs الحقيقية في inbox.html
-- [x] `iv3OnPageShow` ذكي (init مرة واحدة فقط، polling فقط بعد كدة)
-- [x] ربط `iv3ResetContextPanel` مع `iv3ResetChat`
-- [x] pm2 reload — سيرفر شغال، inbox v3 يطلب الـ API فعلاً
-- [x] كل التغييرات commitية على GitHub
+#### 8. Keyboard Shortcuts
+**الوصف:** Tab للانتقال بين محادثات / R للرد / E للإغلاق / A للتعيين
+**الملفات:** `inbox-init.js`
+**التقدير:** 2-3 ساعات
 
-- [x] **إصلاح تعارض Polling** — حذف `loadInbox()` القديم من `showPage` (commit: 92d0504)
-- [x] **إصلاح API prefix** — `/api/inbox/` → `/api/system/inbox/` في `inbox-api.js` + `inbox-chat.js` (commit: 2cb0ebe)
-- [x] **إصلاح Branding** — `loadAndApplyBranding` تستخدم `apiFetch` مباشرة (commit: 14a7021)
-- [x] **إصلاح 401** — `inbox-api.js` يستخدم `apiFetch` (Bearer token) بدل `fetch` المجرد (commit: 00b4406)
-- [x] **تأكيد حي من المتصفح (Chromium headless):**
-  - `IV3._initialized: true` ✅
-  - `IV3.pollTimer: شغّال` ✅
-  - `/api/system/inbox/me` → `{ok:true, isOwner:true}` ✅
-  - `/api/system/inbox/conversations` → `{ok:true, conversations:[]}` ✅
+### 🟢 تضيف قيمة تنافسية فريدة
 
-- [x] **إصلاح inbox-context.js** — endpoint صح (`/api/crm/contacts/by-phone` + `/api/system/invoices`) + apiFetch + جلب فواتير العميل
-- [x] **إصلاح inbox-chat.js** — حقول DB صح (content/sent_at/media_type) + حذف → إغلاق
-- [x] **إصلاح inbox-reply.js** — حقول متوافقة (content/sent_at) + templates تستخدم name بدل title
-- [x] **cache-busting** لكل الملفات المعدّلة
+#### 9. Customer Lifetime Value Badge
+**الوصف:** في Context Panel — "12 فاتورة / 4,500 جنيه" يظهر تلقائياً
+**الملفات:** `inbox-context.js`
+**التقدير:** 1-2 ساعة
 
-- [x] **فحص inbox.html** — كل IDs متطابقة مع JS ✔️
-- [x] **iv3ToggleVoice stub** — زر ميكروفون شغّال (قيد التطوير)
-- [x] **iv3UpdateCharCount** — دالة عد الحروف مربوطة بالـ textarea
-- [x] **اختبار حي (Chromium headless)** — UI يظهر صح، 3 panels، لا errors جديدة
+#### 10. Catalog العرض السريع
+**الوصف:** زر في Reply box → يعرض المنتجات من المخزون → موظف يختار ويبعت
+**الملفات:** `inbox-reply.js` + ربط بـ inventory API
+**التقدير:** 4-5 ساعات
 
-- [x] **Notes Panel كامل** — عرض + إضافة + حذف في Context Panel (commit: 790ee9e)
-- [x] **Voice Recording كامل** — MediaRecorder + رفع + إرسال + UI نبضة (commit: 56904a6)
-- [x] **إضافة Notes section في index.html** — كان مفقوداً (commit: bc6cfe3)
-- [x] **اختبار حي** — كل العناصر موجودة، Notes form يفتح صح
+### ⚪ يحتاج تدخّل أحمد
 
-**الخطوة التالية (تحتاج تدخّل أحمد):** ربط WhatsApp QR بـ pro-test وإرسال رسالة تجريبية لاختبار العرض الكامل
+#### 11. ربط WhatsApp QR
+**الوصف:** مسح QR مرة واحدة لربط رقم واتساب بـ pro-test
+**المطلوب من أحمد:** فتح صفحة الإعدادات → قنوات التواصل → واتساب QR → مسح الـ QR
 
-### المرحلة 2: الـ Core Features
-- [ ] عرض المحادثات مع فلترة وبحث
-- [ ] فتح محادثة + عرض الرسائل
-- [ ] الرد النصي + الميديا
-- [ ] سياق العميل (فواتير + أوردرات) في real-time
-
-### المرحلة 3: الـ Power Features
-- [ ] إرسال فاتورة بضغطة واحدة من المحادثة
-- [ ] ملاحظات داخلية (Internal Notes)
-- [ ] Labels ملوّنة
-- [ ] تعيين لموظف + Queue
-- [ ] Keyboard shortcuts
-
-### المرحلة 4: الـ Automation
-- [ ] ردود جاهزة (Templates) بـ slash command
-- [ ] AI reply suggestions
-- [ ] Auto-assign rules
-- [ ] Chatbot flows
-
-### المرحلة 5: الإدارة والتقارير
-- [ ] Inbox Permissions UI (موجود جزئياً)
-- [ ] Analytics dashboard
-- [ ] CSAT
-- [ ] Broadcast
-
-### المرحلة 6: Onboarding Wizard
-- [ ] خطوات ترحيبية لأي عميل جديد يسجل
-- [ ] ربط أول قناة تواصل
-- [ ] إضافة أول عميل CRM
-- [ ] إرسال أول رسالة
+#### 12. ربط Telegram Bot
+**الوصف:** Bot Token من @BotFather
+**المطلوب من أحمد:** 5 دقائق فقط — Token في إعدادات قنوات التواصل
 
 ---
 
@@ -308,14 +245,20 @@ inbox_team_members        -- أعضاء الفرق
 # Deploy آمن
 cd /home/areej/areej-pro && pm2 reload areej-pro
 
-# Syntax check قبل deploy
-node --check server/routes/inbox.js
+# Syntax check
+node --check public/dashboard/inbox-v3/inbox-chat.js
 
-# مشاهدة اللوج
+# لوج السيرفر
 pm2 logs areej-pro --lines 50
 
-# نسخة احتياطية
-cd /home/areej/areej-pro && ./scripts/deploy.sh "وصف التغيير"
+# OTP للـ owner login في pro-test
+sqlite3 /home/areej/areej-pro/data/master.db \
+  "INSERT INTO otp_codes (email,code,expires_at,used) VALUES ('sales@areejegypt.com','123456',datetime('now','+10 minutes'),0);"
+# ثم استخدم 123456 في صفحة الـ OTP
+
+# مسار DB العملاء
+# Master: /home/areej/areej-pro/data/master.db
+# Tenant 1 (pro-test): /home/areej/areej-pro/data/tenants/1.db
 ```
 
 ---
@@ -324,8 +267,10 @@ cd /home/areej/areej-pro && ./scripts/deploy.sh "وصف التغيير"
 
 1. **PROJECT.md يُحدَّث بعد كل خطوة** — بدون استثناء
 2. **كل جلسة جديدة تبدأ بقراءة PROJECT.md**
-3. **Syntax check قبل كل deploy**
-4. **الأسرار في SECRETS.md فقط** — لا تكتب tokens في الكود
-5. **القاعدة الذهبية (3 أماكن):** سيرفر + GitHub + Cloudflare
-6. **pro-test.areejegypt.com** للاختبار — لا تكسر pro.areejegypt.com
-7. **الـ 29 عميل الحاليين** تجريبيون فقط — لا يوجد عملاء حقيقيون بعد
+3. **Syntax check قبل كل commit**
+4. **الأسرار في SECRETS.md فقط**
+5. **القاعدة الذهبية:** سيرفر + GitHub + Cloudflare
+6. **pro-test فقط للاختبار** — لا تكسر prod
+7. **بروتوكول المهام:** ACU → تنفيذ → Syntax check → Commit → انتظار 10 ثواني
+8. **حد أقصى 5 مهام في الجلسة الواحدة**
+9. **SESSION_CONTEXT.md يُحدَّث في أعلى الملف قبل إغلاق الجلسة**
