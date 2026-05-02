@@ -66,11 +66,26 @@ async function iv3LoadCustomerContext(conv) {
   }
 
   try {
-    const res = await fetch(`/api/customers/by-phone?phone=${encodeURIComponent(phone)}`);
-    if (!res.ok) throw new Error('not found');
+    const res = await apiFetch(`/api/crm/contacts/by-phone?phone=${encodeURIComponent(phone)}`);
+    if (!res || !res.ok || !res.contact) throw new Error('not found');
 
-    const customer = await res.json();
-    iv3RenderCustomerERP(customer);
+    const contact = res.contact;
+
+    // جلب الفواتير الأخيرة للعميل
+    let recentInvoices = [];
+    let recentOrders   = [];
+    try {
+      const invData = await apiFetch(`/api/system/invoices?search=${encodeURIComponent(contact.name || '')}&limit=4`);
+      recentInvoices = (invData?.data || []).filter(i => i.contact_id === contact.id).slice(0, 4);
+      // تحويل الحقول للصيغة المتوقعة
+      recentInvoices = recentInvoices.map(i => ({
+        number: i.invoice_no,
+        total: i.total,
+        status: i.status
+      }));
+    } catch (_) {}
+
+    iv3RenderCustomerERP({ ...contact, recent_invoices: recentInvoices, recent_orders: recentOrders });
 
     // إخفاء زر "إضافة" لأنه موجود
     const addBtn = document.getElementById('iv3-ctx-add-btn');
@@ -78,7 +93,7 @@ async function iv3LoadCustomerContext(conv) {
 
     // رابط البروفايل
     const profileBtn = document.getElementById('iv3-ctx-profile-btn');
-    if (profileBtn) profileBtn.onclick = () => iv3CtxOpenProfile(customer.id);
+    if (profileBtn) profileBtn.onclick = () => iv3CtxOpenProfile(contact.id);
 
   } catch (e) {
     // العميل مش موجود في CRM
@@ -201,9 +216,8 @@ async function iv3RemoveLabelFromConv(convId, labelId) {
 async function iv3SendInvoice() {
   if (!IV3.activeConvId) return;
   try {
-    const res = await fetch('/api/invoices?status=pending&limit=20');
-    if (!res.ok) throw new Error('فشل تحميل الفواتير');
-    const data = await res.json();
+    const data = await apiFetch('/api/system/invoices?status=pending&limit=20');
+    if (!data) throw new Error('فشل تحميل الفواتير');
     const invoices = data.invoices || data || [];
 
     if (!invoices.length) { iv3Toast('لا توجد فواتير معلقة', 'error'); return; }
