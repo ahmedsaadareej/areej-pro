@@ -1717,3 +1717,43 @@
   box-shadow: 0 0 0 3px rgba(27,94,48,.08);
 }
 .iv3-modal-textarea { resize: none; }
+
+/* ── Catalog Dropdown ───────────────────────────────────────────── */
+.iv3-catalog-item {
+  padding: 9px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f9fafb;
+  transition: background .12s;
+}
+.iv3-catalog-item:hover {
+  background: #f0f9ff;
+}
+.iv3-catalog-item:last-child {
+  border-bottom: none;
+}
+.iv3-catalog-item-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.iv3-catalog-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+}
+.iv3-catalog-price {
+  color: #0891b2;
+  font-weight: 700;
+}
+.iv3-catalog-stock {
+  color: #6b7280;
+}
+.iv3-catalog-stock.low {
+  color: #ef4444;
+  font-weight: 600;
+}

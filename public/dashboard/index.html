@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/dashboard/css/main.css?v=22a33029">
 <link rel="stylesheet" href="/dashboard/css/inbox-v2.css?v=20260501">
-<link rel="stylesheet" href="/dashboard/inbox-v3/inbox.css?v=1777734382">
+<link rel="stylesheet" href="/dashboard/inbox-v3/inbox.css?v=1777745561">
 <script>document.documentElement.style.setProperty("--brand","#1B5E30");</script>
 </head>
 <body>
@@ -2510,6 +2510,9 @@
             <button class="iv3-reply-btn ai" onclick="iv3GetAISuggestions()" id="iv3-ai-btn" title="ردود AI">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
             </button>
+            <button class="iv3-reply-btn" onclick="iv3ToggleCatalog()" title="عرض المنتجات 📦" style="color:#0891b2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+            </button>
 
             <!-- Templates dropdown -->
             <div class="iv3-dropdown" id="iv3-tmpl-dropdown" style="display:none">
@@ -2530,6 +2533,22 @@
               </div>
               <div class="iv3-dropdown-body" id="iv3-ai-list">
                 <div style="padding:20px;text-align:center;color:#9CA3AF;font-size:12px">جاري التحليل...</div>
+              </div>
+            </div>
+            <!-- Catalog dropdown -->
+            <div class="iv3-dropdown" id="iv3-catalog-dropdown" style="display:none;width:300px">
+              <div class="iv3-dropdown-header" style="color:#0891b2">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
+                المنتجات
+              </div>
+              <div style="padding:8px 10px;border-bottom:1px solid #f3f4f6">
+                <input id="iv3-catalog-search" type="text" placeholder="ابحث عن منتج..."
+                  oninput="iv3CatalogSearch(this.value)"
+                  style="width:100%;box-sizing:border-box;border:1.5px solid #e5e7eb;border-radius:7px;padding:6px 10px;font-size:12px;font-family:Cairo,sans-serif;outline:none"
+                  onfocus="this.style.borderColor='#0891b2'" onblur="this.style.borderColor='#e5e7eb'">
+              </div>
+              <div class="iv3-dropdown-body" id="iv3-catalog-list" style="max-height:220px;overflow-y:auto">
+                <div style="padding:20px;text-align:center;color:#9CA3AF;font-size:12px">جاري التحميل...</div>
               </div>
             </div>
           </div>
@@ -5147,7 +5166,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="/dashboard/inbox-v3/inbox-api.js?v=1777722319"></script>
 <script src="/dashboard/inbox-v3/inbox-conv.js?v=20260502"></script>
 <script src="/dashboard/inbox-v3/inbox-chat.js?v=1777722319"></script>
-<script src="/dashboard/inbox-v3/inbox-reply.js?v=1777722319"></script>
+<script src="/dashboard/inbox-v3/inbox-reply.js?v=1777745561"></script>
 <script src="/dashboard/inbox-v3/inbox-context.js?v=1777745139"></script>
 <script src="/dashboard/inbox-v3/inbox-init.js?v=1777732234"></script>
 <script src="/dashboard/js/inbox-settings.js?v=1777731233"></script>

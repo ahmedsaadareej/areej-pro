@@ -426,8 +426,112 @@ function iv3HandleSlashDropdown(el) {
 function iv3CloseDropdowns() {
   iv3CloseTemplatesDropdown();
   iv3CloseAIDropdown();
+  iv3CloseCatalog();
   const slash = document.getElementById('iv3-slash-dropdown');
   if (slash) slash.style.display = 'none';
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// CATALOG — عرض سريع للمنتجات من المخزون
+// ──────────────────────────────────────────────────────────────────────
+
+let _iv3CatalogTimer = null;
+let _iv3CatalogCache = null; // cache أول تحميل
+
+async function iv3ToggleCatalog() {
+  const dropdown = document.getElementById('iv3-catalog-dropdown');
+  if (!dropdown) return;
+  const isOpen = dropdown.style.display !== 'none';
+  iv3CloseDropdowns();
+  if (isOpen) return;
+
+  dropdown.style.display = 'block';
+  const searchEl = document.getElementById('iv3-catalog-search');
+  if (searchEl) { searchEl.value = ''; searchEl.focus(); }
+  await iv3LoadCatalog('');
+}
+
+function iv3CloseCatalog() {
+  const dropdown = document.getElementById('iv3-catalog-dropdown');
+  if (dropdown) dropdown.style.display = 'none';
+}
+
+async function iv3LoadCatalog(query) {
+  const listEl = document.getElementById('iv3-catalog-list');
+  if (!listEl) return;
+
+  // لو بلا search وعندنا cache — استخدمه
+  if (!query && _iv3CatalogCache) {
+    iv3RenderCatalog(_iv3CatalogCache);
+    return;
+  }
+
+  listEl.innerHTML = '<div style="padding:16px;text-align:center;color:#9ca3af;font-size:12px">⏳ جاري التحميل...</div>';
+
+  try {
+    const url = query
+      ? `/api/system/products?search=${encodeURIComponent(query)}&limit=20`
+      : '/api/system/products?limit=20';
+    const res = await apiFetch(url);
+    const products = res?.data || [];
+    if (!query) _iv3CatalogCache = products; // cache
+    iv3RenderCatalog(products);
+  } catch (e) {
+    listEl.innerHTML = `<div style="padding:16px;text-align:center;color:#ef4444;font-size:12px">❌ خطأ: ${e.message}</div>`;
+  }
+}
+
+function iv3RenderCatalog(products) {
+  const listEl = document.getElementById('iv3-catalog-list');
+  if (!listEl) return;
+
+  if (!products.length) {
+    listEl.innerHTML = '<div style="padding:16px;text-align:center;color:#9ca3af;font-size:12px">📦 لا توجد منتجات</div>';
+    return;
+  }
+
+  listEl.innerHTML = products.map(p => {
+    const price    = p.sell_price ? Number(p.sell_price).toLocaleString('ar-EG') + ' ج.م' : '—';
+    const stock    = p.stock_qty  != null ? p.stock_qty : '?';
+    const lowStock = p.is_low_stock;
+    return `
+      <div class="iv3-catalog-item" onclick="iv3InsertProduct(${JSON.stringify(p.name).replace(/'/g, '&#39;')}, '${p.sell_price || 0}')">
+        <div class="iv3-catalog-item-name">${p.name}</div>
+        <div class="iv3-catalog-item-meta">
+          <span class="iv3-catalog-price">${price}</span>
+          <span class="iv3-catalog-stock ${lowStock ? 'low' : ''}">
+            ${lowStock ? '⚠️' : '📦'} ${stock} قطعة
+          </span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function iv3InsertProduct(name, price) {
+  const textarea = document.getElementById('iv3-textarea');
+  if (!textarea) return;
+
+  const priceNum = parseFloat(price);
+  const priceStr = priceNum > 0 ? ` — السعر: ${priceNum.toLocaleString('ar-EG')} ج.م` : '';
+  const text     = `📦 ${name}${priceStr}`;
+
+  // أدرج بعد الكرسور أو في آخر النص
+  const start = textarea.selectionStart;
+  const end   = textarea.selectionEnd;
+  const val   = textarea.value;
+  const sep   = val && !val.endsWith('\n') ? '\n' : '';
+  textarea.value = val.slice(0, start) + sep + text + val.slice(end);
+  textarea.focus();
+  iv3ResizeTextarea(textarea);
+  iv3CloseCatalog();
+
+  // إشعال toast بسيط
+  if (typeof iv3Toast === 'function') iv3Toast('تم إدراج المنتج', 'success');
+}
+
+function iv3CatalogSearch(val) {
+  clearTimeout(_iv3CatalogTimer);
+  _iv3CatalogTimer = setTimeout(() => iv3LoadCatalog(val.trim()), 300); // debounce 300ms
 }
 
 function iv3FormatFileSize(bytes) {
