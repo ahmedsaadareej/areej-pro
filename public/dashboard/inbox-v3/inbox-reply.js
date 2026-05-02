@@ -392,10 +392,108 @@ function iv3FileIcon(mimeType) {
   return '📎';
 }
 
-// ── Voice Recording (قيد التطوير) ───────────────────────────
+// ── Voice Recording ────────────────────────────────────────
 
-function iv3ToggleVoice() {
-  iv3Toast('الرسائل الصوتية قيد التطوير', 'info');
+// State
+let _iv3MediaRecorder = null;
+let _iv3AudioChunks   = [];
+let _iv3RecordTimer   = null;
+let _iv3RecordSec     = 0;
+
+async function iv3ToggleVoice() {
+  if (_iv3MediaRecorder && _iv3MediaRecorder.state === 'recording') {
+    _iv3MediaRecorder.stop();
+    return;
+  }
+
+  if (!IV3.activeConvId) {
+    iv3Toast('افتح محادثة أولاً', 'warning');
+    return;
+  }
+
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    iv3Toast('فشل الوصول للميكروفون: ' + e.message, 'error');
+    return;
+  }
+
+  const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+    ? 'audio/webm;codecs=opus'
+    : MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
+      ? 'audio/ogg;codecs=opus'
+      : 'audio/webm';
+
+  _iv3AudioChunks = [];
+  _iv3MediaRecorder = new MediaRecorder(stream, { mimeType });
+
+  _iv3MediaRecorder.ondataavailable = e => {
+    if (e.data.size > 0) _iv3AudioChunks.push(e.data);
+  };
+
+  _iv3MediaRecorder.onstop = async () => {
+    stream.getTracks().forEach(t => t.stop());
+    iv3StopVoiceUI();
+    const blob = new Blob(_iv3AudioChunks, { type: mimeType });
+    if (blob.size < 1000) { iv3Toast('التسجيل قصير جداً', 'warning'); return; }
+    await iv3UploadAndSendVoice(blob, mimeType);
+  };
+
+  _iv3MediaRecorder.start(200);
+  iv3StartVoiceUI();
+}
+
+function iv3StartVoiceUI() {
+  const btn = document.getElementById('iv3-mic-btn');
+  if (btn) {
+    btn.classList.add('recording');
+    btn.title = 'إيقاف التسجيل';
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="#EF4444"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>`;
+  }
+  _iv3RecordSec = 0;
+  _iv3RecordTimer = setInterval(() => {
+    _iv3RecordSec++;
+    const m = String(Math.floor(_iv3RecordSec / 60)).padStart(2, '0');
+    const s = String(_iv3RecordSec % 60).padStart(2, '0');
+    const count = document.getElementById('iv3-char-count');
+    if (count) count.textContent = `🔴 ${m}:${s}`;
+    if (_iv3RecordSec >= 60) {
+      iv3Toast('وصلت للحد الأقصى (60 ثانية)', 'warning');
+      if (_iv3MediaRecorder?.state === 'recording') _iv3MediaRecorder.stop();
+    }
+  }, 1000);
+}
+
+function iv3StopVoiceUI() {
+  clearInterval(_iv3RecordTimer);
+  _iv3RecordTimer = null;
+  const btn = document.getElementById('iv3-mic-btn');
+  if (btn) {
+    btn.classList.remove('recording');
+    btn.title = 'رسالة صوتية';
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`;
+  }
+  const count = document.getElementById('iv3-char-count');
+  if (count) count.textContent = '0';
+}
+
+async function iv3UploadAndSendVoice(blob, mimeType) {
+  const btn = document.getElementById('iv3-send-btn');
+  if (btn) btn.disabled = true;
+  iv3Toast('جاري رفع الرسالة الصوتية...', 'info');
+
+  try {
+    const ext  = mimeType.includes('ogg') ? 'ogg' : 'webm';
+    const file = new File([blob], `voice_${Date.now()}.${ext}`, { type: mimeType });
+    await IV3_API.sendMedia(IV3.activeConvId, file);
+    await iv3LoadMessages(IV3.activeConvId);
+    iv3Toast('تم إرسال الرسالة الصوتية ✓', 'success');
+  } catch(e) {
+    iv3Toast('فشل إرسال الصوت: ' + e.message, 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 // ── Char Count ───────────────────────────────────────────────
