@@ -1,7 +1,7 @@
 # 📋 PROJECT.md — مرجع مشروع Areej Pro
 > **قاعدة ذهبية:** هذا الملف يُحدَّث بعد كل خطوة بدون استثناء.
 > أي جلسة جديدة تبدأ بقراءة هذا الملف أولاً قبل أي شيء.
-> آخر تحديث: 2026-05-02 15:57 UTC
+> آخر تحديث: 2026-05-02 16:05 UTC
 
 ---
 
@@ -193,10 +193,7 @@ inbox_agent_status   (id, user_id, status)
 
 #### ~~6. Bulk Actions~~ ✅ تم (commit d4b9d94)
 
-#### 3. Collision Detection
-**الوصف:** "أحمد يرد على هذه المحادثة الآن" — يمنع ردين في نفس الوقت
-**الملفات:** `inbox-init.js` (polling) + `inbox-chat.js` + `server/routes/inbox.js`
-**التقدير:** 3-4 ساعات
+#### ~~3. Collision Detection~~ ✅ تم (commit 17c91cb)
 
 #### ~~8. Keyboard Shortcuts~~ ✅ تم (commit 7b4fec8)
 

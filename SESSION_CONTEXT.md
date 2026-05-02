@@ -2,6 +2,25 @@
 
 ---
 
+## Session 2026-05-02 15:56 UTC
+- الحالة: تم الإكمال
+- ما تم إنجازه:
+  - `server/routes/inbox.js`: `POST /typing-state` (lazy migrate عمودي `typing_conv_id` + `typing_at` + تحديث) + `GET /conversations/:id/typing-agents` (يرجع الموظفين في خلال 10 ثواني)
+  - `inbox-api.js`: `setTypingState()` (fire-and-forget) + `getTypingAgents()`
+  - `inbox-reply.js`: `iv3SendTypingBeacon()` + `iv3ClearTypingBeacon()` — بيكون كل 3ث + تصفير عند الإرسال + `onblur`
+  - `inbox-chat.js`: تصفير beacon عند تغيير المحادثة
+  - `inbox-init.js`: في polling كل 8ث — `iv3CheckTypingAgents()` + `iv3UpdateTypingBanner()`
+  - `inbox.css`: تصميم `.iv3-typing-banner` (خلفية صفراء تحذيرية)
+  - `index.html`: `#iv3-typing-banner` + `onblur` على textarea
+- قرارات تقنية:
+  - Beacon timeout = 10 ثواني (صلاحية) بينما البيكون يُرسل كل 3ث — هامش أمان كافي
+  - `setTypingState` يستخدم `fetch` مباشرة (fire-and-forget, لا يعطّل await)
+  - الموظّف لا يرى نفسه في البانر (user_id != myId)
+- آخر Commit: `17c91cb` — feat: Collision Detection
+- نقطة البداية القادمة: `inbox-context.js` + ربط بـ orders module — زر "تحويل لأوردر" من المحادثة
+
+---
+
 ## Session 2026-05-02 15:53 UTC
 - الحالة: تم الإكمال
 - ما تم إنجازه:
