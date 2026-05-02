@@ -82,8 +82,7 @@ async function checkAuth() {
 
 async function loadAndApplyBranding() {
   try {
-    const r = await apiFetch('/api/auth/profile');
-    const d = await r.json();
+    const d = await apiFetch('/api/auth/profile');
     if (!d.ok) return;
     const p = d.profile || {};
 
