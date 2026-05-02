@@ -3,11 +3,16 @@
  * آخر تحديث: 2026-05-02
  *
  * Public endpoints (لا تحتاج auth — العميل هو من يفتحها):
- *   GET  /api/pay/link/:token          ← جلب بيانات الرابط + tenant branding
- *   POST /api/pay/initiate             ← بدء الدفع (يختار gateway + method)
- *   GET  /api/pay/status/:token        ← حالة الدفع
- *   POST /api/pay/webhook/fawaterk     ← Fawaterk webhook
- *   POST /api/pay/webhook/paymob       ← Paymob webhook
+ *   GET  /api/pay/link/:token            ← جلب بيانات الرابط + tenant branding
+ *   POST /api/pay/initiate               ← بدء الدفع (يختار gateway + method)
+ *   GET  /api/pay/status/:token          ← حالة الدفع
+ *   POST /api/pay/webhook/fawaterk       ← Fawaterk webhook
+ *   POST /api/pay/webhook/paymob         ← Paymob webhook
+ *   POST /api/pay/webhook/paytabs        ← PayTabs callback (server_url)
+ *   POST /api/pay/webhook/stripe         ← Stripe webhook (Stripe-Signature)
+ *   GET  /api/pay/stripe/success         ← Stripe redirect بعد الدفع
+ *   GET  /api/pay/paytabs/return         ← PayTabs redirect بعد الدفع
+ *   GET  /api/pay/paypal/return          ← PayPal redirect + capture
  *
  * Protected endpoints (تحتاج auth من dashboard):
  *   POST /api/system/payment-links/create   ← في routes-system (sales-tools)
@@ -23,6 +28,9 @@ const { getTenantDb } = require('../db-tenant');
 const fawaterk   = require('../lib/gateways/fawaterk');
 const paymob     = require('../lib/gateways/paymob');
 const instapay   = require('../lib/gateways/instapay');
+const stripeGw   = require('../lib/gateways/stripe');
+const paytabsGw  = require('../lib/gateways/paytabs');
+const paypalGw   = require('../lib/gateways/paypal');
 const { getGatewayCredentials } = require('./payment-gateways');
 
 // BASE_URL للـ webhooks
@@ -51,6 +59,104 @@ function getPayLink(db, token) {
 // ── Helper: جلب tenant profile ───────────────────────────────────────────────
 function getTenantProfile(db) {
   return db.prepare('SELECT * FROM tenant_profile WHERE id = 1').get() || {};
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// handlePaymentSuccess — معالجة متكاملة بعد نجاح أي دفعة
+// الخطوات:
+//  1. payment_links → paid
+//  2. sys_invoices  → paid (لو مرتبطة بفاتورة)
+//  3. خصم receivable_wallet لو كانت الفاتورة آجلاً
+//  4. IN صافي (مبلغ - عمولة) في خزنة البوابة
+//  5. OUT عمولة البوابة كمصروف منفصل
+//  6. crm_contacts: balance -= المبلغ، total_paid += المبلغ
+//  7. inbox: رسالة تأكيد + note داخلي للموظفين (لو conversation_id موجود)
+// ──────────────────────────────────────────────────────────────────────
+async function handlePaymentSuccess(db, link, gatewayName, paidAmount) {
+  try {
+    const amount = paidAmount || link.amount || 0;
+
+    // 1. payment_links → paid
+    db.prepare(`UPDATE payment_links SET status='paid', paid_at=datetime('now'), gateway=COALESCE(gateway,?) WHERE id=?`)
+      .run(gatewayName, link.id);
+
+    // 2. sys_invoices → paid
+    if (link.invoice_id) {
+      db.prepare(`UPDATE sys_invoices SET status='paid', paid_at=datetime('now') WHERE id=?`).run(link.invoice_id);
+    }
+
+    // 3+4+5. خزنة البوابة + عمولة
+    try {
+      const gwRow = db.prepare('SELECT * FROM payment_gateways WHERE gateway_name=? AND enabled=1').get(gatewayName);
+      if (gwRow?.wallet_id) {
+        const pct   = parseFloat(gwRow.commission_pct   || 0);
+        const fixed = parseFloat(gwRow.commission_fixed || 0);
+        const comm  = (amount * pct / 100) + fixed;
+        const net   = amount - comm;
+
+        // 3. خصم receivable_wallet لو الفاتورة آجلة
+        if (link.invoice_id) {
+          const inv = db.prepare('SELECT * FROM sys_invoices WHERE id=?').get(link.invoice_id);
+          if (inv?.payment_type === 'credit') {
+            const rwId = db.prepare(`SELECT id FROM sys_wallets WHERE name LIKE '%receivable%' OR name LIKE '%آجل%' LIMIT 1`).get()?.id;
+            if (rwId) {
+              db.prepare(`INSERT INTO sys_transactions (wallet_id,type,amount,category,description,created_at) VALUES (?,?,?,?,?,datetime('now'))`)
+                .run(rwId, 'OUT', amount, 'تحصيل آجل', `تحصيل فاتورة #${link.invoice_id}`);
+              db.prepare('UPDATE sys_wallets SET balance = balance - ? WHERE id=?').run(amount, rwId);
+            }
+          }
+        }
+
+        // 4. IN صافي في خزنة البوابة
+        if (net > 0) {
+          db.prepare(`INSERT INTO sys_transactions (wallet_id,type,amount,category,description,created_at) VALUES (?,?,?,?,?,datetime('now'))`)
+            .run(gwRow.wallet_id, 'IN', net, 'مدفوعات إلكترونية', `دفعة عبر ${gatewayName} - رابط #${link.id}`);
+          db.prepare('UPDATE sys_wallets SET balance = balance + ? WHERE id=?').run(net, gwRow.wallet_id);
+        }
+
+        // 5. OUT عمولة كمصروف منفصل
+        if (comm > 0) {
+          db.prepare(`INSERT INTO sys_transactions (wallet_id,type,amount,category,description,created_at) VALUES (?,?,?,?,?,datetime('now'))`)
+            .run(gwRow.wallet_id, 'OUT', comm, 'مصروفات بوابات الدفع', `عمولة ${gatewayName} - رابط #${link.id}`);
+          db.prepare('UPDATE sys_wallets SET balance = balance - ? WHERE id=?').run(comm, gwRow.wallet_id);
+        }
+      }
+    } catch (walletErr) {
+      console.error('handlePaymentSuccess wallet error:', walletErr.message);
+    }
+
+    // 6. crm_contacts: balance -= المبلغ، total_paid += المبلغ
+    try {
+      if (link.client_phone) {
+        const contact = db.prepare('SELECT id FROM crm_contacts WHERE phone=? LIMIT 1').get(link.client_phone);
+        if (contact) {
+          db.prepare('UPDATE crm_contacts SET balance = balance - ?, total_paid = COALESCE(total_paid,0) + ? WHERE id=?')
+            .run(amount, amount, contact.id);
+        }
+      }
+    } catch (crmErr) {
+      console.error('handlePaymentSuccess CRM error:', crmErr.message);
+    }
+
+    // 7. inbox: رسالة تأكيد + note داخلي
+    try {
+      const convId = link.conversation_id;
+      if (convId) {
+        const gatewayLabel = { fawaterk: 'فواتيرك', paymob: 'Paymob', instapay: 'InstaPay', stripe: 'Stripe', paytabs: 'PayTabs', paypal: 'PayPal' }[gatewayName] || gatewayName;
+        db.prepare(`INSERT INTO inbox_messages (conversation_id, direction, content, sent_at, is_note) VALUES (?,?,?,datetime('now'),0)`)
+          .run(convId, 'out', `✅ تم استلام مبلغ ${amount} ج.م عبر ${gatewayLabel}. شكراً لك!`);
+        db.prepare(`INSERT INTO inbox_messages (conversation_id, direction, content, sent_at, is_note) VALUES (?,?,?,datetime('now'),1)`)
+          .run(convId, 'in', `💰 دفع ناجح: ${amount} ج.م عبر ${gatewayLabel}`);
+        db.prepare(`UPDATE inbox_conversations SET last_message_at=datetime('now') WHERE id=?`).run(convId);
+      }
+    } catch (inboxErr) {
+      console.error('handlePaymentSuccess inbox error:', inboxErr.message);
+    }
+
+    console.log(`✅ handlePaymentSuccess: link#${link.id} | gateway:${gatewayName} | amount:${amount}`);
+  } catch (err) {
+    console.error('❌ handlePaymentSuccess CRITICAL:', err.message);
+  }
 }
 
 // ── GET /api/pay/link/:token — بيانات الرابط للـ frontend ───────────────────
@@ -83,7 +189,7 @@ router.get('/link/:token', (req, res) => {
 
     // جلب البوابات المفعّلة للـ tenant
     const enabledGateways = [];
-    for (const gwName of ['fawaterk', 'paymob', 'instapay']) {
+    for (const gwName of ['fawaterk', 'paymob', 'instapay', 'stripe', 'paytabs', 'paypal']) {
       const creds = getGatewayCredentials(db, gwName);
       if (creds) enabledGateways.push(gwName);
     }
@@ -201,6 +307,56 @@ router.post('/initiate', async (req, res) => {
         instapay_url: result.instapayLink,
         amount,
       });
+    }
+
+    // ── Stripe ────────────────────────────────────────────────────────────────
+    if (gateway === 'stripe') {
+      const result = await stripeGw.createPaymentLink(creds, {
+        token,
+        amount,
+        currency:       'egp',
+        description:    link.description || companyName,
+        customer_name:  clientName,
+        customer_email: link.client_email || null,
+      });
+
+      db.prepare(`UPDATE payment_links SET invoice_ref=?, gateway=?, gateway_method=?, updated_at=datetime('now') WHERE token=?`)
+        .run(result.gatewayRef, 'stripe', 'card', linkToken);
+
+      return res.json({ ok: true, action: 'redirect', url: result.redirectUrl });
+    }
+
+    // ── PayTabs ───────────────────────────────────────────────────────────────
+    if (gateway === 'paytabs') {
+      const result = await paytabsGw.createPaymentLink(creds, {
+        token,
+        amount,
+        currency:       'EGP',
+        description:    link.description || companyName,
+        customer_name:  clientName,
+        customer_phone: clientPhone,
+        customer_email: link.client_email || 'customer@areejegypt.com',
+      });
+
+      db.prepare(`UPDATE payment_links SET invoice_ref=?, gateway=?, gateway_method=?, updated_at=datetime('now') WHERE token=?`)
+        .run(result.gatewayRef, 'paytabs', 'card', linkToken);
+
+      return res.json({ ok: true, action: 'redirect', url: result.redirectUrl });
+    }
+
+    // ── PayPal ────────────────────────────────────────────────────────────────
+    if (gateway === 'paypal') {
+      const result = await paypalGw.createPaymentLink(creds, {
+        token,
+        amount,
+        currency:    link.currency || 'USD',
+        description: link.description || companyName,
+      });
+
+      db.prepare(`UPDATE payment_links SET invoice_ref=?, gateway=?, gateway_method=?, updated_at=datetime('now') WHERE token=?`)
+        .run(result.gatewayRef, 'paypal', 'paypal', linkToken);
+
+      return res.json({ ok: true, action: 'redirect', url: result.redirectUrl });
     }
 
     res.status(400).json({ ok: false, error: 'بوابة غير معروفة' });
@@ -342,6 +498,190 @@ router.post('/webhook/paymob', async (req, res) => {
   } catch (err) {
     console.error('Paymob webhook error:', err.message);
     res.sendStatus(500);
+  }
+});
+
+// ── GET /api/pay/stripe/success — Stripe redirect بعد الدفع ─────────────────
+router.get('/stripe/success', async (req, res) => {
+  const { token, session_id } = req.query;
+  if (!token || !session_id) return res.redirect('/pay/error?msg=missing_params');
+
+  try {
+    const dotIdx    = token.indexOf('.');
+    const slug      = token.slice(0, dotIdx);
+    const linkToken = token.slice(dotIdx + 1);
+
+    const owner = getTenantBySlug(slug);
+    if (!owner) return res.redirect('/pay/error?msg=tenant_not_found');
+
+    const db   = getTenantDb(owner.id);
+    const link = getPayLink(db, linkToken);
+    if (!link) return res.redirect('/pay/error?msg=link_not_found');
+    if (link.status === 'paid') return res.redirect(`/pay/${token}/result?status=paid`);
+
+    const creds = getGatewayCredentials(db, 'stripe');
+    if (!creds) return res.redirect(`/pay/${token}/result?status=error`);
+
+    const result = await stripeGw.verifySession(creds, session_id);
+
+    if (result.paid) {
+      await handlePaymentSuccess(db, link, 'stripe', result.amount);
+      return res.redirect(`/pay/${token}/result?status=paid`);
+    }
+
+    return res.redirect(`/pay/${token}/result?status=pending`);
+  } catch (err) {
+    console.error('Stripe success redirect error:', err.message);
+    return res.redirect(`/pay/${token}/result?status=error`);
+  }
+});
+
+// ── POST /api/pay/webhook/stripe — Stripe Webhook ────────────────────────────
+router.post('/webhook/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const sig    = req.headers['stripe-signature'];
+    const body   = req.body?.toString() || '';
+    if (!sig || !body) return res.sendStatus(400);
+
+    // نبحث عن tenant من metadata.areej_token
+    let event;
+    try {
+      // parse بدون verify أول — عشان نجيب الـ token
+      event = JSON.parse(body);
+    } catch { return res.sendStatus(400); }
+
+    if (event.type !== 'checkout.session.completed') return res.sendStatus(200);
+
+    const session    = event.data?.object;
+    const areejToken = session?.metadata?.areej_token;
+    if (!areejToken) return res.sendStatus(200);
+
+    const dotIdx    = areejToken.indexOf('.');
+    const slug      = areejToken.slice(0, dotIdx);
+    const linkToken = areejToken.slice(dotIdx + 1);
+
+    const owner = getTenantBySlug(slug);
+    if (!owner) return res.sendStatus(200);
+
+    const db   = getTenantDb(owner.id);
+    const link = getPayLink(db, linkToken);
+    if (!link || link.status === 'paid') return res.sendStatus(200);
+
+    // Verify signature لو عندنا webhook_secret
+    const creds = getGatewayCredentials(db, 'stripe');
+    if (creds?.webhook_secret) {
+      try {
+        stripeGw.constructWebhookEvent(body, sig, creds.webhook_secret);
+      } catch (e) {
+        console.warn('⚠️ Stripe webhook signature mismatch:', e.message);
+        return res.sendStatus(401);
+      }
+    }
+
+    if (session.payment_status === 'paid') {
+      const amount = session.amount_total / 100;
+      await handlePaymentSuccess(db, link, 'stripe', amount);
+      console.log(`✅ Payment paid via Stripe webhook: link#${link.id}`);
+    }
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Stripe webhook error:', err.message);
+    res.sendStatus(500);
+  }
+});
+
+// ── POST /api/pay/webhook/paytabs — PayTabs Callback (server_url) ─────────────
+router.post('/webhook/paytabs', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const result = paytabsGw.verifyCallback(body);
+
+    if (!result.token) return res.sendStatus(200);
+
+    const dotIdx    = result.token.indexOf('.');
+    const slug      = result.token.slice(0, dotIdx);
+    const linkToken = result.token.slice(dotIdx + 1);
+
+    const owner = getTenantBySlug(slug);
+    if (!owner) return res.sendStatus(200);
+
+    const db   = getTenantDb(owner.id);
+    const link = getPayLink(db, linkToken);
+    if (!link || link.status === 'paid') return res.sendStatus(200);
+
+    if (result.paid) {
+      await handlePaymentSuccess(db, link, 'paytabs', result.amount);
+      console.log(`✅ Payment paid via PayTabs: link#${link.id}`);
+    }
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('PayTabs webhook error:', err.message);
+    res.sendStatus(500);
+  }
+});
+
+// ── GET /api/pay/paytabs/return — PayTabs redirect بعد الدفع ─────────────────
+router.get('/paytabs/return', async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.redirect('/pay/error?msg=missing_token');
+
+  try {
+    // PayTabs يرسل الحالة في callback (server_url) — هنا فقط نوجّه
+    const dotIdx = token.indexOf('.');
+    const slug   = token.slice(0, dotIdx);
+    const owner  = getTenantBySlug(slug);
+    if (!owner) return res.redirect('/pay/error?msg=not_found');
+
+    const db   = getTenantDb(owner.id);
+    const link = getPayLink(db, token.slice(dotIdx + 1));
+    if (!link) return res.redirect('/pay/error?msg=not_found');
+
+    const status = link.status === 'paid' ? 'paid' : 'pending';
+    return res.redirect(`/pay/${token}/result?status=${status}`);
+  } catch (err) {
+    console.error('PayTabs return error:', err.message);
+    return res.redirect('/pay/error?msg=server_error');
+  }
+});
+
+// ── GET /api/pay/paypal/return — PayPal redirect + capture ───────────────────
+router.get('/paypal/return', async (req, res) => {
+  // PayPal بيرجع: ?areej_token=slug.token&token=ORDER_ID
+  const areejToken = req.query.areej_token;
+  const orderId    = req.query.token; // PayPal ORDER_ID
+
+  if (!areejToken || !orderId) return res.redirect('/pay/error?msg=missing_params');
+
+  try {
+    const dotIdx    = areejToken.indexOf('.');
+    const slug      = areejToken.slice(0, dotIdx);
+    const linkToken = areejToken.slice(dotIdx + 1);
+
+    const owner = getTenantBySlug(slug);
+    if (!owner) return res.redirect('/pay/error?msg=not_found');
+
+    const db   = getTenantDb(owner.id);
+    const link = getPayLink(db, linkToken);
+    if (!link) return res.redirect('/pay/error?msg=not_found');
+    if (link.status === 'paid') return res.redirect(`/pay/${areejToken}/result?status=paid`);
+
+    const creds = getGatewayCredentials(db, 'paypal');
+    if (!creds) return res.redirect(`/pay/${areejToken}/result?status=error`);
+
+    const result = await paypalGw.captureOrder(creds, orderId);
+
+    if (result.paid) {
+      await handlePaymentSuccess(db, link, 'paypal', result.amount);
+      console.log(`✅ Payment paid via PayPal: link#${link.id}`);
+      return res.redirect(`/pay/${areejToken}/result?status=paid`);
+    }
+
+    return res.redirect(`/pay/${areejToken}/result?status=pending`);
+  } catch (err) {
+    console.error('PayPal return error:', err.message);
+    return res.redirect(`/pay/${areejToken}/result?status=error`);
   }
 });
 

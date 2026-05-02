@@ -89,7 +89,7 @@ async function createPaymentLink(creds, linkData) {
       landing_page:        'BILLING',
       shipping_preference: 'NO_SHIPPING',
       user_action:         'PAY_NOW',
-      return_url:          `${BASE_URL}/api/pay/paypal/return?token=${token}`,
+      return_url:          `${BASE_URL}/api/pay/paypal/return?areej_token=${token}`,
       cancel_url:          `${BASE_URL}/pay/${token}?cancelled=1`,
     },
   };
