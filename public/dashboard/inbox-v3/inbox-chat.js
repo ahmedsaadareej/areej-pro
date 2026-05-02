@@ -83,8 +83,8 @@ function iv3RenderMessages() {
   let lastDate = null;
 
   IV3.messages.forEach((msg, i) => {
-    // فاصل التاريخ
-    const msgDate = iv3DateLabel(msg.created_at);
+    // فاصل التاريخ — sent_at هو الحقل الفعلي
+    const msgDate = iv3DateLabel(msg.sent_at || msg.created_at);
     if (msgDate !== lastDate) {
       html += `<div class="iv3-date-sep"><span>${msgDate}</span></div>`;
       lastDate = msgDate;
@@ -104,7 +104,7 @@ function iv3RenderMessages() {
 function iv3BuildMsgBubble(msg) {
   const isOut  = msg.direction === 'out';
   const isNote = msg.is_note || msg.mode === 'note';
-  const time   = iv3FormatMsgTime(msg.created_at);
+  const time   = iv3FormatMsgTime(msg.sent_at || msg.created_at);
   const senderName = isOut ? (IV3.me?.name || 'أنت') : (IV3.activeConv?.sender_name || '');
 
   let content = '';
@@ -112,7 +112,7 @@ function iv3BuildMsgBubble(msg) {
   if (msg.media_url || msg.file_id) {
     content = iv3BuildMediaContent(msg);
   } else {
-    content = `<div class="iv3-msg-text">${iv3EscHtml(msg.message || msg.content || '').replace(/\n/g, '<br>')}</div>`;
+    content = `<div class="iv3-msg-text">${iv3EscHtml(msg.content || msg.message || '').replace(/\n/g, '<br>')}</div>`;
   }
 
   const statusIcon = isOut ? iv3MsgStatusIcon(msg.status) : '';
@@ -133,7 +133,7 @@ function iv3BuildMsgBubble(msg) {
 
 function iv3BuildMediaContent(msg) {
   const url = msg.media_url || `/api/system/inbox/media-proxy/${msg.id}`;
-  const mimeType = msg.mime_type || '';
+  const mimeType = msg.mime_type || msg.media_type || '';
 
   if (mimeType.startsWith('image/')) {
     return `<img class="iv3-msg-img" src="${url}" onclick="iv3PreviewImg('${url}')" loading="lazy">`;
@@ -284,18 +284,16 @@ async function iv3ConfirmAssign() {
 
 async function iv3DeleteConv() {
   if (!IV3.activeConvId) return;
-  if (!confirm('هل تريد حذف هذه المحادثة؟')) return;
+  if (!confirm('هل تريد إغلاق هذه المحادثة؟')) return;
 
   try {
-    await fetch(`/api/system/inbox/conversations/${IV3.activeConvId}`, { method: 'DELETE' });
-    IV3.convs = IV3.convs.filter(c => c.id !== IV3.activeConvId);
-    IV3.activeConvId = null;
-    IV3.activeConv = null;
-    iv3RenderConvs();
-    iv3ResetChat();
-    iv3Toast('تم حذف المحادثة', 'success');
+    // نغلق المحادثة بدل حذفها (endpoint الحذف غير موجود)
+    await IV3_API.changeStatus(IV3.activeConvId, 'closed');
+    if (IV3.activeConv) IV3.activeConv.status = 'closed';
+    iv3UpdateConvInList({ id: IV3.activeConvId, status: 'closed' });
+    iv3Toast('تم إغلاق المحادثة', 'success');
   } catch (e) {
-    iv3Toast(e.message, 'error');
+    iv3Toast('فشل الإغلاق: ' + e.message, 'error');
   }
 }
 
@@ -356,6 +354,7 @@ function iv3PreviewImg(url) {
 
 function iv3DateLabel(ts) {
   if (!ts) return '';
+  // sent_at هو الحقل الفعلي في inbox_messages
   const d = new Date(ts);
   const now = new Date();
   const diff = Math.floor((now - d) / 86400000);
