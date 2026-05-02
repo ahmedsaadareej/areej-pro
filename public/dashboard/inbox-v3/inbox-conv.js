@@ -105,7 +105,8 @@ function iv3RenderConvs() {
 function iv3BuildConvItem(c) {
   const isActive  = c.id === IV3.activeConvId;
   const platIcon  = iv3PlatIcon(c.platform);
-  const initials  = iv3Initials(c.sender_name || c.sender_id || '?');
+  const displayName = iv3CleanSenderDisplay(c.sender_name, c.sender_id);
+  const initials  = iv3Initials(displayName || '?');
   const color     = iv3AvatarColor(c.sender_id || c.id);
   const timeStr   = iv3FormatTime(c.last_message_at || c.updated_at);
   const lastMsg   = iv3EscHtml(iv3TruncText(c.last_message || '...', 45));
@@ -136,7 +137,7 @@ function iv3BuildConvItem(c) {
       </div>
       <div class="iv3-conv-body">
         <div class="iv3-conv-row1">
-          <span class="iv3-conv-name">${iv3EscHtml(c.sender_name || c.sender_id || 'مجهول')}</span>
+          <span class="iv3-conv-name">${iv3EscHtml(displayName || 'مجهول')}</span>
           <span class="iv3-conv-time">${timeStr}</span>
         </div>
         <div class="iv3-conv-row2">
@@ -219,6 +220,30 @@ function iv3PlatIcon(platform) {
     'instagram':   '📸',
   };
   return icons[platform] || '💬';
+}
+
+/**
+ * تنظيف sender_name/sender_id للعرض — يزيل @lid / @c.us / @s.whatsapp.net
+ * لو كان اسم حقيقي موجود يرجعه، وإلا يعرض رقم الهاتف أو نص افتراضي
+ */
+function iv3CleanSenderDisplay(name, id) {
+  if (name) {
+    // لو فيه @ يعني الاسم هو JID برده — نستخرج الرقم
+    if (name.includes('@lid')) return id ? iv3JidToPhone(id) || 'مجهول' : 'مجهول';
+    if (name.includes('@c.us') || name.includes('@s.whatsapp')) return iv3JidToPhone(name) || name.split('@')[0];
+    return name; // اسم حقيقي
+  }
+  if (id) return iv3JidToPhone(id) || id.split('@')[0] || 'مجهول';
+  return 'مجهول';
+}
+
+/** تحويل JID لرقم هاتف مقروء */
+function iv3JidToPhone(jid) {
+  if (!jid) return null;
+  const num = jid.split('@')[0];
+  if (!num || !/^\d+$/.test(num)) return null; // @lid بيكون بحروف قد تكون non-digit أحياناً
+  if (num.length < 7) return null;  // رقم صغير جداً = ليس رقم هاتف
+  return '+' + num;
 }
 
 function iv3Initials(name) {

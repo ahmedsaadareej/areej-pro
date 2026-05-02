@@ -181,7 +181,16 @@ async function handleIncomingMessage(userId, msg) {
   } catch(e) { console.error('[whatsapp-qr-service.js]', e.message); }
 
   const senderId = msg.from; // Keep full JID (@c.us or @lid)
-  const senderName = msg._data?.notifyName || msg._data?.pushName || msg.author || senderId;
+
+  // استخراج رقم الهاتف من JID
+  // JID formats: 201012345678@c.us | 111527868792933@lid | 201012345678@s.whatsapp.net
+  const jidNumber = senderId.split('@')[0]; // رقم فقط بدون لاحقة
+  const isLid     = senderId.includes('@lid'); // LID = device-linked id (not a real phone number)
+
+  // الاسم: notifyName (اسم الواتساب الحقيقي) > pushName > رقم الهاتف > JID
+  const rawName    = msg._data?.notifyName || msg._data?.pushName || msg.author || null;
+  const phoneLabel = isLid ? null : `+${jidNumber}`; // @lid ما عندهوش رقم حقيقي
+  const senderName = rawName || phoneLabel || jidNumber;
 
   // Detect message type and content
   let msgType = 'text';

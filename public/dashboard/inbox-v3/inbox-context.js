@@ -23,15 +23,18 @@ async function iv3UpdateContextPanel(conv) {
 // ── بيانات الاتصال الأساسية ─────────────────────────────────
 
 function iv3RenderContactInfo(conv) {
+  const cleanName = (typeof iv3CleanSenderDisplay === 'function')
+    ? iv3CleanSenderDisplay(conv.sender_name, conv.sender_id)
+    : (conv.sender_name || conv.sender_id || 'مجهول');
   const color    = iv3AvatarColor(conv.sender_id || conv.id);
-  const initials = iv3Initials(conv.sender_name || conv.sender_id || '?');
+  const initials = iv3Initials(cleanName || '?');
 
   const avatarEl = document.getElementById('iv3-ctx-avatar');
   const nameEl   = document.getElementById('iv3-ctx-name');
   const platEl   = document.getElementById('iv3-ctx-plat');
 
   if (avatarEl) { avatarEl.style.background = color; avatarEl.textContent = initials; }
-  if (nameEl)   nameEl.textContent = conv.sender_name || conv.sender_id || 'مجهول';
+  if (nameEl)   nameEl.textContent = cleanName || 'مجهول';
 
   const platNames = {
     'whatsapp-qr': '📱 واتساب QR',
@@ -59,15 +62,22 @@ function iv3RenderContactInfo(conv) {
 
 async function iv3LoadCustomerContext(conv) {
   const phone = iv3ExtractPhone(conv.sender_id);
-  if (!phone) {
-    // إظهار زر "إضافة كعميل"
+  // للـ @lid نحاول البحث بالاسم لو موجود
+  const cleanName = (typeof iv3CleanSenderDisplay === 'function')
+    ? iv3CleanSenderDisplay(conv.sender_name, conv.sender_id)
+    : (conv.sender_name || '');
+
+  if (!phone && !cleanName) {
     const addBtn = document.getElementById('iv3-ctx-add-btn');
     if (addBtn) addBtn.style.display = '';
     return;
   }
 
   try {
-    const res = await apiFetch(`/api/crm/contacts/by-phone?phone=${encodeURIComponent(phone)}`);
+    const queryParam = phone
+      ? `phone=${encodeURIComponent(phone)}`
+      : `phone=${encodeURIComponent(cleanName)}`; // fallback — API بيدعم بحث بالاسم عبر LIKE
+    const res = await apiFetch(`/api/crm/contacts/by-phone?${queryParam}`);
     if (!res || !res.ok || !res.contact) throw new Error('not found');
 
     const contact = res.contact;
@@ -566,8 +576,11 @@ function iv3ResetContextPanel() {
 
 function iv3ExtractPhone(senderId) {
   if (!senderId) return null;
+  if (String(senderId).includes('@lid')) return null; // LID ليس رقم هاتف
   const cleaned = String(senderId).replace(/@.+$/, '').replace(/\D/g, '');
-  return cleaned.length >= 10 ? cleaned : null;
+  // رقم مصري عادةً 11-12 رقم (01xxxxxxxxx أو 201xxxxxxxxx) أو دولي 10-15
+  if (cleaned.length < 8 || cleaned.length > 15) return null;
+  return '+' + cleaned;
 }
 
 function iv3LinkCustomer() {

@@ -330,11 +330,14 @@ function iv3UpdateChatHeader(conv) {
   const assigned = document.getElementById('iv3-hdr-assigned');
   const statusSel = document.getElementById('iv3-status-sel');
 
-  if (name) name.textContent = conv.sender_name || conv.sender_id || 'مجهول';
+  const displayName = (typeof iv3CleanSenderDisplay === 'function')
+    ? iv3CleanSenderDisplay(conv.sender_name, conv.sender_id)
+    : (conv.sender_name || conv.sender_id || 'مجهول');
+  if (name) name.textContent = displayName || 'مجهول';
 
   if (avatar) {
     const color = iv3AvatarColor(conv.sender_id || conv.id);
-    const init  = iv3Initials(conv.sender_name || conv.sender_id || '?');
+    const init  = iv3Initials(displayName || '?');
     avatar.style.background = color;
     avatar.textContent = init;
   }

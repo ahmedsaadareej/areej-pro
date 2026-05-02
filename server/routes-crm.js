@@ -85,12 +85,23 @@ router.get('/contacts/search', requireAuth, (req, res) => {
 });
 
 // GET /api/crm/contacts/by-phone?phone=xxx
+// يدعم البحث برقم الهاتف أو الاسم (فائدة لـ @lid)
 router.get('/contacts/by-phone', requireAuth, (req, res) => {
   const db = req.db;
   try {
-    const phone = (req.query.phone || '').trim().replace(/^0+/, '');
-    if (!phone) return res.json({ ok: false });
-    const row = db.prepare('SELECT * FROM crm_contacts WHERE phone LIKE ?').get('%'+phone);
+    const raw = (req.query.phone || '').trim();
+    if (!raw) return res.json({ ok: false });
+
+    // حدد هل هو رقم أم اسم
+    const isNumeric = /^[\d+\-\s()]+$/.test(raw);
+    let row;
+    if (isNumeric) {
+      const phone = raw.replace(/^\+?0+/, ''); // شيل leading zeros/+
+      row = db.prepare('SELECT * FROM crm_contacts WHERE phone LIKE ?').get('%'+phone);
+    } else {
+      // بحث بالاسم (fallback لـ @lid)
+      row = db.prepare('SELECT * FROM crm_contacts WHERE name LIKE ?').get('%'+raw+'%');
+    }
     if (!row) return res.json({ ok: false, contact: null });
     // عدد الفواتير من sys_invoices
     let invoice_count = 0;
