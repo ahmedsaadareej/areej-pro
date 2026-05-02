@@ -35,6 +35,25 @@
 ## سجل الجلسات (الأحدث في الأعلى)
 
 ---
+## جلسة 2026-05-02 11:21 UTC
+
+### وقفت عند:
+- الملف: `public/dashboard/inbox-v3/inbox-reply.js` + `inbox-v3/inbox.html`
+- آخر تغيير: إضافة `iv3ToggleVoice` stub + `iv3UpdateCharCount` + ربط char count بالـ textarea
+
+### قرارات تقنية:
+- كل IDs في `inbox.html` متطابقة مع ما تستخدمه ملفات JS — لا يوجد تعارض
+- `iv3ToggleVoice` كانت مستدعاة في HTML لكن غير معرّفة — تم إضافة stub (voice recording قيد التطوير)
+- `iv3UpdateCharCount` أُضيفت وربطت بـ oninput في textarea
+- الاختبار الحي (Chromium headless): UI يظهر صح، 3 panels، لا errors جديدة في الـ console
+- Functions المفقودة الوحيدة كانت `iv3ToggleVoice` — باقي الـ 19 function كلها موجودة
+
+### المهمة الأولى للجلسة القادمة:
+- تحسين UI الـ inbox (spacing + empty state alignment) أو ربط WhatsApp QR (يحتاج أحمد) أو الانتقال لمرحلة تانية في المشروع
+
+---
+
+---
 ## جلسة 2026-05-02 10:07 UTC
 
 ### وقفت عند:
