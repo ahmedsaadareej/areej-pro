@@ -4083,11 +4083,18 @@ function pgwRender() {
     const commLabel = hasCommission
       ? [gw.commission_pct > 0 ? gw.commission_pct + '%' : '', gw.commission_fixed > 0 ? gw.commission_fixed + ' ج.م' : ''].filter(Boolean).join(' + ')
       : '—';
+    const reqHtml = gw.requirements?.length
+      ? `<div style="margin-top:10px;padding:10px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">
+           <div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:6px">📋 ما تحتاجه للإعداد:</div>
+           <ul style="margin:0;padding-right:18px;font-size:11px;color:#4b5563;line-height:1.8">${gw.requirements.map(r=>`<li>${r}</li>`).join('')}</ul>
+           ${gw.setup_url ? `<a href="${gw.setup_url}" target="_blank" style="display:inline-block;margin-top:8px;font-size:11px;color:var(--brand,#1B5E30);font-weight:600;text-decoration:none">🔗 فتح ${gw.display_name} Dashboard ←</a>` : ''}
+         </div>`
+      : '';
     return `
     <div style="background:#fff;border:1.5px solid ${gw.enabled ? 'var(--brand,#1B5E30)' : '#e5e7eb'};border-radius:14px;padding:20px 22px">
       <div style="display:flex;align-items:center;gap:16px">
         <div style="font-size:32px;min-width:44px;text-align:center">${gw.icon}</div>
-        <div style="flex:1">
+        <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap">
             <span style="font-size:15px;font-weight:700;color:#111">${gw.display_name}</span>
             ${gw.enabled
@@ -4096,13 +4103,15 @@ function pgwRender() {
             }
             ${gw.configured ? '<span style="background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px">🔑 مُعدّ</span>' : ''}
           </div>
-          <div style="font-size:12px;color:#6b7280;display:flex;gap:16px;flex-wrap:wrap;margin-top:4px">
+          ${gw.description ? `<p style="margin:0 0 6px;font-size:12px;color:#6b7280">${gw.description}</p>` : ''}
+          <div style="font-size:12px;color:#6b7280;display:flex;gap:16px;flex-wrap:wrap">
             <span>طرق الدفع: ${gw.methods.join(' · ')}</span>
             <span>🏦 الخزنة: <strong>${walletName}</strong></span>
             <span>💸 العمولة: <strong>${commLabel}</strong></span>
           </div>
+          ${reqHtml}
         </div>
-        <div style="display:flex;gap:8px;flex-shrink:0">
+        <div style="display:flex;gap:8px;flex-shrink:0;align-self:flex-start">
           <button onclick="pgwOpenModal('${gw.gateway_name}')" style="background:var(--brand,#1B5E30);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:Cairo,sans-serif">
             ${gw.configured ? '✏️ تعديل' : '⚙️ إعداد'}
           </button>
@@ -4111,6 +4120,18 @@ function pgwRender() {
       </div>
     </div>`;
   }).join('');
+
+  // رسالة "بوابة أخرى؟"
+  list.innerHTML += `
+    <div style="background:#fffbeb;border:1.5px dashed #f59e0b;border-radius:14px;padding:20px 22px;text-align:center">
+      <div style="font-size:22px;margin-bottom:8px">🤔</div>
+      <div style="font-size:14px;font-weight:700;color:#92400e;margin-bottom:6px">تحتاج بوابة دفع أخرى؟</div>
+      <p style="margin:0 0 12px;font-size:13px;color:#78350f">نحن نعمل باستمرار على إضافة بوابات جديدة. تواصل معنا وسنضيفها في أقرب وقت.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <a href="https://wa.me/201000000000" target="_blank" style="background:#25D366;color:#fff;text-decoration:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600">💬 واتساب</a>
+        <a href="mailto:support@areejegypt.com" style="background:#f3f4f6;color:#374151;text-decoration:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600">📧 إيميل</a>
+      </div>
+    </div>`;
 }
 
 function pgwOpenModal(name) {
@@ -5112,7 +5133,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="/dashboard/js/invoices.js?v=e64c2ce1"></script>
 <script src="/dashboard/js/contracts.js?v=bb274c61"></script>
 <script src="/dashboard/js/treasury.js?v=a379cf29"></script>
-<script src="/dashboard/js/inbox.js?v=1777742965"></script>
+<script src="/dashboard/js/inbox.js?v=1777743631"></script>
 <!-- Inbox v3 modules -->
 <script src="/dashboard/inbox-v3/inbox-state.js?v=20260502"></script>
 <script src="/dashboard/inbox-v3/inbox-api.js?v=1777722319"></script>

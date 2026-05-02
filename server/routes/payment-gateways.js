@@ -10,7 +10,7 @@
  *   POST   /payment-gateways/:name/test ← اختبار الاتصال
  *
  * الجدول: payment_gateways (lazy migration)
- * البوابات المدعومة: fawaterk | paymob | instapay
+ * البوابات المدعومة: fawaterk | paymob | instapay | stripe | paytabs | paypal
  */
 
 'use strict';
@@ -54,6 +54,12 @@ const SUPPORTED_GATEWAYS = {
   fawaterk: {
     display_name: 'فواتيرك',
     icon: '🧾',
+    description: 'بوابة دفع مصرية تدعم الكارت والمحفظة وفوري وأمان وبصاطة وApple Pay.',
+    setup_url: 'https://app.fawaterk.com',
+    requirements: [
+      'سجّل حسابًا على fawaterk.com',
+      'من الـ Dashboard → API Keys → انسخ API Key و Vendor Key',
+    ],
     fields: [
       { key: 'api_key',    label: 'API Key',    secret: true },
       { key: 'vendor_key', label: 'Vendor Key', secret: true },
@@ -63,6 +69,14 @@ const SUPPORTED_GATEWAYS = {
   paymob: {
     display_name: 'Paymob',
     icon: '💳',
+    description: 'بوابة دفع مصرية رائدة تدعم الكارت والمحفظة والتقسيط.',
+    setup_url: 'https://my.paymob.com',
+    requirements: [
+      'سجّل حسابًا على my.paymob.com',
+      'من Settings → API Keys → انسخ API Key و Secret Key',
+      'من Developers → Integrations → أنشئ integration للكارت والمحفظة',
+      'انسخ HMAC Secret من Settings → Security',
+    ],
     fields: [
       { key: 'api_key',              label: 'API Key',              secret: true  },
       { key: 'public_key',           label: 'Public Key',           secret: false },
@@ -77,10 +91,67 @@ const SUPPORTED_GATEWAYS = {
   instapay: {
     display_name: 'InstaPay',
     icon: '📱',
+    description: 'خدمة التحويل الفوري المصرية — الأبسط والأسرع للمبالغ الصغيرة.',
+    setup_url: 'https://instapay.com.eg',
+    requirements: [
+      'افتح تطبيق InstaPay أو البنك المرتبط بحسابك',
+      'انسخ رابط الاستلام الخاص بك (يبدأ بـ https://ipn.eg/)',
+    ],
     fields: [
       { key: 'instapay_link', label: 'رابط InstaPay الخاص بك', secret: false },
     ],
     methods: ['instapay'],
+  },
+  stripe: {
+    display_name: 'Stripe',
+    icon: '🌐',
+    description: 'بوابة دفع عالمية تدعم بطاقات Visa / Mastercard / Amex من أي دولة.',
+    setup_url: 'https://dashboard.stripe.com',
+    requirements: [
+      'سجّل حسابًا على stripe.com (مطلوب بيانات الشركة)',
+      'من Dashboard → Developers → API Keys → انسخ Secret Key (sk_live_...)',
+      'اختياري: من Webhooks → أضف endpoint وانسخ Webhook Secret (whsec_...)',
+    ],
+    fields: [
+      { key: 'secret_key',      label: 'Secret Key (sk_live_...)',  secret: true  },
+      { key: 'webhook_secret',  label: 'Webhook Secret (whsec_...)', secret: true  },
+    ],
+    methods: ['card', 'visa', 'mastercard', 'amex'],
+  },
+  paytabs: {
+    display_name: 'PayTabs',
+    icon: '🔵',
+    description: 'بوابة دفع إقليمية تغطي مصر والسعودية والإمارات وعدة دول عربية.',
+    setup_url: 'https://merchant.paytabs.com',
+    requirements: [
+      'سجّل حسابًا على merchant.paytabs.com',
+      'من Account Settings → Security → انسخ Profile ID و Server Key',
+      'اختر الـ Region المناسبة (EGY للمصريين)',
+    ],
+    fields: [
+      { key: 'profile_id',  label: 'Profile ID',                          secret: false },
+      { key: 'server_key',  label: 'Server Key',                           secret: true  },
+      { key: 'region',      label: 'Region (EGY / ARE / SAU / Global)',     secret: false },
+    ],
+    methods: ['card', 'wallet', 'mada', 'apple'],
+  },
+  paypal: {
+    display_name: 'PayPal',
+    icon: '🅿️',
+    description: 'منصة الدفع الأشهر عالمياً — مناسبة للعملاء خارج مصر.',
+    setup_url: 'https://developer.paypal.com',
+    requirements: [
+      'سجّل حسابًا على paypal.com (Business Account)',
+      'من developer.paypal.com → My Apps & Credentials → Create App',
+      'انسخ Client ID و Client Secret',
+      'حدد Mode: sandbox للاختبار، live للإنتاج',
+    ],
+    fields: [
+      { key: 'client_id',     label: 'Client ID',            secret: false },
+      { key: 'client_secret', label: 'Client Secret',         secret: true  },
+      { key: 'mode',          label: 'Mode (sandbox / live)', secret: false },
+    ],
+    methods: ['paypal', 'card'],
   },
 };
 
@@ -152,6 +223,9 @@ router.get('/payment-gateways', (req, res) => {
         gateway_name:    name,
         display_name:    def.display_name,
         icon:            def.icon,
+        description:     def.description     || '',
+        setup_url:       def.setup_url        || '',
+        requirements:    def.requirements     || [],
         enabled:         row ? !!row.enabled : false,
         configured,
         methods:         def.methods,
@@ -371,6 +445,27 @@ router.post('/payment-gateways/:name/test', async (req, res) => {
         return res.json({ ok: true, message: '✅ الرابط يبدو صحيحاً' });
       }
       return res.status(400).json({ ok: false, error: 'الرابط يجب أن يبدأ بـ https://ipn.eg/' });
+    }
+
+    // ── اختبار Stripe ────────────────────────────────────────────────────────
+    if (name === 'stripe') {
+      const stripe = require('../lib/gateways/stripe');
+      const result = await stripe.testConnection(creds);
+      return res.json({ ok: true, message: `✅ الاتصال بـ Stripe ناجح — الحساب: ${result.account || '—'}` });
+    }
+
+    // ── اختبار PayTabs ───────────────────────────────────────────────────────
+    if (name === 'paytabs') {
+      const paytabs = require('../lib/gateways/paytabs');
+      await paytabs.testConnection(creds);
+      return res.json({ ok: true, message: '✅ الاتصال بـ PayTabs ناجح' });
+    }
+
+    // ── اختبار PayPal ────────────────────────────────────────────────────────
+    if (name === 'paypal') {
+      const paypal = require('../lib/gateways/paypal');
+      await paypal.testConnection(creds);
+      return res.json({ ok: true, message: '✅ الاتصال بـ PayPal ناجح' });
     }
 
     res.json({ ok: true, message: 'اختبار غير متاح لهذه البوابة' });
