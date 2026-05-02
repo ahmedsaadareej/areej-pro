@@ -142,7 +142,7 @@ function iv3BuildConvItem(c) {
       </div>
       <div class="iv3-conv-body">
         <div class="iv3-conv-row1">
-          <span class="iv3-conv-name">${iv3EscHtml(displayName || 'مجهول')}</span>
+          ${iv3PlatBadge(c.platform)}<span class="iv3-conv-name">${iv3EscHtml(displayName || 'مجهول')}</span>
           <span class="iv3-conv-time">${timeStr}</span>
         </div>
         <div class="iv3-conv-row2">
@@ -225,6 +225,22 @@ function iv3PlatIcon(platform) {
     'instagram':   '📸',
   };
   return icons[platform] || '💬';
+}
+
+/** Badge SVG ملون حسب المنصة */
+function iv3PlatBadge(platform) {
+  const map = {
+    'whatsapp-qr': { cls: 'wa-qr',     svg: '<path d="M17.5 3.5A12 12 0 0 0 2.9 18.1L2 22l4-1a12 12 0 1 0 11.5-17.5zm0 16.5c-1.2.7-2.5 1-3.8 1a10 10 0 0 1-8.5-15.2l.5-.8L4.4 3l1.2.4A10 10 0 0 1 17.5 20z" fill="currentColor"/>' },
+    'whatsapp':    { cls: 'wa-api',    svg: '<path d="M17.5 3.5A12 12 0 0 0 2.9 18.1L2 22l4-1a12 12 0 1 0 11.5-17.5z" fill="currentColor"/>' },
+    'telegram':    { cls: 'telegram',  svg: '<path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" fill="none"/>' },
+    'messenger':   { cls: 'messenger', svg: '<path d="M12 2C6.5 2 2 6.1 2 11.2c0 2.8 1.3 5.3 3.4 7L5 22l3.9-2c1 .3 2 .4 3.1.4 5.5 0 10-4.1 10-9.2S17.5 2 12 2z" fill="currentColor"/>' },
+    'instagram':   { cls: 'instagram', svg: '<rect x="2" y="2" width="20" height="20" rx="5" ry="5" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2" fill="none"/>' },
+  };
+  const p = map[platform];
+  if (!p) return `<span class="iv3-plat-badge unknown" title="${platform}">?</span>`;
+  return `<span class="iv3-plat-badge ${p.cls}" title="${platform}">
+    <svg width="10" height="10" viewBox="0 0 24 24">${p.svg}</svg>
+  </span>`;
 }
 
 /**

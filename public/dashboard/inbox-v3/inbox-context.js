@@ -18,6 +18,16 @@ async function iv3UpdateContextPanel(conv) {
   iv3RenderContactInfo(conv);
   iv3LoadCustomerContext(conv);
   iv3LoadNotes(conv.id);
+
+  // فتح تاب contact تلقائياً إذا لم يكن فيه تاب مفتوح مسبقاً
+  const flyout = document.getElementById('iv3-ctx-flyout');
+  if (flyout && !flyout.classList.contains('open')) {
+    iv3CtxToggleTab('contact');
+  } else if (flyout && flyout.classList.contains('open') && _iv3ActiveTab) {
+    // تحديث الـ sections الظاهرة للتاب الحالي
+    iv3CtxToggleTab(_iv3ActiveTab);
+    setTimeout(() => iv3CtxToggleTab(_iv3ActiveTab), 10); // reopen
+  }
 }
 
 // ── بيانات الاتصال الأساسية ─────────────────────────────────
@@ -552,15 +562,75 @@ function iv3CtxAddContact() {
 
 // ── Toggle Context Panel ─────────────────────────────────────
 
+// ── Icon Sidebar Tab System ────────────────────────────────────
+
+const IV3_CTX_TABS = {
+  contact:  { title: 'د⁠ بيانات العميل',    sections: ['iv3-ctx-header','iv3-ctx-details','iv3-ctx-clv','iv3-ctx-balance'] },
+  actions:  { title: '⚡ إجراءات سريعة',  sections: ['iv3-ctx-header','iv3-ctx-actions'] },
+  invoices: { title: '📄 الفواتير',         sections: ['iv3-ctx-header','iv3-ctx-clv','iv3-ctx-invoices'] },
+  orders:   { title: '📦 الأوردرات',         sections: ['iv3-ctx-header','iv3-ctx-orders'] },
+  notes:    { title: '📌 ملاحظات',          sections: ['iv3-ctx-header','iv3-ctx-notes'] },
+};
+
+let _iv3ActiveTab = null;
+
+function iv3CtxToggleTab(tab) {
+  const flyout = document.getElementById('iv3-ctx-flyout');
+  if (!flyout) return;
+
+  // لو نفس التاب — أغلق الـ flyout
+  if (_iv3ActiveTab === tab && flyout.classList.contains('open')) {
+    flyout.classList.remove('open');
+    _iv3ActiveTab = null;
+    document.querySelectorAll('.iv3-ctx-icon-btn').forEach(b => b.classList.remove('active'));
+    return;
+  }
+
+  _iv3ActiveTab = tab;
+
+  // تمييز الزر النشط
+  document.querySelectorAll('.iv3-ctx-icon-btn').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.getElementById(`iv3-ctx-btn-${tab}`);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  // تحديث عنوان الـ flyout
+  const headerEl = flyout.querySelector('.iv3-ctx-flyout-header span');
+  if (headerEl) headerEl.textContent = IV3_CTX_TABS[tab]?.title || '';
+
+  // إظهار/إخفاء الـ sections
+  const allSections = ['iv3-ctx-empty','iv3-ctx-header','iv3-ctx-details','iv3-ctx-clv',
+    'iv3-ctx-balance','iv3-ctx-actions','iv3-ctx-invoices','iv3-ctx-orders','iv3-ctx-notes'];
+  const tabSections = IV3_CTX_TABS[tab]?.sections || [];
+
+  allSections.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    // empty: أخف دائماً عند فتح تاب
+    if (id === 'iv3-ctx-empty') { el.style.display = 'none'; return; }
+    el.style.display = tabSections.includes(id) ? '' : 'none';
+  });
+
+  flyout.classList.add('open');
+}
+
+function iv3CtxCloseFlyout() {
+  const flyout = document.getElementById('iv3-ctx-flyout');
+  if (flyout) flyout.classList.remove('open');
+  _iv3ActiveTab = null;
+  document.querySelectorAll('.iv3-ctx-icon-btn').forEach(b => b.classList.remove('active'));
+}
+
 function iv3ToggleContext() {
-  const panel = document.getElementById('iv3-context');
-  if (!panel) return;
-  panel.classList.toggle('visible');
+  // legacy toggle — بيفتح/يغلق تاب contact
+  iv3CtxToggleTab('contact');
 }
 
 // ── Reset Context Panel ──────────────────────────────────────
 
 function iv3ResetContextPanel() {
+  // إغلاق الـ flyout وإعادة تعيين الحالة
+  iv3CtxCloseFlyout();
+
   const emptyEl  = document.getElementById('iv3-ctx-empty');
   const headerEl = document.getElementById('iv3-ctx-header');
   if (emptyEl)  emptyEl.style.display  = '';

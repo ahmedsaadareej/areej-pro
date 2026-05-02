@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/dashboard/css/main.css?v=22a33029">
 <link rel="stylesheet" href="/dashboard/css/inbox-v2.css?v=20260501">
-<link rel="stylesheet" href="/dashboard/inbox-v3/inbox.css?v=1777745561">
+<link rel="stylesheet" href="/dashboard/inbox-v3/inbox.css?v=1777748413">
 <script>document.documentElement.style.setProperty("--brand","#1B5E30");</script>
 </head>
 <body>
@@ -2603,6 +2603,34 @@
     </div>
 
     <!-- ══ COL 3: Customer Context ══ -->
+    <div class="iv3-context-wrap" id="iv3-context-wrap">
+
+    <!-- Icon Sidebar -->
+    <div class="iv3-ctx-iconbar" id="iv3-ctx-iconbar">
+      <button class="iv3-ctx-icon-btn" id="iv3-ctx-btn-contact" onclick="iv3CtxToggleTab('contact')" title="بيانات العميل">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </button>
+      <button class="iv3-ctx-icon-btn" id="iv3-ctx-btn-invoices" onclick="iv3CtxToggleTab('invoices')" title="الفواتير">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+      </button>
+      <button class="iv3-ctx-icon-btn" id="iv3-ctx-btn-orders" onclick="iv3CtxToggleTab('orders')" title="الأوردرات">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      </button>
+      <button class="iv3-ctx-icon-btn" id="iv3-ctx-btn-actions" onclick="iv3CtxToggleTab('actions')" title="إجراءات سريعة">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </button>
+      <button class="iv3-ctx-icon-btn" id="iv3-ctx-btn-notes" onclick="iv3CtxToggleTab('notes')" title="ملاحظات">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </button>
+    </div>
+
+    <!-- Flyout Panel -->
+    <div class="iv3-ctx-flyout" id="iv3-ctx-flyout">
+      <div class="iv3-ctx-flyout-header">
+        <span>بيانات العميل</span>
+        <button class="iv3-ctx-flyout-close" onclick="iv3CtxCloseFlyout()">×</button>
+      </div>
+
     <div class="iv3-context" id="iv3-context">
 
       <!-- Empty state -->
@@ -2707,6 +2735,9 @@
       </div>
 
     </div><!-- /iv3-context -->
+
+    </div><!-- /iv3-ctx-flyout -->
+    </div><!-- /iv3-context-wrap -->
 
   </div><!-- /iv3-body -->
 
@@ -5206,10 +5237,10 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- Inbox v3 modules -->
 <script src="/dashboard/inbox-v3/inbox-state.js?v=1777747810"></script>
 <script src="/dashboard/inbox-v3/inbox-api.js?v=1777722319"></script>
-<script src="/dashboard/inbox-v3/inbox-conv.js?v=1777747810"></script>
+<script src="/dashboard/inbox-v3/inbox-conv.js?v=1777748413"></script>
 <script src="/dashboard/inbox-v3/inbox-chat.js?v=1777747195"></script>
 <script src="/dashboard/inbox-v3/inbox-reply.js?v=1777745561"></script>
-<script src="/dashboard/inbox-v3/inbox-context.js?v=1777747004"></script>
+<script src="/dashboard/inbox-v3/inbox-context.js?v=1777748413"></script>
 <script src="/dashboard/inbox-v3/inbox-init.js?v=1777732234"></script>
 <script src="/dashboard/js/inbox-settings.js?v=1777731233"></script>
 <script src="/dashboard/js/team-settings.js?v=4b6f9871"></script>

@@ -918,12 +918,11 @@
    COL 3 — Customer Context Panel
    ══════════════════════════════════════════════════════════ */
 .iv3-context {
-  width: 300px;
-  flex-shrink: 0;
+  width: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   background: #fff;
-  border-right: 1px solid #E2E8F0;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #E2E8F0 transparent;
@@ -1756,4 +1755,119 @@
 .iv3-catalog-stock.low {
   color: #ef4444;
   font-weight: 600;
+}
+
+/* ── Platform Badge (في قائمة المحادثات) ─────────────────────── */
+.iv3-plat-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  font-size: 9px;
+  line-height: 1;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+.iv3-plat-badge.wa-qr   { background: #25D366; color: #fff; }
+.iv3-plat-badge.wa-api  { background: #128C7E; color: #fff; }
+.iv3-plat-badge.telegram{ background: #2CA5E0; color: #fff; }
+.iv3-plat-badge.messenger{ background: #0084FF; color: #fff; }
+.iv3-plat-badge.instagram{ background: linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888); color: #fff; }
+.iv3-plat-badge.unknown  { background: #9CA3AF; color: #fff; }
+
+/* ── Context Icon Sidebar ──────────────────────────────────────── */
+.iv3-ctx-iconbar {
+  width: 52px;
+  flex-shrink: 0;
+  background: #f8fafc;
+  border-right: 1px solid #E2E8F0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  gap: 4px;
+  z-index: 10;
+}
+.iv3-ctx-icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: #6B7280;
+  font-size: 18px;
+  transition: background .15s, color .15s;
+  position: relative;
+}
+.iv3-ctx-icon-btn:hover { background: #e2e8f0; color: #111827; }
+.iv3-ctx-icon-btn.active { background: #1B5E30; color: #fff; }
+.iv3-ctx-icon-btn .iv3-ctx-icon-label {
+  font-size: 8px;
+  font-family: Cairo, sans-serif;
+  line-height: 1;
+  display: none;
+}
+
+/* ── Context Flyout Panel ──────────────────────────────────────── */
+.iv3-ctx-flyout {
+  position: absolute;
+  top: 0; left: 52px;
+  width: 290px;
+  height: 100%;
+  background: #fff;
+  border-right: 1px solid #E2E8F0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #E2E8F0 transparent;
+  display: none;
+  flex-direction: column;
+  z-index: 9;
+  box-shadow: 4px 0 16px rgba(0,0,0,.06);
+  animation: iv3FlyIn .18s ease;
+}
+.iv3-ctx-flyout.open { display: flex; }
+@keyframes iv3FlyIn {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.iv3-ctx-flyout-header {
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid #f3f4f6;
+  font-weight: 700;
+  font-size: 13px;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+}
+.iv3-ctx-flyout-close {
+  margin-right: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9CA3AF;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 4px;
+}
+.iv3-ctx-flyout-close:hover { color: #374151; }
+
+/* إخفاء الـ context القديم */
+.iv3-context-wrap {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
 }
