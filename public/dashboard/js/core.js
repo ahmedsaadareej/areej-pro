@@ -158,6 +158,7 @@ const NAV_PERM_MAP = {
   'team-settings': null,
   'settings':     'settings',
   'inbox-settings': null,
+  'payment-gateways': null,
 };
 
 function applyPermissionNav(perms) {

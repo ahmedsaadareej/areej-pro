@@ -88,6 +88,8 @@
       <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> الرئيسية</div>
     <div class="sidebar-item" id="sb-inbox" onclick="sbShowPage('inbox',this)">
       <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> الرسائل<span class="badge" id="sb-inbox-badge" style="display:none">0</span></div>
+    <div class="sidebar-item" id="sb-payment-gateways" onclick="sbShowPage('payment-gateways',this)" style="padding-right:22px;font-size:12px;color:#6b7280">
+      <svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> بوابات الدفع</div>
     <div class="sidebar-item" id="sb-inbox-settings" onclick="sbShowPage('inbox-settings',this)" style="padding-right:22px;font-size:12px;color:#6b7280">
       <svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> إعدادات الرسائل</div>
 
@@ -3996,6 +3998,195 @@
   </div><!-- /is-content -->
 
 </div><!-- /page-inbox-settings -->
+
+<!-- ════════════════ PAYMENT GATEWAYS PAGE ════════════════ -->
+<div class="page" id="page-payment-gateways" style="display:none;padding:0;overflow-y:auto">
+  <div style="max-width:860px;margin:0 auto;padding:28px 24px">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:28px">
+      <div style="width:44px;height:44px;background:var(--brand,#1B5E30);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px">💳</div>
+      <div>
+        <h2 style="margin:0;font-size:20px;font-weight:700;color:#111">بوابات الدفع</h2>
+        <p style="margin:4px 0 0;font-size:13px;color:#6b7280">اربط نظامك ببوابة الدفع المناسبة لإرسال روابط الدفع لعملائك</p>
+      </div>
+    </div>
+
+    <!-- Status banner -->
+    <div id="pgw-banner" style="display:none;padding:10px 16px;border-radius:10px;margin-bottom:20px;font-size:13px;font-weight:600"></div>
+
+    <!-- Gateways list -->
+    <div id="pgw-list" style="display:flex;flex-direction:column;gap:16px">
+      <div style="text-align:center;padding:40px;color:#9ca3af">⏳ جاري التحميل...</div>
+    </div>
+
+  </div>
+</div><!-- /page-payment-gateways -->
+
+<!-- Payment Gateway Form Modal -->
+<div id="pgw-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);margin:16px">
+    <div style="padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f3f4f6;padding-bottom:14px">
+      <h3 id="pgw-modal-title" style="margin:0;font-size:16px;font-weight:700">إعدادات البوابة</h3>
+      <button onclick="pgwCloseModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280;line-height:1">✕</button>
+    </div>
+    <div style="padding:20px 24px">
+      <div id="pgw-modal-body"></div>
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button id="pgw-save-btn" onclick="pgwSave()" style="flex:1;background:var(--brand,#1B5E30);color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">💾 حفظ الإعدادات</button>
+        <button id="pgw-test-btn" onclick="pgwTest()" style="background:#f3f4f6;color:#374151;border:none;border-radius:10px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:Cairo,sans-serif">🔌 اختبار</button>
+      </div>
+      <div id="pgw-test-result" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// Payment Gateways Page (pgw*)
+// ══════════════════════════════════════════════
+let _pgwData    = [];
+let _pgwCurrent = null;
+
+async function pgwLoad() {
+  try {
+    const r = await apiFetch('/api/system/payment-gateways');
+    if (!r.ok) throw new Error(r.error);
+    _pgwData = r.gateways;
+    pgwRender();
+  } catch (e) {
+    document.getElementById('pgw-list').innerHTML =
+      `<div style="text-align:center;padding:40px;color:#ef4444">❌ خطأ في التحميل: ${e.message}</div>`;
+  }
+}
+
+function pgwRender() {
+  const list = document.getElementById('pgw-list');
+  if (!_pgwData.length) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af">لا توجد بوابات</div>';
+    return;
+  }
+  list.innerHTML = _pgwData.map(gw => `
+    <div style="background:#fff;border:1.5px solid ${gw.enabled ? 'var(--brand,#1B5E30)' : '#e5e7eb'};border-radius:14px;padding:20px 22px;display:flex;align-items:center;gap:16px">
+      <div style="font-size:32px;min-width:44px;text-align:center">${gw.icon}</div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap">
+          <span style="font-size:15px;font-weight:700;color:#111">${gw.display_name}</span>
+          ${gw.enabled
+            ? '<span style="background:#dcfce7;color:#166534;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">✅ مفعّل</span>'
+            : '<span style="background:#f3f4f6;color:#6b7280;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px">غير مفعّل</span>'
+          }
+          ${gw.configured ? '<span style="background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px">🔑 مُعدّ</span>' : ''}
+        </div>
+        <div style="font-size:12px;color:#6b7280">طرق الدفع: ${gw.methods.join(' · ')}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button onclick="pgwOpenModal('${gw.gateway_name}')" style="background:var(--brand,#1B5E30);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:Cairo,sans-serif">
+          ${gw.configured ? '✏️ تعديل' : '⚙️ إعداد'}
+        </button>
+        ${gw.configured ? `<button onclick="pgwDelete('${gw.gateway_name}','${gw.display_name}')" style="background:#fee2e2;color:#dc2626;border:none;border-radius:8px;padding:8px 12px;font-size:13px;cursor:pointer" title="حذف">🗑</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function pgwOpenModal(name) {
+  const gw = _pgwData.find(g => g.gateway_name === name);
+  if (!gw) return;
+  _pgwCurrent = gw;
+  document.getElementById('pgw-modal-title').textContent = gw.icon + ' إعدادات ' + gw.display_name;
+  document.getElementById('pgw-test-result').style.display = 'none';
+  document.getElementById('pgw-modal-body').innerHTML = `
+    <div style="margin-bottom:16px">
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;cursor:pointer">
+        <input type="checkbox" id="pgw-enabled" ${gw.enabled ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--brand,#1B5E30)">
+        تفعيل هذه البوابة
+      </label>
+    </div>
+    <div style="border-top:1px solid #f3f4f6;padding-top:16px">
+      ${gw.fields.map(f => `
+        <div style="margin-bottom:14px">
+          <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px">
+            ${f.label}${f.secret ? ' <span style="color:#9ca3af;font-weight:400">(مشفّر)</span>' : ''}
+          </label>
+          <input type="${f.secret ? 'password' : 'text'}" id="pgw-field-${f.key}"
+            placeholder="${!f.secret && gw.credentials[f.key] ? gw.credentials[f.key] : (f.secret && gw.credentials[f.key] ? '••••••••' : 'أدخل القيمة...')}"
+            value="${!f.secret && gw.credentials[f.key] ? gw.credentials[f.key] : ''}"
+            style="width:100%;box-sizing:border-box;border:1.5px solid #e5e7eb;border-radius:8px;padding:10px 12px;font-size:13px;font-family:Cairo,sans-serif;outline:none"
+            onfocus="this.style.borderColor='var(--brand,#1B5E30)'" onblur="this.style.borderColor='#e5e7eb'">
+        </div>
+      `).join('')}
+    </div>`;
+  document.getElementById('pgw-modal').style.display = 'flex';
+}
+
+function pgwCloseModal() {
+  document.getElementById('pgw-modal').style.display = 'none';
+  _pgwCurrent = null;
+}
+
+async function pgwSave() {
+  if (!_pgwCurrent) return;
+  const btn = document.getElementById('pgw-save-btn');
+  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
+  const body = { enabled: document.getElementById('pgw-enabled').checked };
+  for (const f of _pgwCurrent.fields) {
+    const val = (document.getElementById('pgw-field-' + f.key) || {}).value || '';
+    if (val.trim()) body[f.key] = val.trim();
+  }
+  try {
+    const r = await apiFetch('/api/system/payment-gateways/' + _pgwCurrent.gateway_name, { method:'POST', body:JSON.stringify(body) });
+    if (!r.ok) throw new Error(r.error);
+    pgwCloseModal();
+    pgwShowBanner(r.message || 'تم الحفظ بنجاح', 'success');
+    await pgwLoad();
+  } catch(e) {
+    pgwShowBanner('❌ ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 حفظ الإعدادات';
+  }
+}
+
+async function pgwTest() {
+  if (!_pgwCurrent) return;
+  const btn = document.getElementById('pgw-test-btn');
+  const res = document.getElementById('pgw-test-result');
+  btn.disabled = true; btn.textContent = '⏳';
+  res.style.display = 'none';
+  try {
+    const r = await apiFetch('/api/system/payment-gateways/' + _pgwCurrent.gateway_name + '/test', { method:'POST', body:'{}' });
+    res.style.display = 'block';
+    if (r.ok) { res.style.background='#dcfce7'; res.style.color='#166534'; res.textContent = r.message; }
+    else       { res.style.background='#fee2e2'; res.style.color='#dc2626'; res.textContent = '❌ ' + (r.error||'فشل الاختبار'); }
+  } catch(e) {
+    res.style.display='block'; res.style.background='#fee2e2'; res.style.color='#dc2626'; res.textContent='❌ '+e.message;
+  } finally { btn.disabled=false; btn.textContent='🔌 اختبار'; }
+}
+
+async function pgwDelete(name, displayName) {
+  if (!confirm('هل أنت متأكد من حذف إعدادات ' + displayName + '؟')) return;
+  try {
+    const r = await apiFetch('/api/system/payment-gateways/' + name, { method:'DELETE' });
+    if (!r.ok) throw new Error(r.error);
+    pgwShowBanner('تم حذف الإعدادات', 'success');
+    await pgwLoad();
+  } catch(e) { pgwShowBanner('❌ '+e.message,'error'); }
+}
+
+function pgwShowBanner(msg, type) {
+  const b = document.getElementById('pgw-banner');
+  b.textContent = msg; b.style.display = 'block';
+  b.style.background = type==='success' ? '#dcfce7' : '#fee2e2';
+  b.style.color      = type==='success' ? '#166534' : '#dc2626';
+  setTimeout(() => { b.style.display='none'; }, 4000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('pgw-modal').addEventListener('click', function(e) {
+    if (e.target === this) pgwCloseModal();
+  });
+});
+</script>
 
 <!-- ════════════════ LIBRARY PAGE ════════════════ -->
 <div class="page" id="page-library">

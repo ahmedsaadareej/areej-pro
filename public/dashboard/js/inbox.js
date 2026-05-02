@@ -616,6 +616,7 @@ function showPage(name, btn, _skipHistory) {
       document.querySelectorAll('.is-channel-detail').forEach(el => el.style.display = 'none');
       showInboxSettingsSection('integrations-channels');
     }
+    if (name === 'payment-gateways') { if (typeof pgwLoad === 'function') pgwLoad(); }
     if (name !== 'inbox' && name !== 'inbox-settings') { stopInboxPolling(); if (typeof iv3OnPageHide === 'function') iv3OnPageHide(); } // الـ badge poll بيفضل شغال دايماً عبر setInterval الثابت
     // iframe pages (plan90, persona) need no loader
   } catch(e) {
