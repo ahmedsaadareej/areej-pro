@@ -227,15 +227,8 @@ function iv3PopulateAgentFilter() {
 }
 
 // ── Inbox Settings ───────────────────────────────────────────
-
-function showInboxSettings() {
-  // تفويض للإعدادات الموجودة في النظام القديم
-  if (typeof showInboxSettingsModal === 'function') {
-    showInboxSettingsModal();
-  } else {
-    iv3Toast('إعدادات الرسائل قيد التطوير', 'info');
-  }
-}
+// showInboxSettings() مُعرَّفة في inbox.js — لا نُعيد تعريفها هنا
+// لتجنب override يطغى على الدالة الشغالة (sbShowPage → page-inbox-settings)
 
 // ── Toast Notifications ──────────────────────────────────────
 
