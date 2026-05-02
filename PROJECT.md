@@ -1,7 +1,7 @@
 # 📋 PROJECT.md — مرجع مشروع Areej Pro
 > **قاعدة ذهبية:** هذا الملف يُحدَّث بعد كل خطوة بدون استثناء.
 > أي جلسة جديدة تبدأ بقراءة هذا الملف أولاً قبل أي شيء.
-> آخر تحديث: 2026-05-02 20:12 UTC
+> آخر تحديث: 2026-05-02 20:20 UTC
 
 ---
 
@@ -251,7 +251,7 @@ payment_gateways (
 
 ### 🔴 المرحلة الأولى — WhatsApp API Channel Management
 
-#### WA-1 — صفحة إعدادات WhatsApp API (الربط)
+#### WA-1 — صفحة إعدادات WhatsApp API (الربط) ✅
 **الوصف:** صفحة إعدادات كاملة تشرح خطوتين:
 - لو عندك رقم API موجود: حقول Phone Number ID + Access Token + Webhook Token
 - لو معندكش رقم: خطوات إنشاء حساب Meta Business + ربط رقم
@@ -261,7 +261,7 @@ payment_gateways (
 **التقدير:** 2 ساعة
 **الحالة:** ✅ commit 8c11f0a
 
-#### WA-2 — Template Manager
+#### WA-2 — Template Manager ✅
 **الوصف:** تبويب كامل لإدارة WhatsApp Templates من جوا المنظومة:
 - قايمة كل templates مع حالتها (✅ معتمد / ⏳ قيد المراجعة / ❌ مرفوض)
 - إنشاء template جديد (form: اسم + لغة + نوع + محتوى + متغيرات)
@@ -272,7 +272,7 @@ payment_gateways (
 **التقدير:** 3-4 ساعات
 **الحالة:** ✅ commit da75f1d
 
-#### WA-3 — Analytics Dashboard للواتساب
+#### WA-3 — Analytics Dashboard للواتساب ✅
 **الوصف:** تبويب تحليلات داخل إعدادات WhatsApp API:
 - حد الرسائل الشهري + tier حالي (1K / 10K / 100K / Unlimited)
 - رسائل اليوم / الأسبوع / الشهر
