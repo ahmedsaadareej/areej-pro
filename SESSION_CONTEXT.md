@@ -2,6 +2,49 @@
 
 ---
 
+## Session 2026-05-02 17:13 UTC
+- الحالة: تم الإكمال
+- ما تم إنجازه:
+  - **ACU-4**: زر "رابط دفع" في Context Panel — `inbox-context.js` + `inbox-api.js` + `index.html`
+  - **ACU-5**: زر "إرسال رابط دفع" من صفحة الفواتير (جدول + detail panel) — `invoices.js`
+  - **ACU-A**: ربط بوابات الدفع بالخزنة والعمولة — `payment-gateways.js` + `index.html`
+    - lazy migration: wallet_id + commission_pct + commission_fixed في payment_gateways
+    - modal إعدادات البوابة: dropdown الخزنة + حقلا العمولة + preview تلقائي
+    - `getGatewayConfig()` helper جديد يرجع creds + wallet + commission معاً
+  - **ACU-B**: `handlePaymentSuccess()` في `pay.js` — معالجة متكاملة بعد نجاح الدفع:
+    - payment_links → paid + sys_invoices → paid
+    - خصم receivable_wallet لو كانت الفاتورة آجلاً
+    - IN صافي (مبلغ - عمولة) في خزنة البوابة
+    - OUT عمولة البوابة كمصروف منفصل (category: مصروفات بوابات الدفع)
+    - crm_contacts: balance -= المبلغ الكامل، total_paid += المبلغ الكامل
+    - inbox: رسالة تأكيد للعميل + note داخلي للموظفين
+  - **ACU-C**: conversation_id في payment_links — `inbox.js` + `inbox-context.js` + `inbox-api.js`
+- قرارات تقنية:
+  - العمولة = (amount × pct%) + fixed — تُسجَّل كـ OUT منفصل من خزنة البوابة
+  - رصيد العميل يُخصم بالمبلغ الكامل (العمولة تتحمّلها الشركة)
+  - رسالة التأكيد تُرسل فقط لو link.conversation_id موجود
+  - الخطأ القديم في logs "payment-gateways GET error" كان قبل الجلسة وليس من كودنا
+- آخر Commit: `e6d7c1d` — feat: ربط payment_links بـ conversation_id (ACU-C)
+- نقطة البداية القادمة: Customer Lifetime Value Badge في `inbox-context.js` — "12 فاتورة / 4,500 ج.م" يظهر تلقائياً في Context Panel
+
+---
+
+## Session 2026-05-02 16:27 UTC
+- الحالة: جارٍ التنفيذ — ACU-1
+- ما تم إنجازه: تحديث PROJECT.md + SESSION_CONTEXT.md بالقرارات المعمارية الجديدة لمنظومة الدفع
+- قرارات تقنية:
+  - areej-payment لا يُلمس أبداً — منطق الدفع يُعاد كتابته داخل areej-pro (Xيار B)
+  - كل Tenant عنده credentials خاصة في جدول `payment_gateways` في tenant DB
+  - صفحة الدفع White-Label على `{slug}.areejegypt.com/pay/{token}`
+  - `tenant_profile` موجود فعلاً (company_name, logo_url, brand_color) ✅
+  - `payment_links` جدول موجود فعلاً في tenant DB ✅ — سيُستخدم مباشرة
+  - نوعان: رابط حر (invoice_id=NULL) + رابط فاتورة (invoice_id=X)
+  - البوابات: Fawaterk + Paymob + InstaPay + قابل للتوسع
+- آخر Commit: 5c18915 (آخر commit قبل هذه الجلسة)
+- نقطة البداية القادمة: `server/routes/payment-gateways.js` — ACU-1: جدول payment_gateways + CRUD endpoints
+
+---
+
 ## Session 2026-05-02 16:00 UTC
 - الحالة: تم الإكمال
 - ما تم إنجازه:
@@ -376,3 +419,28 @@ iv3-ctx-phone   ← تليفون العميل
 - ✅ pm2 `areej-pro` شغّال على port 3002 بدون errors
 - ✅ الـ logs أظهرت `/api/inbox/conversations?page=1&limit=30` — v3 يعمل فعلاً
 - ⚠️ AMD EPYC 4 cores / 15GB RAM — لا تشغّل builds ثقيلة وقت الذروة
+
+---
+
+## Session 2026-05-02 16:40 UTC
+- الحالة: تم الإكمال — ACU-1 + ACU-2 + ACU-3
+- ما تم إنجازه:
+  - `server/routes/payment-gateways.js`: CRUD كامل + AES-256-GCM encryption + test endpoint
+  - `server/routes-system.js`: تسجيل payment-gateways route
+  - `public/dashboard/index.html`: صفحة `page-payment-gateways` كاملة (sidebar + HTML + JS)
+  - `public/dashboard/js/core.js`: إضافة 'payment-gateways' في NAV_PERM_MAP
+  - `public/dashboard/js/inbox.js`: ربط pgwLoad() بـ sbShowPage
+  - `server/lib/gateways/fawaterk.js`: Fawaterk module بـ dynamic credentials
+  - `server/lib/gateways/paymob.js`: Paymob module بـ dynamic credentials
+  - `server/lib/gateways/instapay.js`: InstaPay module
+  - `server/routes/pay.js`: /api/pay/* (link + initiate + status + webhooks)
+  - `server/app.js`: تسجيل /api/pay route
+  - `public/pay/index.html`: صفحة دفع White-Label كاملة
+- قرارات تقنية:
+  - Token format: `{slug}.{linkToken}` (الـ slug يُستخرج من أول نقطة)
+  - Credentials مشفّرة بـ AES-256-GCM في payment_gateways table
+  - lazy migration لأعمدة payment_links (invoice_ref, gateway, gateway_method, updated_at)
+  - areej-payment لم يُلمس — الكود مُعاد كتابته داخل areej-pro
+  - الصفحة تأخذ brand_color + logo_url + company_name من tenant_profile
+- آخر Commit: 74e6b06 — fix sidebar (بوابات الدفع في الإعدادات العامة)
+- نقطة البداية القادمة: `inbox-context.js` — ACU-4: زر "رابط دفع" في Inbox (حر أو بمبلغ) يُنشئ token ويرسله للعميل في المحادثة
