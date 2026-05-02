@@ -54,6 +54,7 @@ const SUPPORTED_GATEWAYS = {
   fawaterk: {
     display_name: 'فواتيرك',
     icon: '🧾',
+    logo_url: 'https://app.fawaterk.com/favicon.ico',
     description: 'بوابة دفع مصرية تدعم الكارت والمحفظة وفوري وأمان وبصاطة وApple Pay.',
     setup_url: 'https://app.fawaterk.com',
     requirements: [
@@ -69,10 +70,11 @@ const SUPPORTED_GATEWAYS = {
   paymob: {
     display_name: 'Paymob',
     icon: '💳',
+    logo_url: 'https://www.paymob.com/favicon.ico',
     description: 'بوابة دفع مصرية رائدة تدعم الكارت والمحفظة والتقسيط.',
-    setup_url: 'https://my.paymob.com',
+    setup_url: 'https://accept.paymob.com/portal2/en/login',
     requirements: [
-      'سجّل حسابًا على my.paymob.com',
+      'سجّل بالدخول على accept.paymob.com',
       'من Settings → API Keys → انسخ API Key و Secret Key',
       'من Developers → Integrations → أنشئ integration للكارت والمحفظة',
       'انسخ HMAC Secret من Settings → Security',
@@ -91,11 +93,13 @@ const SUPPORTED_GATEWAYS = {
   instapay: {
     display_name: 'InstaPay',
     icon: '📱',
+    logo_url: 'https://www.instapay.eg/favicon.ico',
     description: 'خدمة التحويل الفوري المصرية — الأبسط والأسرع للمبالغ الصغيرة.',
-    setup_url: 'https://instapay.com.eg',
+    setup_url: 'https://www.instapay.eg',
     requirements: [
-      'افتح تطبيق InstaPay أو البنك المرتبط بحسابك',
-      'انسخ رابط الاستلام الخاص بك (يبدأ بـ https://ipn.eg/)',
+      'حمّل تطبيق InstaPay من Google Play أو App Store',
+      'سجّل حسابك البنكي وفعّل خاصية الاستلام',
+      'من التطبيق → محفظتي → رابط الاستلام → انسخ الرابط (يبدأ بـ https://ipn.eg/)',
     ],
     fields: [
       { key: 'instapay_link', label: 'رابط InstaPay الخاص بك', secret: false },
@@ -105,6 +109,7 @@ const SUPPORTED_GATEWAYS = {
   stripe: {
     display_name: 'Stripe',
     icon: '🌐',
+    logo_url: 'https://stripe.com/img/v3/home/social.png',
     description: 'بوابة دفع عالمية تدعم بطاقات Visa / Mastercard / Amex من أي دولة.',
     setup_url: 'https://dashboard.stripe.com',
     requirements: [
@@ -121,6 +126,7 @@ const SUPPORTED_GATEWAYS = {
   paytabs: {
     display_name: 'PayTabs',
     icon: '🔵',
+    logo_url: 'https://merchant.paytabs.com/favicon.ico',
     description: 'بوابة دفع إقليمية تغطي مصر والسعودية والإمارات وعدة دول عربية.',
     setup_url: 'https://merchant.paytabs.com',
     requirements: [
@@ -138,6 +144,7 @@ const SUPPORTED_GATEWAYS = {
   paypal: {
     display_name: 'PayPal',
     icon: '🅿️',
+    logo_url: 'https://www.paypalobjects.com/webstatic/icon/pp258.png',
     description: 'منصة الدفع الأشهر عالمياً — مناسبة للعملاء خارج مصر.',
     setup_url: 'https://developer.paypal.com',
     requirements: [
@@ -223,6 +230,7 @@ router.get('/payment-gateways', (req, res) => {
         gateway_name:    name,
         display_name:    def.display_name,
         icon:            def.icon,
+        logo_url:        def.logo_url         || '',
         description:     def.description     || '',
         setup_url:       def.setup_url        || '',
         requirements:    def.requirements     || [],

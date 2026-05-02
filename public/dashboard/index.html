@@ -4093,7 +4093,12 @@ function pgwRender() {
     return `
     <div style="background:#fff;border:1.5px solid ${gw.enabled ? 'var(--brand,#1B5E30)' : '#e5e7eb'};border-radius:14px;padding:20px 22px">
       <div style="display:flex;align-items:center;gap:16px">
-        <div style="font-size:32px;min-width:44px;text-align:center">${gw.icon}</div>
+        <div style="min-width:52px;width:52px;height:52px;border-radius:10px;border:1px solid #e5e7eb;background:#f9fafb;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
+          ${gw.logo_url
+            ? `<img src="${gw.logo_url}" alt="${gw.display_name}" style="width:36px;height:36px;object-fit:contain" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" /><span style="display:none;font-size:26px">${gw.icon}</span>`
+            : `<span style="font-size:26px">${gw.icon}</span>`
+          }
+        </div>
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap">
             <span style="font-size:15px;font-weight:700;color:#111">${gw.display_name}</span>
