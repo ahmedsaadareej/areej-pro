@@ -369,6 +369,24 @@
         <div id="iv3-ctx-ord-list"></div>
       </div>
 
+      <!-- Notes -->
+      <div class="iv3-ctx-section" id="iv3-ctx-notes" style="display:none">
+        <div class="iv3-ctx-section-title">
+          📌 ملاحظات داخلية
+          <button class="iv3-notes-add-btn" onclick="iv3ShowAddNote()" title="إضافة ملاحظة">+</button>
+        </div>
+        <div id="iv3-ctx-notes-list"></div>
+        <div id="iv3-note-form" style="display:none">
+          <textarea id="iv3-note-input" class="iv3-note-input" rows="3"
+            placeholder="اكتب ملاحظتك..."
+            onkeydown="if(event.key==='Enter'&&event.ctrlKey)iv3SubmitNote()"></textarea>
+          <div class="iv3-note-form-actions">
+            <button onclick="iv3HideAddNote()" class="iv3-modal-cancel" style="font-size:11px;padding:3px 10px">إلغاء</button>
+            <button onclick="iv3SubmitNote()" class="iv3-modal-confirm" style="font-size:11px;padding:3px 10px">حفظ Ctrl+↵</button>
+          </div>
+        </div>
+      </div>
+
     </div><!-- /iv3-context -->
 
   </div><!-- /iv3-body -->

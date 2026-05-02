@@ -17,6 +17,7 @@ async function iv3UpdateContextPanel(conv) {
 
   iv3RenderContactInfo(conv);
   iv3LoadCustomerContext(conv);
+  iv3LoadNotes(conv.id);
 }
 
 // ── بيانات الاتصال الأساسية ─────────────────────────────────
@@ -300,7 +301,7 @@ function iv3ResetContextPanel() {
   if (emptyEl)  emptyEl.style.display  = '';
   if (headerEl) headerEl.style.display = 'none';
 
-  ['iv3-ctx-details','iv3-ctx-balance','iv3-ctx-actions','iv3-ctx-invoices','iv3-ctx-orders'].forEach(id => {
+  ['iv3-ctx-details','iv3-ctx-balance','iv3-ctx-actions','iv3-ctx-invoices','iv3-ctx-orders','iv3-ctx-notes'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -320,4 +321,89 @@ function iv3LinkCustomer() {
 
 function iv3ConvertLead() {
   iv3Toast('ميزة تحويل Lead قيد التطوير', 'info');
+}
+
+// ── Notes Panel ──────────────────────────────────────────────
+
+async function iv3LoadNotes(convId) {
+  const section = document.getElementById('iv3-ctx-notes');
+  const list    = document.getElementById('iv3-ctx-notes-list');
+  if (!section || !list) return;
+
+  section.style.display = '';
+  list.innerHTML = `<div style="color:#9CA3AF;font-size:12px;padding:4px 0">جاري التحميل...</div>`;
+
+  try {
+    const data = await IV3_API.getNotes(convId);
+    const notes = Array.isArray(data) ? data : (data.notes || []);
+
+    if (!notes.length) {
+      list.innerHTML = `<div class="iv3-dropdown-empty" style="font-size:12px;padding:6px 0">لا توجد ملاحظات بعد</div>`;
+      return;
+    }
+
+    list.innerHTML = notes.map(n => `
+      <div class="iv3-note-item" id="iv3-note-${n.id}">
+        <button class="iv3-note-delete" onclick="iv3DeleteNote(${n.id})" title="حذف">✕</button>
+        <div class="iv3-note-content">${iv3EscHtml(n.content)}</div>
+        <div class="iv3-note-meta">
+          ${iv3EscHtml(n.author_name || 'مجهول')} · ${iv3FormatTime(n.created_at)}
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    list.innerHTML = `<div style="color:#EF4444;font-size:12px">⚠️ فشل تحميل الملاحظات</div>`;
+  }
+}
+
+function iv3ShowAddNote() {
+  const form = document.getElementById('iv3-note-form');
+  const input = document.getElementById('iv3-note-input');
+  if (form) form.style.display = '';
+  if (input) { input.value = ''; input.focus(); }
+}
+
+function iv3HideAddNote() {
+  const form = document.getElementById('iv3-note-form');
+  if (form) form.style.display = 'none';
+}
+
+async function iv3SubmitNote() {
+  if (!IV3.activeConvId) return;
+
+  const input = document.getElementById('iv3-note-input');
+  const text  = input?.value?.trim();
+  if (!text) return;
+
+  const btn = document.querySelector('#iv3-note-form .iv3-modal-confirm');
+  if (btn) btn.disabled = true;
+
+  try {
+    await IV3_API.addNote(IV3.activeConvId, text);
+    iv3HideAddNote();
+    await iv3LoadNotes(IV3.activeConvId);
+    iv3Toast('تم حفظ الملاحظة ✓', 'success');
+  } catch(e) {
+    iv3Toast('فشل حفظ الملاحظة: ' + e.message, 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function iv3DeleteNote(noteId) {
+  if (!IV3.activeConvId) return;
+  if (!confirm('حذف الملاحظة؟')) return;
+
+  try {
+    await apiFetch(`/api/system/inbox/conversations/${IV3.activeConvId}/notes/${noteId}`, { method: 'DELETE' });
+    document.getElementById(`iv3-note-${noteId}`)?.remove();
+    iv3Toast('تم حذف الملاحظة', 'success');
+
+    // لو القائمة فاضية بعد الحذف
+    const list = document.getElementById('iv3-ctx-notes-list');
+    if (list && !list.querySelector('.iv3-note-item')) {
+      list.innerHTML = `<div class="iv3-dropdown-empty" style="font-size:12px;padding:6px 0">لا توجد ملاحظات بعد</div>`;
+    }
+  } catch(e) {
+    iv3Toast('فشل الحذف: ' + e.message, 'error');
+  }
 }
