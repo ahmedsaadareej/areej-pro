@@ -1,6 +1,6 @@
 /**
  * inbox-reply.js — Areej Pro Inbox v3
- * Reply box: كتابة، إرسال، ميديا، ردود جاهزة، AI
+ * Reply box: كتابة، إرسال، ميديا، ردود جاهزة، AI، Quote/Reply
  * آخر تحديث: 2026-05-02
  */
 
@@ -27,6 +27,9 @@ async function iv3Send() {
   // إغلاق أي dropdowns مفتوحة
   iv3CloseDropdowns();
 
+  // حفظ الاقتباس قبل الإرسال (وتصفيره بعد الإرسال)
+  const quoted = IV3.quotedMsg ? { ...IV3.quotedMsg } : null;
+
   // إضافة الرسالة مؤقتاً للـ UI (حقول متوافقة مع inbox_messages schema)
   const tmpMsg = {
     id: 'tmp_' + Date.now(),
@@ -38,12 +41,21 @@ async function iv3Send() {
     sent_at: new Date().toISOString(),    // الحقل الحقيقي
     created_at: new Date().toISOString(), // fallback
     status: 'pending',
+    // بيانات الاقتباس للـ optimistic UI
+    ...(quoted ? {
+      quoted_content: quoted.content,
+      quoted_sender: quoted.sender_name,
+      quoted_direction: quoted.direction,
+    } : {}),
   };
   IV3.messages.push(tmpMsg);
   iv3RenderMessages();
 
+  // تصفير الاقتباس فوراً
+  if (typeof iv3ClearQuote === 'function') iv3ClearQuote();
+
   try {
-    const result = await IV3_API.sendMessage(IV3.activeConvId, text, IV3.replyMode);
+    const result = await IV3_API.sendMessage(IV3.activeConvId, text, IV3.replyMode, quoted);
 
     // استبدل الرسالة المؤقتة بالحقيقية
     const idx = IV3.messages.findIndex(m => m.id === tmpMsg.id);

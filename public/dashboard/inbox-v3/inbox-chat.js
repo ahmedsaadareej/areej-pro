@@ -1,6 +1,6 @@
 /**
  * inbox-chat.js — Areej Pro Inbox v3
- * Chat window: فتح محادثة، تحميل الرسائل، render
+ * Chat window: فتح محادثة، تحميل الرسائل، render، Quote/Reply
  * آخر تحديث: 2026-05-02
  */
 
@@ -109,6 +109,16 @@ function iv3BuildMsgBubble(msg) {
 
   let content = '';
 
+  // بناء قسم الاقتباس لو هذه الرسالة تحتوي على quote
+  let quoteHtml = '';
+  if (msg.quoted_content) {
+    const qSender = msg.quoted_sender || (msg.quoted_direction === 'out' ? (IV3.me?.name || 'أنت') : (IV3.activeConv?.sender_name || ''));
+    quoteHtml = `<div class="iv3-quote-block">
+      <div class="iv3-quote-sender">${iv3EscHtml(qSender)}</div>
+      <div class="iv3-quote-text">${iv3EscHtml(iv3TruncText(msg.quoted_content, 80))}</div>
+    </div>`;
+  }
+
   if (msg.media_url || msg.file_id) {
     content = iv3BuildMediaContent(msg);
   } else {
@@ -117,11 +127,25 @@ function iv3BuildMsgBubble(msg) {
 
   const statusIcon = isOut ? iv3MsgStatusIcon(msg.status) : '';
 
+  // زر الرد السريع (يظهر عند hover)
+  const msgIdSafe = String(msg.id).replace(/[^a-zA-Z0-9_]/g, '_');
+  const replyBtnHtml = isNote ? '' : `
+    <div class="iv3-msg-actions">
+      <button class="iv3-msg-action-btn" onclick="iv3QuoteMsg('${msgIdSafe}')" title="رد على هذه الرسالة"
+        data-msg-id="${iv3EscHtml(String(msg.id))}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>
+        </svg>
+      </button>
+    </div>`;
+
   return `
-    <div class="iv3-msg-wrap ${isOut ? 'out' : 'in'} ${isNote ? 'note' : ''}">
+    <div class="iv3-msg-wrap ${isOut ? 'out' : 'in'} ${isNote ? 'note' : ''}" id="iv3-msg-${msgIdSafe}">
       ${!isOut ? `<div class="iv3-msg-sender-name">${iv3EscHtml(senderName)}</div>` : ''}
       ${isNote ? '<div class="iv3-note-label">🔒 ملاحظة داخلية</div>' : ''}
+      ${replyBtnHtml}
       <div class="iv3-msg-bubble">
+        ${quoteHtml}
         ${content}
         <div class="iv3-msg-meta">
           <span class="iv3-msg-time">${time}</span>
@@ -158,6 +182,58 @@ function iv3MsgStatusIcon(status) {
   if (status === 'read')      return '<span class="iv3-tick read">✓✓</span>';
   if (status === 'failed')    return '<span class="iv3-tick failed">✗</span>';
   return '<span class="iv3-tick pending">○</span>';
+}
+
+// ── Quote / Reply ──────────────────────────────────────────
+
+function iv3QuoteMsg(msgId) {
+  // البحث عن الرسالة في IV3.messages
+  // msgId قد يكون string مع underscore بدل حرف خاص
+  const msg = IV3.messages.find(m => String(m.id) === msgId || String(m.id).replace(/[^a-zA-Z0-9_]/g, '_') === msgId);
+  if (!msg) return;
+
+  // لا نقتبس notes
+  if (msg.is_note || msg.mode === 'note') return;
+
+  // تخزين الاقتباس في الـ state
+  IV3.quotedMsg = {
+    id: msg.id,
+    content: msg.content || msg.message || '',
+    sender_name: msg.direction === 'out'
+      ? (IV3.me?.name || 'أنت')
+      : (IV3.activeConv?.sender_name || ''),
+    direction: msg.direction,
+  };
+
+  // تحديث الـ preview في الـ reply box
+  iv3ShowQuotePreview();
+
+  // فوكس على الـ textarea
+  const textarea = document.getElementById('iv3-textarea');
+  if (textarea) textarea.focus();
+}
+
+function iv3ShowQuotePreview() {
+  const preview = document.getElementById('iv3-quote-preview');
+  if (!preview || !IV3.quotedMsg) return;
+
+  const senderEl = preview.querySelector('.iv3-quote-preview-sender');
+  const textEl   = preview.querySelector('.iv3-quote-preview-text');
+
+  if (senderEl) senderEl.textContent = IV3.quotedMsg.sender_name;
+  if (textEl)   textEl.textContent   = iv3TruncText(IV3.quotedMsg.content, 100);
+
+  preview.style.display = 'flex';
+
+  // scroll للـ textarea
+  const replyBox = document.getElementById('iv3-reply');
+  if (replyBox) replyBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function iv3ClearQuote() {
+  IV3.quotedMsg = null;
+  const preview = document.getElementById('iv3-quote-preview');
+  if (preview) preview.style.display = 'none';
 }
 
 // ── تحديث الـ Header ────────────────────────────────────────

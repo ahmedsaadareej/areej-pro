@@ -1329,3 +1329,129 @@
   0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
   50%       { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
 }
+
+/* ── Quote Preview (في reply box) ──────────────────────── */
+.iv3-quote-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #F0FDF4;
+  border-bottom: 1px solid #D1FAE5;
+  border-radius: 8px 8px 0 0;
+  margin: 0 0 -1px 0;
+  animation: iv3QuoteFadeIn .15s ease;
+}
+@keyframes iv3QuoteFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.iv3-quote-preview-bar {
+  width: 3px;
+  min-height: 32px;
+  background: var(--brand, #1B5E30);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.iv3-quote-preview-body {
+  flex: 1;
+  min-width: 0;
+}
+.iv3-quote-preview-sender {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brand, #1B5E30);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.iv3-quote-preview-text {
+  font-size: 12px;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.iv3-quote-preview-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9CA3AF;
+  font-size: 14px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: color .15s, background .15s;
+}
+.iv3-quote-preview-close:hover { color: #EF4444; background: #FEE2E2; }
+
+/* ── Quote Block (داخل الـ bubble) ─────────────────────── */
+.iv3-quote-block {
+  background: rgba(0,0,0,0.06);
+  border-right: 3px solid var(--brand, #1B5E30);
+  border-radius: 6px;
+  padding: 5px 8px;
+  margin-bottom: 6px;
+  max-width: 100%;
+}
+.iv3-msg-wrap.out .iv3-quote-block {
+  background: rgba(255,255,255,0.2);
+  border-right-color: rgba(255,255,255,0.7);
+}
+.iv3-quote-sender {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--brand, #1B5E30);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.iv3-msg-wrap.out .iv3-quote-sender { color: rgba(255,255,255,0.85); }
+.iv3-quote-text {
+  font-size: 12px;
+  color: #4B5563;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.iv3-msg-wrap.out .iv3-quote-text { color: rgba(255,255,255,0.75); }
+
+/* ── Message Hover Actions ──────────────────────────────── */
+.iv3-msg-wrap {
+  position: relative;
+}
+.iv3-msg-actions {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  gap: 4px;
+  z-index: 2;
+}
+.iv3-msg-wrap.in  .iv3-msg-actions { right: -28px; }
+.iv3-msg-wrap.out .iv3-msg-actions { left: -28px; }
+.iv3-msg-wrap:hover .iv3-msg-actions { display: flex; }
+
+.iv3-msg-action-btn {
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #6B7280;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: color .15s, border-color .15s, background .15s;
+  padding: 0;
+}
+.iv3-msg-action-btn:hover {
+  color: var(--brand, #1B5E30);
+  border-color: var(--brand, #1B5E30);
+  background: #F0FDF4;
+}

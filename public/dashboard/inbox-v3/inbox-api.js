@@ -65,8 +65,15 @@ const IV3_API = {
     return data;
   },
 
-  async sendMessage(convId, text, mode = 'reply') {
-    const data = await this._post('/api/system/inbox/send', { conv_id: convId, message: text, mode });
+  async sendMessage(convId, text, mode = 'reply', quoted = null) {
+    const body = { conv_id: convId, message: text, mode };
+    // إرفاق بيانات الاقتباس لو موجودة
+    if (quoted) {
+      body.quoted_msg_id  = quoted.id;
+      body.quoted_content = quoted.content;
+      body.quoted_sender  = quoted.sender_name;
+    }
+    const data = await this._post('/api/system/inbox/send', body);
     if (!data) throw new Error('فشل إرسال الرسالة');
     return data;
   },
