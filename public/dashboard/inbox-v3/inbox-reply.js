@@ -391,3 +391,16 @@ function iv3FileIcon(mimeType) {
   if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return '📊';
   return '📎';
 }
+
+// ── Voice Recording (قيد التطوير) ───────────────────────────
+
+function iv3ToggleVoice() {
+  iv3Toast('الرسائل الصوتية قيد التطوير', 'info');
+}
+
+// ── Char Count ───────────────────────────────────────────────
+
+function iv3UpdateCharCount(el) {
+  const count = document.getElementById('iv3-char-count');
+  if (count) count.textContent = el.value.length;
+}
