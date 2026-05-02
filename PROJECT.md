@@ -257,7 +257,12 @@ inbox_team_members        -- أعضاء الفرق
 - [x] **إصلاح inbox-reply.js** — حقول متوافقة (content/sent_at) + templates تستخدم name بدل title
 - [x] **cache-busting** لكل الملفات المعدّلة
 
-**الخطوة التالية:** ربط WhatsApp QR بـ pro-test (يحتاج مسح QR من أحمد) وإرسال رسالة تجريبية لاختبار العرض الكامل
+- [x] **فحص inbox.html** — كل IDs متطابقة مع JS ✔️
+- [x] **iv3ToggleVoice stub** — زر ميكروفون شغّال (قيد التطوير)
+- [x] **iv3UpdateCharCount** — دالة عد الحروف مربوطة بالـ textarea
+- [x] **اختبار حي (Chromium headless)** — UI يظهر صح، 3 panels، لا errors جديدة
+
+**الخطوة التالية (تحتاج تدخّل أحمد):** ربط WhatsApp QR بـ pro-test وإرسال رسالة تجريبية لاختبار العرض الكامل
 
 ### المرحلة 2: الـ Core Features
 - [ ] عرض المحادثات مع فلترة وبحث
