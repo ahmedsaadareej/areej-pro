@@ -66,7 +66,7 @@ function showChannelDetail(channel) {
   if (detail) detail.style.display = 'block';
   // Populate webhook URLs + saved fields
   loadIntegrationsStatus();
-  if (channel === 'whatsapp') _populateWhatsAppFields();
+  if (channel === 'whatsapp') { _populateWhatsAppFields(); waInitWhatsApp(); }
   if (channel === 'messenger') _populateMessengerFields();
   if (channel === 'instagram') _populateInstagramFields();
 }
@@ -611,6 +611,12 @@ async function waDeleteTemplate(name) {
   const d = await apiFetch('/api/system/inbox/wa-templates/' + encodeURIComponent(name), { method: 'DELETE' });
   if (d.ok) { iv3Toast('✅ تم الحذف'); waLoadTemplates(); }
   else iv3Toast('❌ ' + (d.error || 'خطأ في الحذف'), 'error');
+}
+
+// init: reset tabs + scenario when page opens
+function waInitWhatsApp() {
+  waShowTab('settings');
+  waSetScenario('existing');
 }
 
 // WhatsApp API scenario toggle

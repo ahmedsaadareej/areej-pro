@@ -3316,196 +3316,256 @@
           <h3 style="margin:0;font-size:15px;font-weight:800">📱 واتساب Business API</h3>
         </div>
 
-        <!-- ── Scenario Toggle ── -->
-        <div style="display:flex;gap:8px;margin-bottom:16px">
-          <button id="wa-scenario-existing" onclick="waSetScenario('existing')" style="flex:1;padding:10px 6px;border-radius:8px;font-size:12px;font-weight:800;font-family:Cairo,sans-serif;cursor:pointer;border:2px solid #1B5E30;background:#1B5E30;color:#fff">✅ عندي رقم API موجود</button>
-          <button id="wa-scenario-new" onclick="waSetScenario('new')" style="flex:1;padding:10px 6px;border-radius:8px;font-size:12px;font-weight:800;font-family:Cairo,sans-serif;cursor:pointer;border:2px solid #e5e7eb;background:#f9fafb;color:#374151">🆕 محتاج أنشئ رقم جديد</button>
+        <!-- ═══ TABS NAV ═══ -->
+        <div style="display:flex;gap:0;margin-bottom:0;border-bottom:2px solid #e5e7eb">
+          <button id="wa-tab-btn-settings"  onclick="waShowTab('settings')"  style="padding:9px 14px;border:none;border-bottom:2.5px solid #1B5E30;background:none;font-size:12px;font-weight:800;color:#1B5E30;cursor:pointer;font-family:Cairo,sans-serif;margin-bottom:-2px">⚙️ إعدادات الربط</button>
+          <button id="wa-tab-btn-templates" onclick="waShowTab('templates')" style="padding:9px 14px;border:none;border-bottom:2.5px solid transparent;background:none;font-size:12px;font-weight:800;color:#6b7280;cursor:pointer;font-family:Cairo,sans-serif;margin-bottom:-2px">📝 Templates</button>
+          <button id="wa-tab-btn-analytics" onclick="waShowTab('analytics')" style="padding:9px 14px;border:none;border-bottom:2.5px solid transparent;background:none;font-size:12px;font-weight:800;color:#6b7280;cursor:pointer;font-family:Cairo,sans-serif;margin-bottom:-2px">📊 تحليلات</button>
         </div>
 
-        <!-- ── Scenario A: Already have API number ── -->
-        <div id="wa-block-existing">
-          <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px;margin-bottom:16px">
-            <div style="font-size:13px;font-weight:800;color:#166534;margin-bottom:10px">🎯 عندك رقم — محتاج 3 حاجات بس</div>
-            <div style="display:flex;gap:10px;margin-bottom:10px">
-              <div style="width:22px;height:22px;border-radius:50%;background:#16a34a;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
-              <div>
-                <div style="font-size:12px;font-weight:700;color:#111827">Phone Number ID</div>
-                <div style="font-size:11px;color:#4b5563;line-height:1.6">افتح <a href="https://business.facebook.com" target="_blank" style="color:#1B5E30;font-weight:700">Meta Business Suite</a> → اختار حساب WhatsApp → <strong>API Setup</strong> → هتلاقي الـ Phone Number ID</div>
-              </div>
-            </div>
-            <div style="display:flex;gap:10px;margin-bottom:10px">
-              <div style="width:22px;height:22px;border-radius:50%;background:#16a34a;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
-              <div>
-                <div style="font-size:12px;font-weight:700;color:#111827">Access Token (Permanent)</div>
-                <div style="font-size:11px;color:#4b5563;line-height:1.6"><strong>Business Settings → System Users</strong> → أنشئ System User أو استخدم موجود → Generate Token → حدّد صلاحية <strong>whatsapp_business_messaging</strong></div>
-                <a href="https://business.facebook.com/settings/system-users" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-top:5px;font-size:11px;font-weight:700;color:#1B5E30;text-decoration:none;background:#dcfce7;padding:3px 10px;border-radius:6px;border:1px solid #86efac">🔗 System Users ↗</a>
-              </div>
-            </div>
-            <div style="display:flex;gap:10px">
-              <div style="width:22px;height:22px;border-radius:50%;background:#16a34a;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
-              <div>
-                <div style="font-size:12px;font-weight:700;color:#111827">اضبط الـ Webhook (مرة واحدة بس)</div>
-                <div style="font-size:11px;color:#4b5563;line-height:1.6">في Meta Developers → تطبيقك → WhatsApp → Configuration → Webhook → أدخل الـ Callback URL والـ Verify Token من الأسفل → Verify and Save → فعّل <strong>messages</strong></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ── Scenario B: New number ── -->
-        <div id="wa-block-new" style="display:none">
-        <!-- Requirements -->
-        <div class="is-requirements-box">
-          <h4 style="margin:0 0 10px;font-size:13px;font-weight:800;color:#92400e">📋 المتطلبات قبل البدء</h4>
-          <ul style="margin:0;padding-right:18px;font-size:12px;color:#374151;line-height:2">
-            <li>✅ حساب <strong>Meta Business Manager</strong> موثّق</li>
-            <li>✅ رقم هاتف <strong>غير مسجّل</strong> في واتساب شخصي أو واتساب بيزنس</li>
-            <li>✅ بطاقة ائتمان مربوطة بحساب Meta (للفوترة)</li>
-            <li>✅ متصفح Chrome أو Edge</li>
-          </ul>
-        </div>
-
-        <!-- Step by step -->
-        <div style="margin-bottom:16px">
-          <h4 style="font-size:13px;font-weight:800;color:#111827;margin:0 0 12px">🪜 خطوات الربط</h4>
-
-          <!-- Step 1 -->
-          <div style="display:flex;gap:10px;margin-bottom:14px">
-            <div style="width:24px;height:24px;border-radius:50%;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
-            <div>
-              <div style="font-size:12px;font-weight:700;color:#111827;margin-bottom:2px">افتح Meta for Developers وأنشئ App</div>
-              <div style="font-size:11px;color:#6b7280;line-height:1.6">اضغط "My Apps" → "Create App" → اختار <strong>Business</strong> → أدخل اسم الـ App → اضغط "Create App"</div>
-              <a href="https://developers.facebook.com/apps/create/" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-weight:700;color:#1B5E30;text-decoration:none;background:#f0fdf4;padding:4px 10px;border-radius:6px;border:1px solid #bbf7d0">
-                🔗 فتح Meta Developers <span style="font-size:9px;opacity:.7">↗</span>
-              </a>
-            </div>
-          </div>
-
-          <!-- Step 2 -->
-          <div style="display:flex;gap:10px;margin-bottom:14px">
-            <div style="width:24px;height:24px;border-radius:50%;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
-            <div>
-              <div style="font-size:12px;font-weight:700;color:#111827;margin-bottom:2px">أضف منتج WhatsApp للـ App</div>
-              <div style="font-size:11px;color:#6b7280;line-height:1.6">في صفحة الـ App → اسكرول لأسفل → ابحث عن <strong>WhatsApp</strong> → اضغط "Set up" → اختار أو أنشئ Meta Business Account</div>
-            </div>
-          </div>
-
-          <!-- Step 3 -->
-          <div style="display:flex;gap:10px;margin-bottom:14px">
-            <div style="width:24px;height:24px;border-radius:50%;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
-            <div>
-              <div style="font-size:12px;font-weight:700;color:#111827;margin-bottom:2px">احصل على Phone Number ID و App ID</div>
-              <div style="font-size:11px;color:#6b7280;line-height:1.6">
-                من صفحة <strong>WhatsApp → Getting Started</strong>:<br>
-                • الـ <strong>Phone Number ID</strong>: رقم يظهر تحت "From" بجوار رقم الاختبار<br>
-                • الـ <strong>App ID</strong>: يظهر في أعلى الصفحة في URL أو في App Settings
-              </div>
-            </div>
-          </div>
-
-          <!-- Step 4 -->
-          <div style="display:flex;gap:10px;margin-bottom:14px">
-            <div style="width:24px;height:24px;border-radius:50%;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>
-            <div>
-              <div style="font-size:12px;font-weight:700;color:#111827;margin-bottom:2px">احصل على Access Token (مؤقت للتجربة)</div>
-              <div style="font-size:11px;color:#6b7280;line-height:1.6">في صفحة Getting Started، اضغط <strong>"Generate Access Token"</strong> — الـ Token صالح 24 ساعة فقط للتجربة. للإنتاج، أنشئ System User Token دائم من Business Settings.</div>
-              <a href="https://business.facebook.com/settings/system-users" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-weight:700;color:#1B5E30;text-decoration:none;background:#f0fdf4;padding:4px 10px;border-radius:6px;border:1px solid #bbf7d0">
-                🔗 System Users (Token دائم) <span style="font-size:9px;opacity:.7">↗</span>
-              </a>
-            </div>
-          </div>
-
-          <!-- Step 5 -->
-          <div style="display:flex;gap:10px;margin-bottom:14px">
-            <div style="width:24px;height:24px;border-radius:50%;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">5</div>
-            <div>
-              <div style="font-size:12px;font-weight:700;color:#111827;margin-bottom:2px">اضبط الـ Webhook</div>
-              <div style="font-size:11px;color:#6b7280;line-height:1.6">في WhatsApp → Configuration → Webhook:<br>
-              • <strong>Callback URL</strong>: انسخ الـ URL من الأسفل وضعه هنا<br>
-              • <strong>Verify Token</strong>: انسخ الـ Verify Token من الأسفل<br>
-              • اضغط "Verify and Save" → ثم فعّل subscription على <strong>messages</strong></div>
-            </div>
-          </div>
-
-          <!-- Step 6 -->
-          <div style="display:flex;gap:10px">
-            <div style="width:24px;height:24px;border-radius:50%;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">6</div>
-            <div>
-              <div style="font-size:12px;font-weight:700;color:#111827;margin-bottom:2px">أضف رقم هاتف حقيقي (للإنتاج)</div>
-              <div style="font-size:11px;color:#6b7280;line-height:1.6">من <strong>WhatsApp → Phone Numbers → Add Phone Number</strong> — تحتاج توثيق الأعمال من Meta قبل إضافة رقم حقيقي. هذه الخطوة اختيارية للتجربة.</div>
-              <a href="https://business.facebook.com/settings/whatsapp-business-accounts" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-weight:700;color:#1B5E30;text-decoration:none;background:#f0fdf4;padding:4px 10px;border-radius:6px;border:1px solid #bbf7d0">
-                🔗 WhatsApp Business Accounts <span style="font-size:9px;opacity:.7">↗</span>
-              </a>
-            </div>
-          </div>
-        </div>
-
-        </div><!-- /wa-block-new -->
-
-        <!-- Fields -->
-        <div style="border-top:1.5px solid #e5e7eb;padding-top:16px;margin-top:4px">
-          <h4 style="font-size:13px;font-weight:800;color:#111827;margin:0 0 12px">⚙️ إعدادات الربط</h4>
-
-          <div class="is-field-group">
-            <label class="is-field-label">Phone Number ID <span style="color:#ef4444">*</span></label>
-            <input id="wa-phone-id" class="is-field-input" placeholder="مثال: 123456789012345" />
-            <div style="font-size:10px;color:#9ca3af;margin-top:3px">يظهر في WhatsApp → Getting Started بجوار رقم الاختبار</div>
-          </div>
-
-          <div class="is-field-group">
-            <label class="is-field-label">WhatsApp Business Account ID <span style="color:#ef4444">*</span></label>
-            <input id="wa-account-id" class="is-field-input" placeholder="مثال: 123456789012345" />
-            <div style="font-size:10px;color:#9ca3af;margin-top:3px">يظهر في WhatsApp → Getting Started أو Business Manager</div>
-          </div>
-
-          <div class="is-field-group">
-            <label class="is-field-label">Access Token <span style="color:#ef4444">*</span></label>
-            <div style="position:relative">
-              <input id="wa-token" class="is-field-input" type="password" placeholder="EAABxxxx..." style="padding-left:70px" />
-              <button onclick="var f=document.getElementById('wa-token');f.type=f.type==='password'?'text':'password'" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:10px;color:#6b7280;cursor:pointer;font-family:Cairo,sans-serif">عرض</button>
-            </div>
-            <div style="font-size:10px;color:#f59e0b;margin-top:3px">⚠️ Token المؤقت صالح 24 ساعة فقط — <strong>للإنتاج: استخدم System User Token الدائم</strong> من Business Settings → System Users</div>
-          </div>
-
-          <div class="is-field-group">
-            <label class="is-field-label">Callback URL (Webhook) — انسخه لـ Meta</label>
-            <div class="is-readonly-url">
-              <span id="is-wa-webhook-display" style="font-size:10px"></span>
-              <button class="is-copy-btn" onclick="copyInboxUrl('is-wa-webhook-display')" title="نسخ">📋</button>
-            </div>
-          </div>
-
-          <div class="is-field-group">
-            <label class="is-field-label">Verify Token — انسخه لـ Meta</label>
-            <div class="is-readonly-url">
-              <span id="is-wa-verify-token" style="font-size:11px;font-family:monospace"></span>
-              <button class="is-copy-btn" onclick="copyInboxUrl('is-wa-verify-token')" title="نسخ">📋</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- wa tabs nav -->
-        <div style="display:flex;gap:6px;margin-bottom:0;border-bottom:2px solid #e5e7eb;padding-bottom:0">
-          <button id="wa-tab-btn-settings" onclick="waShowTab('settings')" style="padding:8px 14px;border:none;border-bottom:2.5px solid #1B5E30;background:none;font-size:12px;font-weight:800;color:#1B5E30;cursor:pointer;font-family:Cairo,sans-serif;margin-bottom:-2px">⚙️ إعدادات الربط</button>
-          <button id="wa-tab-btn-templates" onclick="waShowTab('templates')" style="padding:8px 14px;border:none;border-bottom:2.5px solid transparent;background:none;font-size:12px;font-weight:800;color:#6b7280;cursor:pointer;font-family:Cairo,sans-serif;margin-bottom:-2px">📝 Templates</button>
-          <button id="wa-tab-btn-analytics" onclick="waShowTab('analytics')" style="padding:8px 14px;border:none;border-bottom:2.5px solid transparent;background:none;font-size:12px;font-weight:800;color:#6b7280;cursor:pointer;font-family:Cairo,sans-serif;margin-bottom:-2px">📊 تحليلات</button>
-        </div>
-
-        <!-- tab: settings -->
+        <!-- ═══ TAB: إعدادات الربط ═══ -->
         <div id="wa-tab-settings" style="padding-top:14px">
-          <div class="is-action-buttons">
-            <button class="is-btn-primary" onclick="saveWhatsAppSettingsNew()">💾 حفظ الإعدادات</button>
-            <button class="is-btn-secondary" onclick="testWhatsAppConnection()" style="margin-right:8px">🔌 اختبار الاتصال</button>
+
+          <!-- زراين: عندك رقم / جديد -->
+          <div style="display:flex;gap:8px;margin-bottom:16px">
+            <button id="wa-scenario-existing" onclick="waSetScenario('existing')" style="flex:1;padding:10px 6px;border-radius:8px;font-size:12px;font-weight:800;font-family:Cairo,sans-serif;cursor:pointer;border:2px solid #1B5E30;background:#1B5E30;color:#fff">✅ عندي رقم API موجود</button>
+            <button id="wa-scenario-new"      onclick="waSetScenario('new')"      style="flex:1;padding:10px 6px;border-radius:8px;font-size:12px;font-weight:800;font-family:Cairo,sans-serif;cursor:pointer;border:2px solid #e5e7eb;background:#f9fafb;color:#374151">🆕 محتاج أنشئ رقم جديد</button>
           </div>
-          <div id="wa-status-msg" style="margin-top:8px;font-size:12px"></div>
-        </div>
 
-        <!-- tab: templates -->
+          <!-- ── Block A: رقم موجود ── -->
+          <div id="wa-block-existing">
+
+            <!-- تحذير: لو مربوط بمنصة تانية -->
+            <div style="background:#fff7ed;border:1.5px solid #fdba74;border-radius:10px;padding:14px;margin-bottom:14px">
+              <div style="font-size:12px;font-weight:800;color:#9a3412;margin-bottom:8px">⚠️ لو رقمك مربوط بمنصة تانية (Respond.io / Wati / غيرها) — افصله الأول</div>
+              <div style="font-size:11px;color:#7c2d12;line-height:1.8">
+                <strong>الخطوات:</strong><br>
+                ① روح <a href="https://business.facebook.com" target="_blank" style="color:#9a3412;font-weight:700">Meta Business Suite</a> → من القائمة اليسرى اختار <strong>Settings (الإعدادات)</strong><br>
+                ② اضغط على <strong>Business Assets → WhatsApp Accounts</strong><br>
+                ③ اختار حساب الواتساب بتاعك → اضغط <strong>Settings</strong><br>
+                ④ اختار <strong>WhatsApp Manager</strong> → من القائمة اليسرى <strong>Phone Numbers</strong><br>
+                ⑤ اضغط على الرقم → اختار <strong>Settings</strong> → ابحث عن <strong>"Connected App"</strong> أو <strong>"Assigned Partners"</strong><br>
+                ⑥ اضغط <strong>Remove</strong> أو <strong>Revoke Access</strong> بجوار المنصة القديمة<br>
+                ⑦ بعدها بدقائق، الرقم بيكون حر وتقدر تربطه هنا ✅
+              </div>
+            </div>
+
+            <!-- الخطوات -->
+            <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px;margin-bottom:16px">
+              <div style="font-size:13px;font-weight:800;color:#166534;margin-bottom:12px">🎯 خطوات الربط (3 خطوات بس)</div>
+
+              <!-- خطوة 1 -->
+              <div style="display:flex;gap:10px;margin-bottom:14px">
+                <div style="width:24px;height:24px;border-radius:50%;background:#16a34a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+                <div>
+                  <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px">جيب الـ Phone Number ID</div>
+                  <div style="font-size:11px;color:#374151;line-height:1.8">
+                    ① افتح <a href="https://developers.facebook.com/apps" target="_blank" style="color:#1B5E30;font-weight:700">Meta for Developers</a> → اختار تطبيقك<br>
+                    ② من القائمة اليسرى: <strong>WhatsApp → API Setup</strong><br>
+                    ③ هتشوف قسم <strong>"Step 1: Select a phone number"</strong><br>
+                    ④ انسخ الرقم اللي جنبه <strong>"Phone number ID"</strong> — هو رقم طويل زي: 123456789012345
+                  </div>
+                  <a href="https://developers.facebook.com/apps" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-weight:700;color:#1B5E30;text-decoration:none;background:#dcfce7;padding:4px 10px;border-radius:6px;border:1px solid #86efac">🔗 افتح Meta Developers ↗</a>
+                </div>
+              </div>
+
+              <!-- خطوة 2 -->
+              <div style="display:flex;gap:10px;margin-bottom:14px">
+                <div style="width:24px;height:24px;border-radius:50%;background:#16a34a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+                <div>
+                  <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px">جيب الـ Access Token الدائم</div>
+                  <div style="font-size:11px;color:#374151;line-height:1.8">
+                    ① افتح <a href="https://business.facebook.com/settings/system-users" target="_blank" style="color:#1B5E30;font-weight:700">Business Settings → System Users</a><br>
+                    ② اضغط <strong>Add</strong> → أنشئ System User باسم مثلاً "Areej Bot" — النوع: Employee<br>
+                    ③ بعد الإنشاء اضغط عليه → اضغط <strong>Generate New Token</strong><br>
+                    ④ اختار التطبيق بتاعك من القائمة<br>
+                    ⑤ من الـ Permissions اختار: <strong>whatsapp_business_messaging</strong> و <strong>whatsapp_business_management</strong><br>
+                    ⑥ اضغط <strong>Generate Token</strong> → انسخ الـ Token واحفظه فوراً (مش هيتعرضلك تاني)<br>
+                    ⑦ ارجع للـ System User → اضغط <strong>Add Assets</strong> → اختار WhatsApp Account → منح الصلاحية
+                  </div>
+                  <a href="https://business.facebook.com/settings/system-users" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-weight:700;color:#1B5E30;text-decoration:none;background:#dcfce7;padding:4px 10px;border-radius:6px;border:1px solid #86efac">🔗 System Users ↗</a>
+                </div>
+              </div>
+
+              <!-- خطوة 3 -->
+              <div style="display:flex;gap:10px">
+                <div style="width:24px;height:24px;border-radius:50%;background:#16a34a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+                <div>
+                  <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px">اضبط الـ Webhook (مرة واحدة بس)</div>
+                  <div style="font-size:11px;color:#374151;line-height:1.8">
+                    ① في Meta Developers → تطبيقك → من القائمة اليسرى: <strong>WhatsApp → Configuration</strong><br>
+                    ② في قسم <strong>Webhook</strong>: اضغط <strong>Edit</strong><br>
+                    ③ في حقل <strong>Callback URL</strong>: انسخ الـ URL من الأسفل وضعه هنا<br>
+                    ④ في حقل <strong>Verify token</strong>: انسخ الـ Verify Token من الأسفل وضعه هنا<br>
+                    ⑤ اضغط <strong>Verify and Save</strong> — المفروض يقولك ✅ Verified<br>
+                    ⑥ بعدها اضغط <strong>Manage</strong> بجوار الـ Webhook → فعّل <strong>messages</strong> فقط
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div><!-- /wa-block-existing -->
+
+          <!-- ── Block B: رقم جديد ── -->
+          <div id="wa-block-new" style="display:none">
+
+            <div class="is-requirements-box">
+              <h4 style="margin:0 0 10px;font-size:13px;font-weight:800;color:#92400e">📋 اللي محتاجه قبل ما تبدأ</h4>
+              <ul style="margin:0;padding-right:18px;font-size:12px;color:#374151;line-height:2.2">
+                <li>✅ حساب <strong>Meta Business Manager</strong> موثّق باسمك أو اسم شركتك</li>
+                <li>✅ رقم هاتف <strong>غير مستخدم في أي واتساب</strong> — شخصي أو بيزنس — نهائياً</li>
+                <li>✅ بطاقة ائتمان أو Visa مربوطة بحساب Meta (للفوترة الشهرية)</li>
+                <li>✅ متصفح Chrome أو Edge (مش Firefox)</li>
+              </ul>
+            </div>
+
+            <div style="margin-bottom:16px;margin-top:14px">
+              <h4 style="font-size:13px;font-weight:800;color:#111827;margin:0 0 14px">🪜 الخطوات من الأول للآخر</h4>
+
+              <!-- خطوة 1 -->
+              <div style="display:flex;gap:10px;margin-bottom:16px">
+                <div style="width:24px;height:24px;border-radius:50%;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+                <div>
+                  <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px">أنشئ تطبيق على Meta Developers</div>
+                  <div style="font-size:11px;color:#4b5563;line-height:1.8">
+                    ① افتح <a href="https://developers.facebook.com/apps/create/" target="_blank" style="color:#1B5E30;font-weight:700">developers.facebook.com</a> → اضغط <strong>My Apps</strong> في الأعلى → اضغط <strong>Create App</strong><br>
+                    ② اختار <strong>Other</strong> → اضغط Next → اختار <strong>Business</strong> → اضغط Next<br>
+                    ③ أدخل اسم للتطبيق (مثلاً: Areej WhatsApp) → اختار Business Account → اضغط <strong>Create App</strong><br>
+                    ④ هيطلب منك تأكيد كلمة السر
+                  </div>
+                  <a href="https://developers.facebook.com/apps/create/" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-weight:700;color:#1B5E30;text-decoration:none;background:#f0fdf4;padding:4px 10px;border-radius:6px;border:1px solid #bbf7d0">🔗 فتح Meta Developers ↗</a>
+                </div>
+              </div>
+
+              <!-- خطوة 2 -->
+              <div style="display:flex;gap:10px;margin-bottom:16px">
+                <div style="width:24px;height:24px;border-radius:50%;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+                <div>
+                  <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px">أضف منتج WhatsApp للتطبيق</div>
+                  <div style="font-size:11px;color:#4b5563;line-height:1.8">
+                    ① بعد إنشاء التطبيق هتشوف صفحة "Add products to your app"<br>
+                    ② ابحث عن <strong>WhatsApp</strong> في القائمة → اضغط <strong>Set up</strong><br>
+                    ③ اختار أو أنشئ <strong>Meta Business Account</strong> → اضغط Continue<br>
+                    ④ هتتوجّه لصفحة <strong>WhatsApp Getting Started</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- خطوة 3 -->
+              <div style="display:flex;gap:10px;margin-bottom:16px">
+                <div style="width:24px;height:24px;border-radius:50%;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+                <div>
+                  <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px">أضف رقم هاتف حقيقي</div>
+                  <div style="font-size:11px;color:#4b5563;line-height:1.8">
+                    ① في صفحة Getting Started → اضغط <strong>Add phone number</strong><br>
+                    ② أدخل اسم شركتك واسم التصنيف<br>
+                    ③ أدخل رقم الهاتف الجديد → اختار طريقة التحقق (SMS أو مكالمة)<br>
+                    ④ أدخل الكود اللي وصلك → اضغط Next<br>
+                    ⑤ انتظر حتى يظهر الرقم في القائمة بحالة <strong>Connected</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- خطوة 4 -->
+              <div style="display:flex;gap:10px;margin-bottom:16px">
+                <div style="width:24px;height:24px;border-radius:50%;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>
+                <div>
+                  <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px">جيب الـ Phone Number ID والـ WABA ID</div>
+                  <div style="font-size:11px;color:#4b5563;line-height:1.8">
+                    ① في صفحة <strong>WhatsApp → API Setup</strong><br>
+                    ② هتشوف قسم "Step 1": بجوار رقمك يظهر الـ <strong>Phone number ID</strong> — انسخه<br>
+                    ③ فوقه بيظهر الـ <strong>WhatsApp Business Account ID</strong> — انسخه كمان
+                  </div>
+                </div>
+              </div>
+
+              <!-- خطوة 5 -->
+              <div style="display:flex;gap:10px;margin-bottom:16px">
+                <div style="width:24px;height:24px;border-radius:50%;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">5</div>
+                <div>
+                  <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px">أنشئ Access Token دائم</div>
+                  <div style="font-size:11px;color:#4b5563;line-height:1.8">
+                    ① افتح <a href="https://business.facebook.com/settings/system-users" target="_blank" style="color:#1B5E30;font-weight:700">Business Settings → System Users</a><br>
+                    ② اضغط <strong>Add</strong> → أنشئ System User باسم "Areej Bot" — النوع: Employee<br>
+                    ③ اضغط على المستخدم الجديد → اضغط <strong>Generate New Token</strong><br>
+                    ④ اختار تطبيقك → فعّل: <strong>whatsapp_business_messaging</strong> و <strong>whatsapp_business_management</strong><br>
+                    ⑤ اضغط <strong>Generate Token</strong> → انسخ الـ Token واحفظه (مش هيتعرضلك تاني!)<br>
+                    ⑥ ارجع للـ System User → <strong>Add Assets</strong> → WhatsApp Account → منح الصلاحية
+                  </div>
+                  <a href="https://business.facebook.com/settings/system-users" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-weight:700;color:#1B5E30;text-decoration:none;background:#f0fdf4;padding:4px 10px;border-radius:6px;border:1px solid #bbf7d0">🔗 System Users ↗</a>
+                </div>
+              </div>
+
+              <!-- خطوة 6 -->
+              <div style="display:flex;gap:10px">
+                <div style="width:24px;height:24px;border-radius:50%;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">6</div>
+                <div>
+                  <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px">اضبط الـ Webhook</div>
+                  <div style="font-size:11px;color:#4b5563;line-height:1.8">
+                    ① في Meta Developers → تطبيقك → <strong>WhatsApp → Configuration</strong><br>
+                    ② في قسم Webhook: اضغط <strong>Edit</strong><br>
+                    ③ في <strong>Callback URL</strong>: انسخ الـ URL من الأسفل وضعه<br>
+                    ④ في <strong>Verify token</strong>: انسخ الـ Verify Token من الأسفل وضعه<br>
+                    ⑤ اضغط <strong>Verify and Save</strong> — لازم يقولك ✅ Verified<br>
+                    ⑥ اضغط <strong>Manage</strong> بجوار الـ Webhook → فعّل <strong>messages</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div><!-- /wa-block-new -->
+
+          <!-- ══ حقول الربط (مشتركة بين السيناريوهين) ══ -->
+          <div style="background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;padding:14px;margin-top:4px">
+            <h4 style="font-size:13px;font-weight:800;color:#111827;margin:0 0 12px">⚙️ أدخل البيانات هنا</h4>
+
+            <div class="is-field-group">
+              <label class="is-field-label">Phone Number ID <span style="color:#ef4444">*</span></label>
+              <input id="wa-phone-id" class="is-field-input" placeholder="مثال: 123456789012345" />
+              <div style="font-size:10px;color:#9ca3af;margin-top:3px">رقم طويل من Meta Developers → WhatsApp → API Setup</div>
+            </div>
+
+            <div class="is-field-group">
+              <label class="is-field-label">WhatsApp Business Account ID <span style="color:#ef4444">*</span></label>
+              <input id="wa-account-id" class="is-field-input" placeholder="مثال: 123456789012345" />
+              <div style="font-size:10px;color:#9ca3af;margin-top:3px">من نفس الصفحة فوق الـ Phone Number ID</div>
+            </div>
+
+            <div class="is-field-group">
+              <label class="is-field-label">Access Token <span style="color:#ef4444">*</span></label>
+              <div style="position:relative">
+                <input id="wa-token" class="is-field-input" type="password" placeholder="EAABxxxx..." style="padding-left:70px" />
+                <button onclick="var f=document.getElementById('wa-token');f.type=f.type==='password'?'text':'password'" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:10px;color:#6b7280;cursor:pointer;font-family:Cairo,sans-serif">عرض</button>
+              </div>
+              <div style="font-size:10px;color:#f59e0b;margin-top:3px">⚠️ لازم يكون System User Token دائم — مش الـ Token المؤقت اللي صالح 24 ساعة بس</div>
+            </div>
+
+            <div class="is-field-group">
+              <label class="is-field-label">Callback URL — انسخه وضعه في Meta</label>
+              <div class="is-readonly-url">
+                <span id="is-wa-webhook-display" style="font-size:10px"></span>
+                <button class="is-copy-btn" onclick="copyInboxUrl('is-wa-webhook-display')" title="نسخ">📋</button>
+              </div>
+            </div>
+
+            <div class="is-field-group">
+              <label class="is-field-label">Verify Token — انسخه وضعه في Meta</label>
+              <div class="is-readonly-url">
+                <span id="is-wa-verify-token" style="font-size:11px;font-family:monospace"></span>
+                <button class="is-copy-btn" onclick="copyInboxUrl('is-wa-verify-token')" title="نسخ">📋</button>
+              </div>
+            </div>
+
+            <div class="is-action-buttons">
+              <button class="is-btn-primary" onclick="saveWhatsAppSettingsNew()">💾 حفظ الإعدادات</button>
+              <button class="is-btn-secondary" onclick="testWhatsAppConnection()" style="margin-right:8px">🔌 اختبار الاتصال</button>
+            </div>
+            <div id="wa-status-msg" style="margin-top:8px;font-size:12px"></div>
+          </div>
+
+        </div><!-- /wa-tab-settings -->
+
+        <!-- ═══ TAB: Templates ═══ -->
         <div id="wa-tab-templates" style="display:none;padding-top:14px">
-
-          <!-- status bar -->
           <div id="wa-tpl-status" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px"></div>
-
-          <!-- toolbar -->
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
             <span style="font-size:13px;font-weight:800;color:#111827">📝 الـ Templates بتاعتك</span>
             <div style="display:flex;gap:6px">
@@ -3513,22 +3573,16 @@
               <button onclick="waOpenNewTemplate()" style="padding:5px 12px;border-radius:7px;border:none;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;cursor:pointer;font-family:Cairo,sans-serif">➕ Template جديد</button>
             </div>
           </div>
-
-          <!-- list -->
           <div id="wa-tpl-list" style="display:flex;flex-direction:column;gap:8px;min-height:60px">
             <div style="text-align:center;color:#9ca3af;font-size:12px;padding:20px 0">اضغط "تحديث" لعرض الـ Templates</div>
           </div>
-
-          <!-- new/edit form -->
           <div id="wa-tpl-form" style="display:none;margin-top:16px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;padding:14px">
             <h4 style="margin:0 0 12px;font-size:13px;font-weight:800;color:#111827" id="wa-tpl-form-title">➕ Template جديد</h4>
-
             <div class="is-field-group">
               <label class="is-field-label">اسم الـ Template <span style="color:#ef4444">*</span></label>
               <input id="wa-tpl-name" class="is-field-input" placeholder="مثال: order_confirmation" style="font-family:monospace" />
-              <div style="font-size:10px;color:#9ca3af;margin-top:3px">حروف صغيرة + _ فقط — مثال: order_confirmation</div>
+              <div style="font-size:10px;color:#9ca3af;margin-top:3px">حروف إنجليزية صغيرة + أرقام + _ فقط — مثال: order_confirmation</div>
             </div>
-
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
               <div class="is-field-group" style="margin-bottom:0">
                 <label class="is-field-label">اللغة <span style="color:#ef4444">*</span></label>
@@ -3547,64 +3601,46 @@
                 </select>
               </div>
             </div>
-
             <div class="is-field-group">
               <label class="is-field-label">نص الرسالة (Body) <span style="color:#ef4444">*</span></label>
               <textarea id="wa-tpl-body" class="is-field-input" rows="4" placeholder="مثال: أهلاً {{1}}، طلبك رقم {{2}} جاهز للشحن. المبلغ: {{3}} جنيه." style="font-size:12px;resize:vertical" oninput="waUpdatePreview()"></textarea>
               <div style="font-size:10px;color:#9ca3af;margin-top:3px">استخدم {{1}} {{2}} للمتغيرات — كل رقم = متغير لازم تملأه لما تبعت الرسالة</div>
             </div>
-
-            <!-- preview -->
             <div style="background:#fff;border:1.5px solid #d1fae5;border-radius:8px;padding:10px;margin-bottom:12px">
               <div style="font-size:10px;font-weight:700;color:#6b7280;margin-bottom:6px">👁 معاينة (WhatsApp bubble)</div>
               <div id="wa-tpl-preview" style="background:#dcf8c6;padding:10px 14px;border-radius:10px;font-size:12px;color:#111827;line-height:1.7;min-height:36px;white-space:pre-wrap;direction:rtl;text-align:right"></div>
             </div>
-
             <input type="hidden" id="wa-tpl-edit-id" value="" />
-
             <div style="display:flex;gap:8px">
               <button onclick="waSaveTemplate()" style="flex:1;padding:9px;border-radius:8px;border:none;background:#1B5E30;color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:Cairo,sans-serif">🚀 إرسال لـ Meta للمراجعة</button>
               <button onclick="waCloseTemplateForm()" style="padding:9px 14px;border-radius:8px;border:1.5px solid #e5e7eb;background:#f9fafb;font-size:12px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">إلغاء</button>
             </div>
           </div>
-
         </div><!-- /wa-tab-templates -->
 
-        <!-- tab: analytics -->
+        <!-- ═══ TAB: تحليلات ═══ -->
         <div id="wa-tab-analytics" style="display:none;padding-top:14px">
-
-          <!-- refresh bar -->
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
             <span style="font-size:13px;font-weight:800;color:#111827">📊 تحليلات الواتساب</span>
             <button onclick="waLoadAnalytics()" style="padding:5px 12px;border-radius:7px;border:1.5px solid #e5e7eb;background:#f9fafb;font-size:11px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">🔄 تحديث</button>
           </div>
-
           <div id="wa-analytics-status" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px"></div>
-
-          <!-- KPI cards -->
           <div id="wa-analytics-cards" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
             <div style="text-align:center;color:#9ca3af;font-size:12px;padding:30px 0;grid-column:span 2">اضغط "تحديث" لعرض التحليلات</div>
           </div>
-
-          <!-- conversations breakdown -->
           <div id="wa-analytics-breakdown" style="display:none">
             <div style="font-size:12px;font-weight:800;color:#374151;margin-bottom:8px">تقسيم حسب نوع المحادثة</div>
             <div id="wa-analytics-breakdown-rows" style="display:flex;flex-direction:column;gap:6px"></div>
           </div>
-
-          <!-- cost estimate -->
           <div id="wa-analytics-cost" style="display:none;margin-top:14px;background:#fffbeb;border:1.5px solid #fde68a;border-radius:9px;padding:12px">
             <div style="font-size:12px;font-weight:800;color:#92400e;margin-bottom:6px">💰 تكلفة تقديرية للشهر الجاري</div>
             <div id="wa-analytics-cost-val" style="font-size:20px;font-weight:900;color:#78350f"></div>
             <div style="font-size:10px;color:#a16207;margin-top:3px">تقديري بناءً على أسعار Meta لمصر (EG) — <a href="https://developers.facebook.com/docs/whatsapp/pricing" target="_blank" style="color:#92400e">شوف الأسعار</a></div>
           </div>
-
-          <!-- local stats note -->
           <div style="margin-top:14px;background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:9px;padding:12px">
             <div style="font-size:12px;font-weight:800;color:#0369a1;margin-bottom:8px">📊 إحصائيات محلية (من بيانات Areej Pro)</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="wa-analytics-local"></div>
           </div>
-
         </div><!-- /wa-tab-analytics -->
 
       </div><!-- /detail-whatsapp -->
