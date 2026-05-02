@@ -33,33 +33,30 @@ async function startSession(userId) {
     try { await sessions[userId].client.destroy(); } catch(e) { console.error('[whatsapp-qr-service.js]', e.message); }
   }
 
-  sessions[userId] = { status: 'loading', qrDataUrl: null, phone: null, client: null };
+  sessions[userId] = { status: 'loading', qrDataUrl: null, phone: null, client: null, reconnectAttempts: 0 };
+
+  const CHROME_PATH = (() => {
+    try { const p = require('puppeteer'); const ep = p.executablePath(); if (require('fs').existsSync(ep)) return ep; } catch(_) {}
+    return '/usr/bin/chromium-browser';
+  })();
 
   const client = new Client({
-    authStrategy: new LocalAuth({
-      clientId: `user_${userId}`,
-      dataPath: SESSION_DIR
-    }),
+    authStrategy: new LocalAuth({ clientId: `user_${userId}`, dataPath: SESSION_DIR }),
+    takeoverOnConflict: true,   // لو في متصفح تاني — يأخذ الجلسة
+    takeoverTimeoutMs: 5000,
     puppeteer: {
       headless: true,
-      executablePath: (() => {
-        // Prefer puppeteer bundled Chrome; fallback to system chromium
-        try {
-          const p = require('puppeteer');
-          const ep = p.executablePath();
-          if (require('fs').existsSync(ep)) return ep;
-        } catch(_) {}
-        return '/usr/bin/chromium-browser';
-      })(),
+      executablePath: CHROME_PATH,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        // removed accelerated
-        // removed no-first-run
-        // removed no-zygote
         '--disable-gpu',
-        // removed single-process
+        '--disable-extensions',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--window-size=1280,800',
       ]
     }
   });
@@ -85,7 +82,28 @@ async function startSession(userId) {
     sessions[userId].status = 'connected';
     sessions[userId].phone = phone;
     sessions[userId].qrDataUrl = null;
+    sessions[userId].reconnectAttempts = 0; // reset on success
     console.log(`[WA-QR] User ${userId}: Connected as ${phone}`);
+
+    // Keepalive: طلب بسيط كل 30ث لمنع timeout
+    if (sessions[userId]._keepalive) clearInterval(sessions[userId]._keepalive);
+    sessions[userId]._keepalive = setInterval(async () => {
+      try {
+        const state = await client.getState();
+        if (state !== 'CONNECTED') {
+          console.log(`[WA-QR] User ${userId}: Keepalive detected state=${state}, marking disconnected`);
+          clearInterval(sessions[userId]._keepalive);
+          sessions[userId]._keepalive = null;
+          // trigger disconnect handler manually
+          client.emit('disconnected', 'KEEPALIVE_FAIL');
+        }
+      } catch(e) {
+        // client مات — emit disconnect
+        clearInterval(sessions[userId]?._keepalive);
+        if (sessions[userId]) sessions[userId]._keepalive = null;
+        client.emit('disconnected', 'KEEPALIVE_ERROR');
+      }
+    }, 30_000); // 30 ثانية
   }
 
   client.on('ready', markConnected);
@@ -108,9 +126,48 @@ async function startSession(userId) {
     console.log(`[WA-QR] User ${userId}: Auth failure`);
   });
 
-  client.on('disconnected', (reason) => {
-    sessions[userId].status = 'disconnected';
+  client.on('disconnected', async (reason) => {
     console.log(`[WA-QR] User ${userId}: Disconnected — ${reason}`);
+
+    // وقف الـ keepalive
+    if (sessions[userId]?._keepalive) {
+      clearInterval(sessions[userId]._keepalive);
+      sessions[userId]._keepalive = null;
+    }
+
+    // LOGOUT = المستخدم حذف الجلسة يدوياً — لا نعيد المحاولة
+    if (reason === 'LOGOUT') {
+      sessions[userId].status = 'disconnected';
+      return;
+    }
+
+    const attempts = (sessions[userId]?.reconnectAttempts || 0) + 1;
+    const MAX_ATTEMPTS = 5;
+
+    if (attempts > MAX_ATTEMPTS) {
+      console.log(`[WA-QR] User ${userId}: Max reconnect attempts reached`);
+      if (sessions[userId]) sessions[userId].status = 'disconnected';
+      return;
+    }
+
+    const delayMs = Math.min(5000 * attempts, 30000); // 5s, 10s, 15s, 20s, 25s
+    console.log(`[WA-QR] User ${userId}: Reconnecting in ${delayMs/1000}s (attempt ${attempts}/${MAX_ATTEMPTS})...`);
+    if (sessions[userId]) {
+      sessions[userId].status = 'loading';
+      sessions[userId].reconnectAttempts = attempts;
+    }
+
+    setTimeout(async () => {
+      // تأكد إن الجلسة لسه موجودة ومحتاجة reconnect
+      if (!sessions[userId] || sessions[userId].status === 'connected') return;
+      try {
+        try { await client.destroy(); } catch(_) {}
+        await startSession(userId);
+        console.log(`[WA-QR] User ${userId}: Reconnect attempt ${attempts} started`);
+      } catch(e) {
+        console.error(`[WA-QR] User ${userId}: Reconnect error:`, e.message);
+      }
+    }, delayMs);
   });
 
   client.on('message', async (msg) => {
@@ -146,6 +203,9 @@ function getStatus(userId) {
 async function stopSession(userId) {
   const s = sessions[userId];
   if (!s) return;
+  // وقف الـ keepalive أولاً
+  if (s._keepalive) { clearInterval(s._keepalive); s._keepalive = null; }
+  s.reconnectAttempts = 99; // منع أي reconnect متوقع
   try { await s.client.destroy(); } catch(e) { console.error('[whatsapp-qr-service.js]', e.message); }
   delete sessions[userId];
 }

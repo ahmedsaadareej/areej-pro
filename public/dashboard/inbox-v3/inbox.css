@@ -1916,13 +1916,17 @@
 .iv3-ctx-row-btn.amber:hover { background: #fffbeb; }
 
 /* ── Icon Bar Tooltip ──────────────────────────────────────────── */
+/* الـ iconbar دايماً على أقصى اليسار في RTL
+   → الـ tooltip يظهر على اليمين (نحو وسط الشاشة) */
 .iv3-ctx-icon-btn {
   position: relative;
 }
 .iv3-ctx-icon-btn::after {
   content: attr(title);
   position: absolute;
-  right: calc(100% + 10px);
+  /* في RTL الـ iconbar على اليسار → الـ tooltip يظهر يميناً */
+  left: calc(100% + 10px);
+  right: auto;
   top: 50%;
   transform: translateY(-50%);
   background: #1f2937;
@@ -1934,21 +1938,38 @@
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  transition: opacity .15s;
-  z-index: 100;
+  transition: opacity .18s;
+  z-index: 9999;
+  direction: rtl;
 }
 .iv3-ctx-icon-btn::before {
   content: '';
   position: absolute;
-  right: calc(100% + 4px);
+  left: calc(100% + 4px);
+  right: auto;
   top: 50%;
   transform: translateY(-50%);
   border: 5px solid transparent;
-  border-left-color: #1f2937;
+  border-right-color: #1f2937;
+  border-left-color: transparent;
   opacity: 0;
   pointer-events: none;
-  transition: opacity .15s;
-  z-index: 100;
+  transition: opacity .18s;
+  z-index: 9999;
 }
 .iv3-ctx-icon-btn:hover::after,
 .iv3-ctx-icon-btn:hover::before { opacity: 1; }
+
+/* لو الـ layout LTR (إنجليزي) → الـ iconbar على اليمين → الـ tooltip يظهر يساراً */
+[dir="ltr"] .iv3-ctx-icon-btn::after,
+body.ltr .iv3-ctx-icon-btn::after {
+  left: auto;
+  right: calc(100% + 10px);
+}
+[dir="ltr"] .iv3-ctx-icon-btn::before,
+body.ltr .iv3-ctx-icon-btn::before {
+  left: auto;
+  right: calc(100% + 4px);
+  border-right-color: transparent;
+  border-left-color: #1f2937;
+}
