@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/dashboard/css/main.css?v=22a33029">
 <link rel="stylesheet" href="/dashboard/css/inbox-v2.css?v=20260501">
-<link rel="stylesheet" href="/dashboard/inbox-v3/inbox.css?v=1777748413">
+<link rel="stylesheet" href="/dashboard/inbox-v3/inbox.css?v=1777748735">
 <script>document.documentElement.style.setProperty("--brand","#1B5E30");</script>
 </head>
 <body>
@@ -2616,8 +2616,8 @@
       <button class="iv3-ctx-icon-btn" id="iv3-ctx-btn-orders" onclick="iv3CtxToggleTab('orders')" title="الأوردرات">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
       </button>
-      <button class="iv3-ctx-icon-btn" id="iv3-ctx-btn-actions" onclick="iv3CtxToggleTab('actions')" title="إجراءات سريعة">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <button class="iv3-ctx-icon-btn" id="iv3-ctx-btn-pay" onclick="iv3CtxToggleTab('pay')" title="الدفع والفواتير">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
       </button>
       <button class="iv3-ctx-icon-btn" id="iv3-ctx-btn-notes" onclick="iv3CtxToggleTab('notes')" title="ملاحظات">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -2662,6 +2662,17 @@
           <span class="iv3-ctx-label">📍 مدينة</span>
           <span class="iv3-ctx-val" id="iv3-ctx-city">—</span>
         </div>
+        <!-- زر بروفايل CRM -->
+        <div style="padding:8px 0 2px;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="iv3-ctx-row-btn" onclick="iv3CtxOpenProfile()" id="iv3-ctx-profile-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1B5E30" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            بروفايل العميل
+          </button>
+          <button class="iv3-ctx-row-btn amber" onclick="iv3CtxAddContact()" id="iv3-ctx-add-btn" style="display:none">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            إضافة لـ CRM
+          </button>
+        </div>
       </div>
 
       <!-- CLV Badge -->
@@ -2672,48 +2683,46 @@
         <div class="iv3-balance-alert" id="iv3-balance-inner"></div>
       </div>
 
-      <!-- Quick actions -->
-      <div class="iv3-ctx-section" id="iv3-ctx-actions" style="display:none">
-        <div class="iv3-ctx-section-title">إجراءات سريعة</div>
-        <div class="iv3-ctx-actions">
-          <button class="iv3-ctx-act-btn" onclick="iv3CtxOpenProfile()" id="iv3-ctx-profile-btn">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B5E30" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <span class="iv3-ctx-act-label">بروفايل</span>
-          </button>
-          <button class="iv3-ctx-act-btn" onclick="iv3CtxNewInvoice()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-            <span class="iv3-ctx-act-label">فاتورة جديدة</span>
-          </button>
-          <button class="iv3-ctx-act-btn" onclick="iv3CtxNewOrder()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EA580C" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-            <span class="iv3-ctx-act-label">طلب جديد</span>
-          </button>
-          <button class="iv3-ctx-act-btn" onclick="iv3SendInvoice()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            <span class="iv3-ctx-act-label">بعت فاتورة</span>
-          </button>
-          <button class="iv3-ctx-act-btn" onclick="iv3CreatePayLink()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0891B2" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-            <span class="iv3-ctx-act-label">رابط دفع</span>
-          </button>
-          <!-- Add as client (if not in CRM) -->
-          <button class="iv3-ctx-act-btn full" id="iv3-ctx-add-btn" onclick="iv3CtxAddContact()" style="display:none;border-color:#FDE68A">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span class="iv3-ctx-act-label" style="color:#D97706">+ إضافة كعميل في CRM</span>
-          </button>
-        </div>
-      </div>
+      <!-- iv3-ctx-actions kept as empty hidden div for JS compatibility -->
+      <div id="iv3-ctx-actions" style="display:none"></div>
 
       <!-- Last invoices -->
       <div class="iv3-ctx-section" id="iv3-ctx-invoices" style="display:none">
-        <div class="iv3-ctx-section-title">آخر الفواتير</div>
+        <div class="iv3-ctx-section-title">
+          📄 آخر الفواتير
+          <button class="iv3-ctx-inline-btn" onclick="iv3CtxNewInvoice()" title="إنشاء فاتورة جديدة">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            فاتورة جديدة
+          </button>
+        </div>
         <div id="iv3-ctx-inv-list"></div>
       </div>
 
       <!-- Last orders -->
       <div class="iv3-ctx-section" id="iv3-ctx-orders" style="display:none">
-        <div class="iv3-ctx-section-title">آخر الأوردرات</div>
+        <div class="iv3-ctx-section-title">
+          📦 آخر الأوردرات
+          <button class="iv3-ctx-inline-btn" onclick="iv3CtxNewOrder()" title="إنشاء أوردر جديد">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            أوردر جديد
+          </button>
+        </div>
         <div id="iv3-ctx-ord-list"></div>
+      </div>
+
+      <!-- Pay section -->
+      <div class="iv3-ctx-section" id="iv3-ctx-pay" style="display:none">
+        <div class="iv3-ctx-section-title">💳 الدفع</div>
+        <div style="display:flex;flex-direction:column;gap:6px;padding:4px 0">
+          <button class="iv3-ctx-row-btn" onclick="iv3SendInvoice()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            إرسال فاتورة
+          </button>
+          <button class="iv3-ctx-row-btn" onclick="iv3CreatePayLink()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0891B2" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            إنشاء رابط دفع
+          </button>
+        </div>
       </div>
 
       <!-- Notes -->
@@ -5240,7 +5249,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="/dashboard/inbox-v3/inbox-conv.js?v=1777748413"></script>
 <script src="/dashboard/inbox-v3/inbox-chat.js?v=1777747195"></script>
 <script src="/dashboard/inbox-v3/inbox-reply.js?v=1777745561"></script>
-<script src="/dashboard/inbox-v3/inbox-context.js?v=1777748413"></script>
+<script src="/dashboard/inbox-v3/inbox-context.js?v=1777748735"></script>
 <script src="/dashboard/inbox-v3/inbox-init.js?v=1777732234"></script>
 <script src="/dashboard/js/inbox-settings.js?v=1777731233"></script>
 <script src="/dashboard/js/team-settings.js?v=4b6f9871"></script>

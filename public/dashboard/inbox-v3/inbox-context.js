@@ -63,9 +63,7 @@ function iv3RenderContactInfo(conv) {
     detailsEl.style.display = '';
   }
 
-  // إظهار الأزرار السريعة
-  const actionsEl = document.getElementById('iv3-ctx-actions');
-  if (actionsEl) actionsEl.style.display = '';
+  // iv3-ctx-actions لم يعد يُستخدم (تم دمج الإجراءات في كل section)
 }
 
 // ── سياق العميل (فواتير + أوردرات) ─────────────────────────
@@ -565,11 +563,11 @@ function iv3CtxAddContact() {
 // ── Icon Sidebar Tab System ────────────────────────────────────
 
 const IV3_CTX_TABS = {
-  contact:  { title: 'د⁠ بيانات العميل',    sections: ['iv3-ctx-header','iv3-ctx-details','iv3-ctx-clv','iv3-ctx-balance'] },
-  actions:  { title: '⚡ إجراءات سريعة',  sections: ['iv3-ctx-header','iv3-ctx-actions'] },
-  invoices: { title: '📄 الفواتير',         sections: ['iv3-ctx-header','iv3-ctx-clv','iv3-ctx-invoices'] },
-  orders:   { title: '📦 الأوردرات',         sections: ['iv3-ctx-header','iv3-ctx-orders'] },
-  notes:    { title: '📌 ملاحظات',          sections: ['iv3-ctx-header','iv3-ctx-notes'] },
+  contact:  { title: '👤 بيانات العميل',  sections: ['iv3-ctx-header','iv3-ctx-details','iv3-ctx-clv','iv3-ctx-balance'] },
+  invoices: { title: '📄 الفواتير',        sections: ['iv3-ctx-header','iv3-ctx-clv','iv3-ctx-invoices'] },
+  orders:   { title: '📦 الأوردرات',        sections: ['iv3-ctx-header','iv3-ctx-orders'] },
+  pay:      { title: '💳 الدفع والفواتير', sections: ['iv3-ctx-header','iv3-ctx-balance','iv3-ctx-pay'] },
+  notes:    { title: '📌 ملاحظات',         sections: ['iv3-ctx-header','iv3-ctx-notes'] },
 };
 
 let _iv3ActiveTab = null;
@@ -599,7 +597,7 @@ function iv3CtxToggleTab(tab) {
 
   // إظهار/إخفاء الـ sections
   const allSections = ['iv3-ctx-empty','iv3-ctx-header','iv3-ctx-details','iv3-ctx-clv',
-    'iv3-ctx-balance','iv3-ctx-actions','iv3-ctx-invoices','iv3-ctx-orders','iv3-ctx-notes'];
+    'iv3-ctx-balance','iv3-ctx-actions','iv3-ctx-invoices','iv3-ctx-orders','iv3-ctx-notes','iv3-ctx-pay'];
   const tabSections = IV3_CTX_TABS[tab]?.sections || [];
 
   allSections.forEach(id => {
@@ -636,7 +634,7 @@ function iv3ResetContextPanel() {
   if (emptyEl)  emptyEl.style.display  = '';
   if (headerEl) headerEl.style.display = 'none';
 
-  ['iv3-ctx-details','iv3-ctx-clv','iv3-ctx-balance','iv3-ctx-actions','iv3-ctx-invoices','iv3-ctx-orders','iv3-ctx-notes'].forEach(id => {
+  ['iv3-ctx-details','iv3-ctx-clv','iv3-ctx-balance','iv3-ctx-actions','iv3-ctx-invoices','iv3-ctx-orders','iv3-ctx-notes','iv3-ctx-pay'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });

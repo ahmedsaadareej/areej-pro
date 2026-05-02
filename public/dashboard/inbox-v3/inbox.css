@@ -1871,3 +1871,84 @@
   display: flex;
   flex-shrink: 0;
 }
+
+/* ── Context inline action buttons ────────────────────────────── */
+.iv3-ctx-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.iv3-ctx-inline-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1.5px solid #1B5E30;
+  border-radius: 6px;
+  background: #f0fdf4;
+  color: #1B5E30;
+  font-size: 11px;
+  font-family: Cairo, sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .12s;
+  white-space: nowrap;
+}
+.iv3-ctx-inline-btn:hover { background: #dcfce7; }
+
+.iv3-ctx-row-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #374151;
+  font-size: 12px;
+  font-family: Cairo, sans-serif;
+  cursor: pointer;
+  transition: background .12s, border-color .12s;
+  white-space: nowrap;
+}
+.iv3-ctx-row-btn:hover { background: #f9fafb; border-color: #d1d5db; }
+.iv3-ctx-row-btn.amber { border-color: #FDE68A; color: #D97706; }
+.iv3-ctx-row-btn.amber:hover { background: #fffbeb; }
+
+/* ── Icon Bar Tooltip ──────────────────────────────────────────── */
+.iv3-ctx-icon-btn {
+  position: relative;
+}
+.iv3-ctx-icon-btn::after {
+  content: attr(title);
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1f2937;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: Cairo, sans-serif;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s;
+  z-index: 100;
+}
+.iv3-ctx-icon-btn::before {
+  content: '';
+  position: absolute;
+  right: calc(100% + 4px);
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-left-color: #1f2937;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s;
+  z-index: 100;
+}
+.iv3-ctx-icon-btn:hover::after,
+.iv3-ctx-icon-btn:hover::before { opacity: 1; }
