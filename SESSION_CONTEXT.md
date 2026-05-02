@@ -35,6 +35,27 @@
 ## سجل الجلسات (الأحدث في الأعلى)
 
 ---
+## جلسة 2026-05-02 10:07 UTC
+
+### وقفت عند:
+- الملف: `public/dashboard/inbox-v3/inbox-reply.js` (آخر ملف في الجلسة)
+- آخر تغيير: إصلاح 3 ملفات v3 (context + chat + reply) + cache-busting
+
+### قرارات تقنية:
+- `/api/customers/by-phone` غير موجود — الصح هو `/api/crm/contacts/by-phone` (بيرجع `{ok, contact}`)
+- `/api/invoices` غير موجود في route عام — الصح `/api/system/invoices` (عبر routes-system)
+- `inbox_messages` حقوله: `content` (مش `message`)، `sent_at` (مش `created_at`)، `media_type` (مش `mime_type`)
+- `inbox_templates` حقوله: `name` (مش `title`)، `content`
+- `DELETE /api/system/inbox/conversations/:id` غير موجود — تم تحويل زر الحذف ليعمل `status=closed` بدلاً
+- الـ optimistic message في inbox-reply.js يجب أن يستخدم `content` و`sent_at` ليتوافق مع `iv3BuildMsgBubble`
+- Chromium headless مثبّت على السيرفر وشغّال، يُشغَّل يدوياً بـ: `/usr/bin/chromium-browser --headless=new --no-sandbox --disable-gpu --remote-debugging-port=18800 --remote-debugging-address=127.0.0.1 --disable-dev-shm-usage &`
+
+### المهمة الأولى للجلسة القادمة:
+- ربط WhatsApp QR بـ pro-test (يحتاج أحمد يمسح الـ QR) — ثم اختبار إرسال/استقبال رسالة حقيقية في inbox v3
+
+---
+
+---
 ## جلسة 2026-05-02 09:24 UTC
 
 ### وقفت عند:
