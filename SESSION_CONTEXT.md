@@ -35,6 +35,21 @@
 ## سجل الجلسات (الأحدث في الأعلى)
 
 ---
+## Session 2026-05-02 14:11 UTC
+- الحالة: تم الإكمال
+- ما تم إنجازه:
+  1. `saveAutoMessages()` — إضافة inline status feedback في `is-automsg-status` + try/catch (`inbox.js`)
+  2. `loadAdvancedAnalyticsIS()` — دالة جديدة في `inbox-settings.js` تجلب بيانات التحليلات الحقيقية وتعرض cards + platform breakdown
+  3. اختبار حي: `page-inbox-settings` يفتح صح، modal القديم مخفي، IDs موجودة، analytics تحمّل ✅
+- قرارات تقنية:
+  - `loadAdvancedAnalytics()` في `ui.js` تكتب في IDs مختلفة — الحل: alias منفصل `loadAdvancedAnalyticsIS()` يكتب في `adv-analytics-container-is`
+  - `saveAutoMessages()` تعمل على IDs بدون prefix — وده الكانوني الآن بعد توحيد جلسة 14:04
+- آخر Commit: 77353f1
+- نقطة البداية القادمة: `inbox-settings.js` + `index.html` — استكمال sections الفارغة (integrations-ai، chatbot) أو ربط WhatsApp QR
+
+---
+
+---
 ## Session 2026-05-02 14:04 UTC
 - الحالة: تم الإكمال
 - ما تم إنجازه:
