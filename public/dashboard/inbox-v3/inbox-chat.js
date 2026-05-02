@@ -132,7 +132,7 @@ function iv3BuildMsgBubble(msg) {
 }
 
 function iv3BuildMediaContent(msg) {
-  const url = msg.media_url || `/api/inbox/media-proxy/${msg.id}`;
+  const url = msg.media_url || `/api/system/inbox/media-proxy/${msg.id}`;
   const mimeType = msg.mime_type || '';
 
   if (mimeType.startsWith('image/')) {
@@ -287,7 +287,7 @@ async function iv3DeleteConv() {
   if (!confirm('هل تريد حذف هذه المحادثة؟')) return;
 
   try {
-    await fetch(`/api/inbox/conversations/${IV3.activeConvId}`, { method: 'DELETE' });
+    await fetch(`/api/system/inbox/conversations/${IV3.activeConvId}`, { method: 'DELETE' });
     IV3.convs = IV3.convs.filter(c => c.id !== IV3.activeConvId);
     IV3.activeConvId = null;
     IV3.activeConv = null;
