@@ -86,7 +86,7 @@ async function iv3LoadCustomerContext(conv) {
       }));
     } catch (_) {}
 
-    iv3RenderCustomerERP({ ...contact, recent_invoices: recentInvoices, recent_orders: recentOrders });
+    iv3RenderCustomerERP({ ...contact, invoice_count: contact.invoice_count || 0, recent_invoices: recentInvoices, recent_orders: recentOrders });
 
     // إخفاء زر "إضافة" لأنه موجود
     const addBtn = document.getElementById('iv3-ctx-add-btn');
@@ -102,7 +102,7 @@ async function iv3LoadCustomerContext(conv) {
     if (addBtn) addBtn.style.display = '';
 
     // إخفاء sections الفواتير والأوردرات
-    ['iv3-ctx-balance','iv3-ctx-invoices','iv3-ctx-orders'].forEach(id => {
+    ['iv3-ctx-clv','iv3-ctx-balance','iv3-ctx-invoices','iv3-ctx-orders'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
@@ -110,6 +110,31 @@ async function iv3LoadCustomerContext(conv) {
 }
 
 function iv3RenderCustomerERP(customer) {
+  // ── CLV Badge — عدد الفواتير + إجمالي المدفوع ──
+  const clvEl = document.getElementById('iv3-ctx-clv');
+  if (clvEl) {
+    const invCount   = customer.invoice_count  || 0;
+    const totalPaid  = customer.total_paid     || 0;
+    const totalInv   = customer.total_invoiced || 0;
+    if (invCount > 0 || totalPaid > 0) {
+      clvEl.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px;margin-bottom:8px">
+          <span style="font-size:20px">🏆</span>
+          <div style="flex:1">
+            <div style="font-size:11px;color:#166534;font-weight:700;margin-bottom:2px">قيمة العميل الكاملة</div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <span style="font-size:12px;color:#15803d;font-weight:700">${invCount} فاتورة</span>
+              <span style="font-size:12px;color:#166534">|  مدفوع: <strong>${Number(totalPaid).toLocaleString('ar-EG')} ج.م</strong></span>
+              ${totalInv > totalPaid ? `<span style="font-size:11px;color:#6b7280">(إجمالي: ${Number(totalInv).toLocaleString('ar-EG')} ج.م)</span>` : ''}
+            </div>
+          </div>
+        </div>`;
+      clvEl.style.display = '';
+    } else {
+      clvEl.style.display = 'none';
+    }
+  }
+
   // ── الرصيد ──
   const balanceEl = document.getElementById('iv3-ctx-balance');
   const balanceInner = document.getElementById('iv3-balance-inner');
@@ -531,7 +556,7 @@ function iv3ResetContextPanel() {
   if (emptyEl)  emptyEl.style.display  = '';
   if (headerEl) headerEl.style.display = 'none';
 
-  ['iv3-ctx-details','iv3-ctx-balance','iv3-ctx-actions','iv3-ctx-invoices','iv3-ctx-orders','iv3-ctx-notes'].forEach(id => {
+  ['iv3-ctx-details','iv3-ctx-clv','iv3-ctx-balance','iv3-ctx-actions','iv3-ctx-invoices','iv3-ctx-orders','iv3-ctx-notes'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });

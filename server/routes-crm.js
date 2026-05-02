@@ -91,7 +91,14 @@ router.get('/contacts/by-phone', requireAuth, (req, res) => {
     const phone = (req.query.phone || '').trim().replace(/^0+/, '');
     if (!phone) return res.json({ ok: false });
     const row = db.prepare('SELECT * FROM crm_contacts WHERE phone LIKE ?').get('%'+phone);
-    res.json({ ok: !!row, contact: row || null });
+    if (!row) return res.json({ ok: false, contact: null });
+    // عدد الفواتير من sys_invoices
+    let invoice_count = 0;
+    try {
+      const cnt = db.prepare('SELECT COUNT(*) as cnt FROM sys_invoices WHERE contact_id=?').get(row.id);
+      invoice_count = cnt?.cnt || 0;
+    } catch (_) {}
+    res.json({ ok: true, contact: { ...row, invoice_count } });
   } catch(e) { res.json({ ok: false }); }
 });
 
