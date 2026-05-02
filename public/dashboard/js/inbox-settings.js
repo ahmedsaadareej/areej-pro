@@ -40,6 +40,7 @@ function showInboxSettingsSection(section) {
   currentInboxSettingsSection = section;
   // Load section data
   if (section === 'automation-keywords') { loadKeywordsList(); }
+  if (section === 'automation-automsg')  { typeof loadAutoMessages === 'function' && loadAutoMessages(); }
   if (section === 'content-labels') { loadLabelsListIS(); }
   if (section === 'content-templates') { loadTemplatesListIS(); }
   if (section === 'broadcast-send') { bc2LoadHistory(); }

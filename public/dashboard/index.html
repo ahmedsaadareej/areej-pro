@@ -2767,24 +2767,24 @@
         <div style="background:#fff3cd;border-radius:10px;padding:14px;margin-bottom:14px">
           <div style="font-size:13px;font-weight:800;color:#856404;margin-bottom:10px">👋 رسالة الترحيب</div>
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;margin-bottom:8px">
-            <input type="checkbox" id="auto-welcome-active" onchange="saveAutoMessages()">
+            <input type="checkbox" id="_lgcy_auto-welcome-active" onchange="saveAutoMessages()">
             تفعيل رسالة ترحيب للعملاء الجدد
           </label>
-          <textarea id="auto-welcome-msg" rows="2" placeholder="مرحباً! شكراً لتواصلك معنا 🌿 سنرد عليك في أقرب وقت." style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:12px;resize:vertical"></textarea>
+          <textarea id="_lgcy_auto-welcome-msg" rows="2" placeholder="مرحباً! شكراً لتواصلك معنا 🌿 سنرد عليك في أقرب وقت." style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:12px;resize:vertical"></textarea>
         </div>
         <div style="background:#e0f2fe;border-radius:10px;padding:14px">
           <div style="font-size:13px;font-weight:800;color:#0369a1;margin-bottom:10px">🌙 رسالة خارج أوقات العمل</div>
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;margin-bottom:8px">
-            <input type="checkbox" id="auto-away-active" onchange="saveAutoMessages()">
+            <input type="checkbox" id="_lgcy_auto-away-active" onchange="saveAutoMessages()">
             تفعيل رد تلقائي خارج أوقات العمل
           </label>
           <div style="display:flex;gap:8px;margin-bottom:8px">
             <div style="flex:1"><label style="font-size:11px;color:#6b7280">من الساعة</label>
-              <input type="time" id="auto-away-start" value="22:00" style="width:100%;padding:6px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px"></div>
+              <input type="time" id="_lgcy_auto-away-start" value="22:00" style="width:100%;padding:6px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px"></div>
             <div style="flex:1"><label style="font-size:11px;color:#6b7280">إلى الساعة</label>
-              <input type="time" id="auto-away-end" value="09:00" style="width:100%;padding:6px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px"></div>
+              <input type="time" id="_lgcy_auto-away-end" value="09:00" style="width:100%;padding:6px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px"></div>
           </div>
-          <textarea id="auto-away-msg" rows="2" placeholder="شكراً لتواصلك! نحن خارج أوقات العمل الآن. سنرد عليك صباح الغد إن شاء الله ☀️" style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:12px;resize:vertical"></textarea>
+          <textarea id="_lgcy_auto-away-msg" rows="2" placeholder="شكراً لتواصلك! نحن خارج أوقات العمل الآن. سنرد عليك صباح الغد إن شاء الله ☀️" style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:12px;resize:vertical"></textarea>
           <button onclick="saveAutoMessages()" style="background:var(--brand,#1B5E30);color:#fff;border:none;padding:7px 14px;border-radius:8px;font-family:Cairo,sans-serif;font-size:12px;font-weight:700;cursor:pointer;margin-top:6px">✅ حفظ</button>
         </div>
       </div>
@@ -3597,11 +3597,27 @@
       <div class="is-card">
         <div style="font-size:13px;font-weight:800;color:#856404;margin-bottom:10px">👋 رسالة الترحيب</div>
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;margin-bottom:8px">
-          <input type="checkbox" id="is-auto-welcome-active" onchange="saveAutoMessages()">
+          <input type="checkbox" id="auto-welcome-active">
           تفعيل رسالة ترحيب للعملاء الجدد
         </label>
-        <textarea id="is-auto-welcome-msg" rows="2" class="is-field-input" style="resize:vertical" placeholder="مرحباً! شكراً لتواصلك معنا 🌿"></textarea>
+        <textarea id="auto-welcome-msg" rows="2" class="is-field-input" style="resize:vertical" placeholder="مرحباً! شكراً لتواصلك معنا 🌿 سنرد عليك في أقرب وقت."></textarea>
       </div>
+      <div class="is-card" style="margin-top:12px">
+        <div style="font-size:13px;font-weight:800;color:#0369a1;margin-bottom:10px">🌙 رسالة خارج أوقات العمل</div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;margin-bottom:8px">
+          <input type="checkbox" id="auto-away-active">
+          تفعيل رد تلقائي خارج أوقات العمل
+        </label>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <div style="flex:1"><label class="is-field-label">من الساعة</label>
+            <input type="time" id="auto-away-start" value="22:00" class="is-field-input"></div>
+          <div style="flex:1"><label class="is-field-label">إلى الساعة</label>
+            <input type="time" id="auto-away-end" value="09:00" class="is-field-input"></div>
+        </div>
+        <textarea id="auto-away-msg" rows="2" class="is-field-input" style="resize:vertical" placeholder="شكراً لتواصلك! نحن خارج أوقات العمل الآن. سنرد عليك صباح الغد إن شاء الله ☀️"></textarea>
+      </div>
+      <button onclick="saveAutoMessages()" class="is-btn-primary" style="margin-top:12px">✅ حفظ الرسائل التلقائية</button>
+      <div id="is-automsg-status" style="font-size:12px;margin-top:8px"></div>
     </div>
 
     <!-- ═══ SECTION: automation-chatbot ═══ -->
