@@ -452,3 +452,84 @@ function iv3StatusLabel(status) {
 function iv3CloseModal(id) {
   document.getElementById(id)?.remove();
 }
+
+// ── Snooze ──────────────────────────────────────────────────
+
+function iv3SnoozeConv() {
+  if (!IV3.activeConvId) return;
+
+  const options = [
+    { label: 'في 30 دقيقة', mins: 30 },
+    { label: 'في ساعة',     mins: 60 },
+    { label: 'في 3 ساعات',  mins: 180 },
+    { label: 'غداً',        mins: 1440 },
+    { label: 'بعد أسبوع',   mins: 10080 },
+  ];
+
+  const btns = options.map(o =>
+    `<button class="iv3-snooze-opt" onclick="iv3ConfirmSnooze(${o.mins})">${iv3EscHtml(o.label)}</button>`
+  ).join('');
+
+  const html = `
+    <div class="iv3-modal-overlay" id="iv3-snooze-modal" onclick="iv3CloseModal('iv3-snooze-modal')">
+      <div class="iv3-modal" onclick="event.stopPropagation()" style="max-width:320px">
+        <div class="iv3-modal-title">⏰ تأجيل المحادثة</div>
+        <p style="font-size:12px;color:#6B7280;margin:0 0 12px">
+          ستختفي المحادثة مؤقتاً وتعود تلقائياً بعد المدة المختارة
+        </p>
+        <div class="iv3-snooze-opts">${btns}</div>
+        <div class="iv3-modal-actions" style="margin-top:12px">
+          <button onclick="iv3CloseModal('iv3-snooze-modal')" class="iv3-modal-cancel">إلغاء</button>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+async function iv3ConfirmSnooze(minutes) {
+  iv3CloseModal('iv3-snooze-modal');
+  if (!IV3.activeConvId) return;
+
+  try {
+    const result = await IV3_API.snoozeConv(IV3.activeConvId, minutes);
+    if (!result.ok) throw new Error(result.error || 'خطأ غير متوقع');
+
+    // تحديث الحالة في الـ state
+    if (IV3.activeConv) IV3.activeConv.status = 'snoozed';
+    iv3UpdateConvInList({ id: IV3.activeConvId, status: 'snoozed' });
+
+    // تحديث الـ selector
+    const sel = document.getElementById('iv3-status-sel');
+    if (sel) {
+      // أضف option snoozed لو مش موجودة
+      if (!sel.querySelector('option[value="snoozed"]')) {
+        const opt = document.createElement('option');
+        opt.value = 'snoozed';
+        opt.textContent = '⏰ مؤجلة';
+        sel.appendChild(opt);
+      }
+      sel.value = 'snoozed';
+      sel.className = 'iv3-status-sel snoozed';
+    }
+
+    if (result.snoozed_until) {
+      const wakeLabel = iv3FormatSnoozeTime(result.snoozed_until);
+      iv3Toast(`⏰ تم التأجيل حتى ${wakeLabel}`, 'info');
+    } else {
+      iv3Toast('تم تأجيل المحادثة', 'info');
+    }
+  } catch (e) {
+    iv3Toast('فشل التأجيل: ' + e.message, 'error');
+  }
+}
+
+function iv3FormatSnoozeTime(isoStr) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  const now = new Date();
+  const diffMin = Math.round((d - now) / 60000);
+  if (diffMin < 60)   return `${diffMin} دقيقة`;
+  if (diffMin < 1440) return `${Math.round(diffMin / 60)} ساعة`;
+  return d.toLocaleDateString('ar-EG', { weekday: 'long', hour: '2-digit', minute: '2-digit' });
+}

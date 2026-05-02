@@ -1,6 +1,9 @@
 /**
  * Inbox Routes — /api/system/inbox/*, /api/system/marketplace/*
  * Mounted via routes-system.js → router.use('/', inboxRoutes)
+ *
+ * ⚠️  قبل أي تعديل — اقرأ /home/areej/areej-pro/PROJECT.md أولاً
+ * ⚠️  بعد أي تعديل  — حدِّث PROJECT.md فوراً
  */
 'use strict';
 const express     = require('express');
@@ -1903,6 +1906,66 @@ router.put('/inbox/conversations/:id/status', requireAuth, (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
+// POST /api/system/inbox/conversations/:id/snooze
+// body: { minutes: 30 | 60 | 180 | 1440 | 0 }  — 0 = إلغاء snooze
+router.post('/inbox/conversations/:id/snooze', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    // migrate: إضافة عمود snoozed_until لو مش موجود
+    const cols = db.prepare('PRAGMA table_info(inbox_conversations)').all().map(c => c.name);
+    if (!cols.includes('snoozed_until')) {
+      db.prepare('ALTER TABLE inbox_conversations ADD COLUMN snoozed_until TEXT').run();
+    }
+
+    const { minutes } = req.body;
+    const mins = parseInt(minutes, 10);
+
+    if (mins === 0) {
+      // إلغاء snooze — أعِد الحالة لـ open
+      db.prepare('UPDATE inbox_conversations SET snoozed_until=NULL, status=? WHERE id=?')
+        .run('open', req.params.id);
+      return res.json({ ok: true, action: 'unsnooze' });
+    }
+
+    if (isNaN(mins) || mins < 1 || mins > 10080) {
+      return res.json({ ok: false, error: 'قيمة الوقت غير صالحة' });
+    }
+
+    // احسب وقت الإيقاظ
+    const wakeAt = new Date(Date.now() + mins * 60 * 1000).toISOString();
+
+    db.prepare('UPDATE inbox_conversations SET snoozed_until=?, status=? WHERE id=?')
+      .run(wakeAt, 'snoozed', req.params.id);
+
+    res.json({ ok: true, action: 'snoozed', snoozed_until: wakeAt });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// GET /api/system/inbox/snooze-wakeup
+// يُستدعى من polling لإيقاظ المحادثات التي انتهى وقت snooze-ها
+router.get('/inbox/snooze-wakeup', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const cols = db.prepare('PRAGMA table_info(inbox_conversations)').all().map(c => c.name);
+    if (!cols.includes('snoozed_until')) return res.json({ ok: true, woken: [] });
+
+    const now = new Date().toISOString();
+    const due = db.prepare(`
+      SELECT id FROM inbox_conversations
+      WHERE status='snoozed' AND snoozed_until IS NOT NULL AND snoozed_until <= ?
+    `).all(now);
+
+    if (due.length) {
+      const ids = due.map(r => r.id);
+      const placeholders = ids.map(() => '?').join(',');
+      db.prepare(`UPDATE inbox_conversations SET status='open', snoozed_until=NULL WHERE id IN (${placeholders})`)
+        .run(...ids);
+    }
+
+    res.json({ ok: true, woken: due.map(r => r.id) });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
 // GET /api/system/inbox/search?q=xxx
 router.get('/inbox/search', requireAuth, (req, res) => {
   const db = req.db;
@@ -1969,7 +2032,7 @@ router.get('/inbox/agents', requireAuth, (req, res) => {
   const db = req.db;
   try {
     const agents = db.prepare(`
-      SELECT u.id, u.name, u.email, u.inbox_active, u.max_concurrent,
+      SELECT u.id, u.name, u.email, u.inbox_active, u.max_concurrent, u.permissions, u.active,
              s.status as agent_status,
              COUNT(c.id) as active_convs
       FROM tenant_users u
@@ -1980,16 +2043,64 @@ router.get('/inbox/agents', requireAuth, (req, res) => {
       GROUP BY u.id
     `).all();
     const isOwner = !req.tenantUser;
+    // إضافة perms object لكل agent
+    const agentsWithPerms = agents.map(a => {
+      let perms = {};
+      try { perms = JSON.parse(a.permissions || '{}'); } catch(e) {}
+      return { ...a, perms };
+    });
     res.json({
       ok: true,
       isOwner,
       currentUserId: req.tenantUser?.id || null,
       agents: [
-        { id: req.user.id, name: req.user.name, email: req.user.email, is_owner: true, agent_status: 'online', active_convs: 0 },
-        ...agents
+        { id: req.user.id, name: req.user.name, email: req.user.email, is_owner: true, agent_status: 'online', active_convs: 0, perms: {} },
+        ...agentsWithPerms
       ]
     });
   } catch(e) { res.json({ ok:false, error:e.message }); }
+});
+
+// POST /api/system/inbox/user-perms — تعديل صلاحيات/إعدادات موظف في الـ Inbox
+router.post('/inbox/user-perms', requireAuth, (req, res) => {
+  const db = req.db;
+  const isOwner = !req.tenantUser;
+  if (!isOwner) return res.json({ ok: false, error: 'غير مصرح' });
+
+  const { user_id, perm, value } = req.body;
+  if (!user_id || !perm) return res.json({ ok: false, error: 'بيانات ناقصة' });
+
+  try {
+    const user = db.prepare('SELECT id, permissions, active, inbox_active, max_concurrent FROM tenant_users WHERE id=?').get(user_id);
+    if (!user) return res.json({ ok: false, error: 'مستخدم غير موجود' });
+
+    // حقول خاصة غير JSON
+    if (perm === 'inbox_active') {
+      db.prepare('UPDATE tenant_users SET inbox_active=? WHERE id=?').run(value ? 1 : 0, user_id);
+      return res.json({ ok: true });
+    }
+    if (perm === 'max_concurrent') {
+      // محاولة تحديث عمود max_concurrent لو كان موجود
+      try {
+        db.prepare('ALTER TABLE tenant_users ADD COLUMN max_concurrent INTEGER DEFAULT 10').run();
+      } catch(e) { /* column already exists */ }
+      db.prepare('UPDATE tenant_users SET max_concurrent=? WHERE id=?').run(parseInt(value)||10, user_id);
+      return res.json({ ok: true });
+    }
+
+    // صلاحيات JSON
+    const ALLOWED_PERMS = ['inbox.view_all','inbox.assign','inbox.delete','inbox.export','inbox.admin','full_access'];
+    if (!ALLOWED_PERMS.includes(perm)) return res.json({ ok: false, error: 'صلاحية غير معروفة' });
+
+    let perms = {};
+    try { perms = JSON.parse(user.permissions || '{}'); } catch(e) { perms = {}; }
+    if (value) perms[perm] = true;
+    else delete perms[perm];
+    db.prepare('UPDATE tenant_users SET permissions=? WHERE id=?').run(JSON.stringify(perms), user_id);
+    return res.json({ ok: true, perms });
+  } catch(e) {
+    return res.json({ ok: false, error: e.message });
+  }
 });
 
 // GET /api/system/inbox/me — معلومات المستخدم الحالي في الـ Inbox

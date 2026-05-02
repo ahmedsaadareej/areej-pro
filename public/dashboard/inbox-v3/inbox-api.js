@@ -191,4 +191,15 @@ const IV3_API = {
     return data;
   },
 
+  async snoozeConv(convId, minutes) {
+    const data = await this._post(`/api/system/inbox/conversations/${convId}/snooze`, { minutes });
+    if (!data) throw new Error('فشل الـ snooze');
+    return data;
+  },
+
+  async checkSnoozeWakeup() {
+    const data = await this._get('/api/system/inbox/snooze-wakeup');
+    return data;
+  },
+
 };

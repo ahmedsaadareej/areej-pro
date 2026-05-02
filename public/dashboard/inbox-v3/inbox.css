@@ -1455,3 +1455,40 @@
   border-color: var(--brand, #1B5E30);
   background: #F0FDF4;
 }
+
+/* ── Snooze Options Modal ───────────────────────────────── */
+.iv3-snooze-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.iv3-snooze-opt {
+  background: #F9FAFB;
+  border: 1.5px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: right;
+  transition: background .15s, border-color .15s, color .15s;
+  color: #374151;
+}
+.iv3-snooze-opt:hover {
+  background: #F0FDF4;
+  border-color: var(--brand, #1B5E30);
+  color: var(--brand, #1B5E30);
+}
+
+/* حالة snoozed في قائمة المحادثات */
+.iv3-conv-item[data-status="snoozed"] .iv3-conv-name::after {
+  content: ' ⏰';
+  font-size: 10px;
+  opacity: 0.6;
+}
+/* لون status selector لحالة snoozed */
+.iv3-status-sel.snoozed {
+  background: #FFF7ED;
+  color: #D97706;
+  border-color: #FCD34D;
+}

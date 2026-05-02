@@ -58,6 +58,21 @@ function iv3StopPolling() {
 }
 
 async function iv3PollUpdate() {
+  // تحقق من محادثات Snooze التي حان وقت إيقاظها
+  try {
+    const wakeResult = await IV3_API.checkSnoozeWakeup();
+    if (wakeResult?.woken?.length) {
+      wakeResult.woken.forEach(wokenId => {
+        const conv = IV3.convs.find(c => c.id === wokenId);
+        if (conv) {
+          conv.status = 'open';
+          iv3UpdateConvInList({ id: wokenId, status: 'open' });
+        }
+      });
+      iv3Toast(`⏰ ${wakeResult.woken.length} محادثة عادت من التأجيل`, 'info');
+    }
+  } catch(e) { /* تجاهل */ }
+
   // تحديث قائمة المحادثات في الخلفية
   try {
     const data = await IV3_API.getConversations({
