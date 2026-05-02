@@ -3052,19 +3052,31 @@ async function saveChatbotSettings() {
 }
 
 async function saveAutoMessages() {
-  const d = await apiFetch('/api/system/inbox/auto-messages', {
-    method: 'POST',
-    body: JSON.stringify({
-      welcome_active: document.getElementById('auto-welcome-active')?.checked,
-      welcome_message: document.getElementById('auto-welcome-msg')?.value.trim(),
-      away_active: document.getElementById('auto-away-active')?.checked,
-      away_message: document.getElementById('auto-away-msg')?.value.trim(),
-      away_start: document.getElementById('auto-away-start')?.value,
-      away_end: document.getElementById('auto-away-end')?.value
-    })
-  });
-  if (d.ok) showToast('✅ تم حفظ الردود التلقائية');
-  else showToast('❌ ' + (d.error||'خطأ'));
+  const statusEl = document.getElementById('is-automsg-status');
+  if (statusEl) statusEl.innerHTML = '<span style="color:#6b7280">جاري الحفظ...</span>';
+  try {
+    const d = await apiFetch('/api/system/inbox/auto-messages', {
+      method: 'POST',
+      body: JSON.stringify({
+        welcome_active: document.getElementById('auto-welcome-active')?.checked,
+        welcome_message: document.getElementById('auto-welcome-msg')?.value.trim(),
+        away_active: document.getElementById('auto-away-active')?.checked,
+        away_message: document.getElementById('auto-away-msg')?.value.trim(),
+        away_start: document.getElementById('auto-away-start')?.value,
+        away_end: document.getElementById('auto-away-end')?.value
+      })
+    });
+    if (d.ok) {
+      if (statusEl) statusEl.innerHTML = '<span style="color:#16a34a;font-weight:700">✅ تم الحفظ</span>';
+      if (typeof showToast === 'function') showToast('✅ تم حفظ الردود التلقائية');
+      setTimeout(() => { if (statusEl) statusEl.innerHTML = ''; }, 3000);
+    } else {
+      if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444">❌ ' + (d.error||'خطأ') + '</span>';
+      if (typeof showToast === 'function') showToast('❌ ' + (d.error||'خطأ'));
+    }
+  } catch(e) {
+    if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444">❌ ' + e.message + '</span>';
+  }
 }
 
 function switchInboxPlatform(plat, btn) {
