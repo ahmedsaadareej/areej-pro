@@ -3487,6 +3487,7 @@
         <div style="display:flex;gap:6px;margin-bottom:0;border-bottom:2px solid #e5e7eb;padding-bottom:0">
           <button id="wa-tab-btn-settings" onclick="waShowTab('settings')" style="padding:8px 14px;border:none;border-bottom:2.5px solid #1B5E30;background:none;font-size:12px;font-weight:800;color:#1B5E30;cursor:pointer;font-family:Cairo,sans-serif;margin-bottom:-2px">⚙️ إعدادات الربط</button>
           <button id="wa-tab-btn-templates" onclick="waShowTab('templates')" style="padding:8px 14px;border:none;border-bottom:2.5px solid transparent;background:none;font-size:12px;font-weight:800;color:#6b7280;cursor:pointer;font-family:Cairo,sans-serif;margin-bottom:-2px">📝 Templates</button>
+          <button id="wa-tab-btn-analytics" onclick="waShowTab('analytics')" style="padding:8px 14px;border:none;border-bottom:2.5px solid transparent;background:none;font-size:12px;font-weight:800;color:#6b7280;cursor:pointer;font-family:Cairo,sans-serif;margin-bottom:-2px">📊 تحليلات</button>
         </div>
 
         <!-- tab: settings -->
@@ -3568,6 +3569,43 @@
           </div>
 
         </div><!-- /wa-tab-templates -->
+
+        <!-- tab: analytics -->
+        <div id="wa-tab-analytics" style="display:none;padding-top:14px">
+
+          <!-- refresh bar -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <span style="font-size:13px;font-weight:800;color:#111827">📊 تحليلات الواتساب</span>
+            <button onclick="waLoadAnalytics()" style="padding:5px 12px;border-radius:7px;border:1.5px solid #e5e7eb;background:#f9fafb;font-size:11px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">🔄 تحديث</button>
+          </div>
+
+          <div id="wa-analytics-status" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px"></div>
+
+          <!-- KPI cards -->
+          <div id="wa-analytics-cards" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+            <div style="text-align:center;color:#9ca3af;font-size:12px;padding:30px 0;grid-column:span 2">اضغط "تحديث" لعرض التحليلات</div>
+          </div>
+
+          <!-- conversations breakdown -->
+          <div id="wa-analytics-breakdown" style="display:none">
+            <div style="font-size:12px;font-weight:800;color:#374151;margin-bottom:8px">تقسيم حسب نوع المحادثة</div>
+            <div id="wa-analytics-breakdown-rows" style="display:flex;flex-direction:column;gap:6px"></div>
+          </div>
+
+          <!-- cost estimate -->
+          <div id="wa-analytics-cost" style="display:none;margin-top:14px;background:#fffbeb;border:1.5px solid #fde68a;border-radius:9px;padding:12px">
+            <div style="font-size:12px;font-weight:800;color:#92400e;margin-bottom:6px">💰 تكلفة تقديرية للشهر الجاري</div>
+            <div id="wa-analytics-cost-val" style="font-size:20px;font-weight:900;color:#78350f"></div>
+            <div style="font-size:10px;color:#a16207;margin-top:3px">تقديري بناءً على أسعار Meta لمصر (EG) — <a href="https://developers.facebook.com/docs/whatsapp/pricing" target="_blank" style="color:#92400e">شوف الأسعار</a></div>
+          </div>
+
+          <!-- local stats note -->
+          <div style="margin-top:14px;background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:9px;padding:12px">
+            <div style="font-size:12px;font-weight:800;color:#0369a1;margin-bottom:8px">📊 إحصائيات محلية (من بيانات Areej Pro)</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="wa-analytics-local"></div>
+          </div>
+
+        </div><!-- /wa-tab-analytics -->
 
       </div><!-- /detail-whatsapp -->
 

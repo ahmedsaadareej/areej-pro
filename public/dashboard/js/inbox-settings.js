@@ -371,7 +371,7 @@ async function testWhatsAppConnection() {
 // WhatsApp API — Tab switcher
 // ──────────────────────────────────────────────────────────────
 function waShowTab(tab) {
-  const tabs = ['settings', 'templates'];
+  const tabs = ['settings', 'templates', 'analytics'];
   tabs.forEach(t => {
     const panel = document.getElementById('wa-tab-' + t);
     const btn   = document.getElementById('wa-tab-btn-' + t);
@@ -383,6 +383,124 @@ function waShowTab(tab) {
     btn.style.fontWeight = active ? '800' : '700';
   });
   if (tab === 'templates') waLoadTemplates();
+  if (tab === 'analytics') waLoadAnalytics();
+}
+
+// ──────────────────────────────────────────────────────────────
+// WhatsApp Analytics Dashboard
+// ──────────────────────────────────────────────────────────────
+const WA_TIER_LABELS = {
+  TIER_50:          { label: 'Tier 1', limit: '1,000 محادثة/يوم',  color: '#6b7280' },
+  TIER_250:         { label: 'Tier 2', limit: '10,000 محادثة/يوم', color: '#0369a1' },
+  TIER_1K:          { label: 'Tier 3', limit: '100,000 محادثة/يوم', color: '#166534' },
+  UNLIMITED:        { label: 'Unlimited', limit: 'غير محدود', color: '#7c3aed' },
+  TIER_NOT_STARTED: { label: 'لم يبدأ بعد', limit: 'حدّد ترتيب الجودة أولاً', color: '#92400e' },
+};
+
+const WA_QUALITY_COLORS = {
+  GREEN:  { label: 'جيدة ✅', color: '#166534', bg: '#dcfce7' },
+  YELLOW: { label: 'متوسطة ⚠️', color: '#854d0e', bg: '#fef9c3' },
+  RED:    { label: 'ضعيفة ❌', color: '#991b1b', bg: '#fee2e2' },
+};
+
+// Meta conv type cost estimates (USD) for Egypt market
+const WA_COST_USD = {
+  MARKETING: 0.0219,
+  UTILITY:   0.0042,
+  AUTHENTICATION: 0.0315,
+  SERVICE:   0.0,
+};
+
+async function waLoadAnalytics() {
+  const cardsEl     = document.getElementById('wa-analytics-cards');
+  const statusEl    = document.getElementById('wa-analytics-status');
+  const breakEl     = document.getElementById('wa-analytics-breakdown');
+  const breakRows   = document.getElementById('wa-analytics-breakdown-rows');
+  const costEl      = document.getElementById('wa-analytics-cost');
+  const costVal     = document.getElementById('wa-analytics-cost-val');
+  const localEl     = document.getElementById('wa-analytics-local');
+  if (!cardsEl) return;
+
+  cardsEl.innerHTML = '<div style="text-align:center;color:#9ca3af;font-size:12px;padding:30px 0;grid-column:span 2">⏳ جاري التحميل...</div>';
+  if (statusEl) statusEl.style.display = 'none';
+  if (breakEl) breakEl.style.display = 'none';
+  if (costEl) costEl.style.display = 'none';
+
+  const d = await apiFetch('/api/system/inbox/wa-analytics');
+  if (!d.ok) {
+    cardsEl.innerHTML = '<div style="text-align:center;color:#ef4444;font-size:12px;padding:20px 0;grid-column:span 2">❌ ' + (d.error || 'تعذّر التحميل') + '</div>';
+    return;
+  }
+
+  const { phoneInfo = {}, convData = {}, localStats = {} } = d;
+
+  // ── KPI cards
+  const tier    = WA_TIER_LABELS[phoneInfo.messaging_limit_tier] || { label: 'غير معروف', limit: '—', color: '#6b7280' };
+  const quality = WA_QUALITY_COLORS[phoneInfo.quality_rating] || { label: phoneInfo.quality_rating || '—', color: '#6b7280', bg: '#f3f4f6' };
+
+  function kpiCard(icon, title, value, sub, bgColor) {
+    return `<div style="background:${bgColor||'#f9fafb'};border:1.5px solid #e5e7eb;border-radius:9px;padding:12px">
+      <div style="font-size:18px;margin-bottom:4px">${icon}</div>
+      <div style="font-size:10px;color:#6b7280;font-weight:700;margin-bottom:2px">${title}</div>
+      <div style="font-size:18px;font-weight:900;color:#111827;line-height:1.2">${value}</div>
+      ${sub ? `<div style="font-size:10px;color:#6b7280;margin-top:2px">${sub}</div>` : ''}
+    </div>`;
+  }
+
+  cardsEl.innerHTML = [
+    kpiCard('📱', 'رقم الهاتف', phoneInfo.display_phone_number || '—', phoneInfo.name_status || ''),
+    kpiCard('📈', 'Messaging Tier', tier.label, tier.limit, '#f0fdf4'),
+    kpiCard('⭐', 'جودة الرقم', quality.label, 'بناءً على Meta', quality.bg),
+    kpiCard('💬', 'محادثات واتساب (كل)', localStats.total_conversations ?? '—', 'منذ البداية'),
+    kpiCard('🟢', 'محادثات مفتوحة', localStats.open_conversations ?? '—', 'حالياً'),
+    kpiCard('👥', 'عملاء هذا الشهر', localStats.unique_senders_month ?? '—', 'آخر 30 يوم', '#eff6ff'),
+    kpiCard('✉️', 'رسائل اليوم', localStats.today_messages ?? '—', ''),
+    kpiCard('🕒', 'متوسط وقت الرد', localStats.avg_first_response_min != null ? localStats.avg_first_response_min + ' دقيقة' : '—', 'First Response Time'),
+  ].join('');
+
+  // ── Breakdown from Meta
+  const data = convData.data?.data || [];
+  if (data.length && breakEl && breakRows) {
+    const totals = {};
+    data.forEach(row => {
+      const key = row.conversation_type || 'OTHER';
+      totals[key] = (totals[key] || 0) + (row.conversation || 0);
+    });
+    const typeColors = { MARKETING: '#7c3aed', UTILITY: '#0369a1', AUTHENTICATION: '#065f46', SERVICE: '#166534', OTHER: '#6b7280' };
+    breakRows.innerHTML = Object.entries(totals).map(([type, count]) => {
+      const color = typeColors[type] || '#6b7280';
+      const cost  = (WA_COST_USD[type] || 0) * count;
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#f9fafb;border-radius:7px;font-size:11px">
+        <span style="font-weight:700;color:${color}">${type}</span>
+        <span style="font-weight:800;color:#111827">${count.toLocaleString()} محادثة</span>
+        <span style="color:#6b7280">~$${cost.toFixed(2)}</span>
+      </div>`;
+    }).join('');
+    breakEl.style.display = 'block';
+
+    // total cost
+    const totalCost = Object.entries(totals).reduce((acc, [type, count]) => acc + (WA_COST_USD[type] || 0) * count, 0);
+    if (costEl && costVal) {
+      costVal.textContent = `~$${totalCost.toFixed(2)} USD`;
+      costEl.style.display = 'block';
+    }
+  } else if (breakEl) {
+    // No Meta conv data — show local breakdown
+    if (localEl) {
+      localEl.innerHTML = [
+        `<div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:7px;padding:9px"><div style="font-size:10px;color:#6b7280">رسائل الأسبوع</div><div style="font-size:17px;font-weight:900;color:#111827">${localStats.week_messages ?? '—'}</div></div>`,
+        `<div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:7px;padding:9px"><div style="font-size:10px;color:#6b7280">رسائل الشهر</div><div style="font-size:17px;font-weight:900;color:#111827">${localStats.month_messages ?? '—'}</div></div>`,
+      ].join('');
+    }
+  }
+
+  // ── Local stats section always
+  if (localEl && breakEl?.style.display !== 'block') {
+    localEl.innerHTML = [
+      `<div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:7px;padding:9px"><div style="font-size:10px;color:#6b7280">رسائل الأسبوع</div><div style="font-size:17px;font-weight:900;color:#0369a1">${localStats.week_messages ?? '—'}</div></div>`,
+      `<div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:7px;padding:9px"><div style="font-size:10px;color:#6b7280">رسائل الشهر</div><div style="font-size:17px;font-weight:900;color:#0369a1">${localStats.month_messages ?? '—'}</div></div>`,
+    ].join('');
+  }
 }
 
 // ──────────────────────────────────────────────────────────────

@@ -2765,4 +2765,59 @@ router.delete('/inbox/wa-templates/:name', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/system/inbox/wa-analytics — fetch analytics from Meta + local DB stats
+router.get('/inbox/wa-analytics', requireAuth, async (req, res) => {
+  try {
+    const db = req.db;
+    const { wa_token, wa_account_id, wa_phone_id } = getWaCredentials(db);
+    if (!wa_token || !wa_account_id) return res.json({ ok: false, error: 'wa_token و wa_account_id غير مضبوطَين — احفظ الإعدادات أولاً' });
+
+    // ── 1. Meta: phone number info (quality rating + messaging_limit_tier)
+    let phoneInfo = {};
+    try {
+      if (wa_phone_id) {
+        const r = await fetch(`https://graph.facebook.com/v19.0/${wa_phone_id}?fields=display_phone_number,quality_rating,messaging_limit_tier,name_status&access_token=${wa_token}`);
+        phoneInfo = await r.json();
+      }
+    } catch(e) { /* non-fatal */ }
+
+    // ── 2. Meta: conversation analytics (last 30 days)
+    let convData = {};
+    try {
+      const end   = Math.floor(Date.now() / 1000);
+      const start = end - (30 * 24 * 3600);
+      const url   = `https://graph.facebook.com/v19.0/${wa_account_id}/conversation_analytics?start=${start}&end=${end}&granularity=DAILY&dimensions=["conversation_type","conversation_direction"]&access_token=${wa_token}`;
+      const r = await fetch(url);
+      convData = await r.json();
+    } catch(e) { /* non-fatal */ }
+
+    // ── 3. Local DB stats
+    const localStats = {};
+    try {
+      localStats.total_conversations = db.prepare("SELECT COUNT(*) as c FROM inbox_conversations WHERE platform='whatsapp'").get()?.c || 0;
+      localStats.open_conversations   = db.prepare("SELECT COUNT(*) as c FROM inbox_conversations WHERE platform='whatsapp' AND status='open'").get()?.c || 0;
+      localStats.today_messages       = db.prepare("SELECT COUNT(*) as c FROM inbox_messages m JOIN inbox_conversations c ON m.conversation_id=c.id WHERE c.platform='whatsapp' AND date(m.sent_at)=date('now')").get()?.c || 0;
+      localStats.week_messages        = db.prepare("SELECT COUNT(*) as c FROM inbox_messages m JOIN inbox_conversations c ON m.conversation_id=c.id WHERE c.platform='whatsapp' AND m.sent_at >= datetime('now','-7 days')").get()?.c || 0;
+      localStats.month_messages       = db.prepare("SELECT COUNT(*) as c FROM inbox_messages m JOIN inbox_conversations c ON m.conversation_id=c.id WHERE c.platform='whatsapp' AND m.sent_at >= datetime('now','-30 days')").get()?.c || 0;
+      localStats.unique_senders_month = db.prepare("SELECT COUNT(DISTINCT sender_id) as c FROM inbox_conversations WHERE platform='whatsapp' AND last_message_at >= datetime('now','-30 days')").get()?.c || 0;
+      // avg first response time (minutes) - out msg after first in msg per conv
+      const frt = db.prepare(`
+        SELECT AVG((julianday(o.sent_at) - julianday(i.sent_at)) * 1440) as avg_min
+        FROM inbox_messages i
+        JOIN (
+          SELECT conversation_id, MIN(sent_at) as sent_at FROM inbox_messages WHERE direction='out' GROUP BY conversation_id
+        ) o ON i.conversation_id = o.conversation_id
+        JOIN inbox_conversations c ON c.id = i.conversation_id
+        WHERE i.direction='in' AND c.platform='whatsapp'
+          AND (julianday(o.sent_at) - julianday(i.sent_at)) * 1440 BETWEEN 0 AND 1440
+      `).get();
+      localStats.avg_first_response_min = frt?.avg_min ? Math.round(frt.avg_min) : null;
+    } catch(e) { /* non-fatal */ }
+
+    return res.json({ ok: true, phoneInfo, convData, localStats });
+  } catch(e) {
+    return res.json({ ok: false, error: e.message });
+  }
+});
+
 module.exports = router;
