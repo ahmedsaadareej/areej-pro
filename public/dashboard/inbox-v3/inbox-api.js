@@ -232,13 +232,14 @@ const IV3_API = {
   },
 
   // ── Payment Link ────────────────────────────────────────────────────────────
-  async createPaymentLink({ amount, description, client_name, client_phone, invoice_id }) {
+  async createPaymentLink({ amount, description, client_name, client_phone, invoice_id, conversation_id }) {
     const data = await this._post('/api/system/payment-links', {
       amount,
-      description: description || '',
-      client_name:  client_name  || '',
-      client_phone: client_phone || '',
-      invoice_id:   invoice_id   || null,
+      description:     description     || '',
+      client_name:     client_name     || '',
+      client_phone:    client_phone    || '',
+      invoice_id:      invoice_id      || null,
+      conversation_id: conversation_id || null,
     });
     if (!data?.ok) throw new Error(data?.error || 'فشل إنشاء رابط الدفع');
     return data; // { ok, id, token, link }

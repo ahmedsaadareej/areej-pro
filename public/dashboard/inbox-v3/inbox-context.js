@@ -480,9 +480,10 @@ async function iv3SubmitPayLink() {
     // 1. إنشاء رابط الدفع عبر API
     const result = await IV3_API.createPaymentLink({
       amount,
-      description:  desc  || `دفعة من محادثة ${IV3.activeConv?.platform || ''} — ${IV3.activeConv?.sender_name || ''}`,
-      client_name:  name  || '',
-      client_phone: phone || '',
+      description:     desc  || `دفعة من محادثة ${IV3.activeConv?.platform || ''} — ${IV3.activeConv?.sender_name || ''}`,
+      client_name:     name  || '',
+      client_phone:    phone || '',
+      conversation_id: IV3.activeConvId || null,
     });
 
     iv3CloseModal('iv3-paylink-modal');

@@ -489,11 +489,20 @@ router.put('/marketplace/admin/quotes/:id', requireAuth, (req, res) => {
 router.post('/payment-links', requireAuth, (req, res) => {
   const db = req.db;
   try {
-    const { invoice_id, amount, client_name, client_phone, description } = req.body;
+    const { invoice_id, amount, client_name, client_phone, description, conversation_id } = req.body;
     if (!amount) return res.json({ ok: false, error: 'amount required' });
+
+    // lazy migration لإضافة conversation_id لو ما كانتش
+    try {
+      const cols = db.prepare('PRAGMA table_info(payment_links)').all().map(c => c.name);
+      if (!cols.includes('conversation_id')) {
+        db.prepare('ALTER TABLE payment_links ADD COLUMN conversation_id INTEGER DEFAULT NULL').run();
+      }
+    } catch {}
+
     const token = crypto.randomBytes(16).toString('hex');
-    const r = db.prepare(`INSERT INTO payment_links (invoice_id, token, amount, client_name, client_phone, description) VALUES (?,?,?,?,?,?)`)
-      .run(invoice_id || null, token, parseFloat(amount), client_name||'', client_phone||'', description||'');
+    const r = db.prepare(`INSERT INTO payment_links (invoice_id, token, amount, client_name, client_phone, description, conversation_id) VALUES (?,?,?,?,?,?,?)`)
+      .run(invoice_id || null, token, parseFloat(amount), client_name||'', client_phone||'', description||'', conversation_id || null);
     const baseUrl = process.env.APP_BASE_URL || 'https://pro.areejegypt.com';
     const link = `${baseUrl}/pay/${token}`;
     res.json({ ok: true, id: r.lastInsertRowid, token, link });
