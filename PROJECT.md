@@ -252,7 +252,12 @@ inbox_team_members        -- أعضاء الفرق
   - `/api/system/inbox/me` → `{ok:true, isOwner:true}` ✅
   - `/api/system/inbox/conversations` → `{ok:true, conversations:[]}` ✅
 
-**الخطوة التالية:** ربط WhatsApp QR بـ pro-test وإرسال رسالة تجريبية لاختبار العرض الكامل في الـ inbox v3
+- [x] **إصلاح inbox-context.js** — endpoint صح (`/api/crm/contacts/by-phone` + `/api/system/invoices`) + apiFetch + جلب فواتير العميل
+- [x] **إصلاح inbox-chat.js** — حقول DB صح (content/sent_at/media_type) + حذف → إغلاق
+- [x] **إصلاح inbox-reply.js** — حقول متوافقة (content/sent_at) + templates تستخدم name بدل title
+- [x] **cache-busting** لكل الملفات المعدّلة
+
+**الخطوة التالية:** ربط WhatsApp QR بـ pro-test (يحتاج مسح QR من أحمد) وإرسال رسالة تجريبية لاختبار العرض الكامل
 
 ### المرحلة 2: الـ Core Features
 - [ ] عرض المحادثات مع فلترة وبحث
