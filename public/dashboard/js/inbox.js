@@ -606,7 +606,7 @@ function showPage(name, btn, _skipHistory) {
     if (name === 'shipping')    { loadShipping(); loadShipCompaniesDropdown(); }
     if (name === 'sales-tools') { loadSalesTools(); }
     if (name === 'marketplace') { loadMarketplace(); }
-    if (name === 'inbox')      { loadInbox(); if (typeof iv3OnPageShow === 'function') iv3OnPageShow(); }
+    if (name === 'inbox')      { if (typeof iv3OnPageShow === 'function') iv3OnPageShow(); } // v3: تم حذف loadInbox() القديم — iv3OnPageShow يتولى كل شيء
     if (name === 'team-settings') { initTeamSettings(); }
     if (name === 'inbox-settings') {
       loadIntegrationsStatus();
