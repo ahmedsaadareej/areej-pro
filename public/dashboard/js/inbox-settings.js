@@ -553,3 +553,57 @@ setInterval(loadInboxUnreadBadge, 10000);
 
 // ============================================================
 // VOICE RECORDING (Phase 1d)
+
+// ── Analytics Section (page-inbox-settings) ─────────────────
+async function loadAdvancedAnalyticsIS() {
+  const container = document.getElementById('adv-analytics-container-is');
+  if (!container) return;
+
+  container.innerHTML = '<div style="font-size:12px;color:#9ca3af;text-align:center;padding:20px">جاري التحميل...</div>';
+
+  try {
+    const d = await apiFetch('/api/system/inbox/analytics/advanced?days=30');
+    if (!d.ok) throw new Error(d.error || 'خطأ');
+    const a = d.analytics || {};
+
+    const cards = [
+      { label: 'إجمالي المحادثات', value: a.total_conversations || 0, icon: '💬', color: '#1B5E30' },
+      { label: 'الرسائل الواردة',  value: a.incoming_messages  || 0, icon: '📥', color: '#0369a1' },
+      { label: 'الرسائل الصادرة',  value: a.outgoing_messages  || 0, icon: '📤', color: '#7c3aed' },
+      { label: 'متوسط وقت الرد',   value: (a.avg_response_minutes || 0) + ' دق', icon: '⏱️', color: '#b45309' },
+    ];
+
+    const cardsHtml = `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px">` +
+      cards.map(c =>
+        `<div class="is-card" style="text-align:center;padding:14px">
+          <div style="font-size:22px;margin-bottom:4px">${c.icon}</div>
+          <div style="font-size:20px;font-weight:900;color:${c.color}">${c.value}</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:2px">${c.label}</div>
+        </div>`
+      ).join('') + `</div>`;
+
+    let platHtml = '';
+    if (a.by_platform && a.by_platform.length) {
+      const total = a.total_conversations || 1;
+      const platColors = { telegram: '#0088cc', whatsapp: '#25D366', 'whatsapp-qr': '#25D366', messenger: '#0099ff', instagram: '#E1306C' };
+      platHtml = `<div class="is-card">
+        <div style="font-size:13px;font-weight:800;margin-bottom:10px">📊 حسب المنصة</div>` +
+        a.by_platform.map(p => {
+          const pct = Math.round((p.count / total) * 100);
+          const clr = platColors[p.platform] || '#6b7280';
+          return `<div style="margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+              <span>${p.platform}</span><span style="color:${clr};font-weight:700">${p.count} (${pct}%)</span>
+            </div>
+            <div style="background:#f3f4f6;border-radius:4px;height:6px">
+              <div style="background:${clr};width:${pct}%;height:6px;border-radius:4px"></div>
+            </div>
+          </div>`;
+        }).join('') + `</div>`;
+    }
+
+    container.innerHTML = cardsHtml + platHtml;
+  } catch (e) {
+    container.innerHTML = `<div style="color:#ef4444;font-size:12px;text-align:center;padding:20px">⚠️ ${e.message}</div>`;
+  }
+}
