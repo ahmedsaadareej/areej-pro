@@ -6,6 +6,8 @@
 <title>نظام أريج — لوحة التحكم</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/dashboard/css/main.css?v=22a33029">
+<link rel="stylesheet" href="/dashboard/css/inbox-v2.css?v=20260501">
+<link rel="stylesheet" href="/dashboard/inbox-v3/inbox.css?v=20260502">
 <script>document.documentElement.style.setProperty("--brand","#1B5E30");</script>
 </head>
 <body>
@@ -2226,262 +2228,383 @@
   </div>
 </div>
 
-<!-- ════════════════ INBOX PAGE ════════════════ -->
-<div class="page" id="page-inbox" style="flex-direction:column;height:100%;padding:0;overflow:hidden">
+<!-- ════════════════ INBOX PAGE v3 ════════════════ -->
+<!-- ══════════════════════════════════════════════════════════
+     Areej Pro — Inbox v3 HTML Snippet
+     يُدمج داخل index.html بدل الـ inbox section القديم
+     آخر تحديث: 2026-05-02
+     ══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-inbox">
 
-  <!-- Platform Tabs -->
-  <div style="display:flex;gap:6px;padding:10px 14px;background:#fff;border-bottom:1px solid #e5e7eb;flex-wrap:wrap;align-items:center;justify-content:space-between;flex-shrink:0">
-    <div style="display:flex;gap:5px;flex-wrap:wrap">
-      <button class="inbox-ptab active" data-plat="" onclick="switchInboxPlatform('',this)">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:middle;margin-left:4px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  <!-- ── TOPBAR ─────────────────────────────────────────── -->
+  <div class="iv3-topbar">
+
+    <!-- Platform Tabs -->
+    <div class="iv3-tabs" id="iv3-tabs">
+      <button class="iv3-tab active" data-plat="" onclick="iv3SwitchPlatform('',this)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         الكل
+        <span class="tab-badge" id="iv3-badge-total" style="display:none">0</span>
       </button>
-      <button class="inbox-ptab" data-plat="telegram" onclick="switchInboxPlatform('telegram',this)">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:middle;margin-left:4px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        تيليجرام <span id="badge-telegram" style="display:none;background:#CC2200;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-right:2px">!</span>
+      <button class="iv3-tab" data-plat="whatsapp-qr" onclick="iv3SwitchPlatform('whatsapp-qr',this)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.13 6.13l.96-1.84a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        واتساب QR
+        <span class="tab-badge" id="iv3-badge-waqr" style="display:none">0</span>
       </button>
-      <button class="inbox-ptab" data-plat="whatsapp" onclick="switchInboxPlatform('whatsapp',this)">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:middle;margin-left:4px"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.24h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.16 6.16l.95-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.92 17.3"/></svg>
-        واتساب
+      <button class="iv3-tab" data-plat="whatsapp" onclick="iv3SwitchPlatform('whatsapp',this)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.13 6.13l.96-1.84a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        واتساب API
       </button>
-      <button class="inbox-ptab" data-plat="messenger" onclick="switchInboxPlatform('messenger',this)">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:middle;margin-left:4px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <button class="iv3-tab" data-plat="telegram" onclick="iv3SwitchPlatform('telegram',this)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        تيليجرام
+      </button>
+      <button class="iv3-tab" data-plat="messenger" onclick="iv3SwitchPlatform('messenger',this)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         ماسنجر
       </button>
-      <button class="inbox-ptab" data-plat="instagram" onclick="switchInboxPlatform('instagram',this)">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:middle;margin-left:4px"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      <button class="iv3-tab" data-plat="instagram" onclick="iv3SwitchPlatform('instagram',this)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>
         إنستجرام
       </button>
     </div>
-    <button onclick="showInboxSettings()" class="topbar-btn" style="background:#f3f4f6;border-color:#e5e7eb;color:#374151;gap:5px">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      إعدادات
-    </button>
+
+    <!-- Top actions -->
+    <div class="iv3-top-actions">
+      <!-- Context panel toggle (tablet) -->
+      <button class="iv3-icon-btn iv3-ctx-toggle-btn" id="iv3-ctx-toggle" onclick="iv3ToggleContext()" title="بيانات العميل">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </button>
+      <!-- Sound toggle -->
+      <button class="iv3-icon-btn" id="iv3-sound-btn" onclick="iv3ToggleSound()" title="صوت التنبيهات">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="iv3-sound-icon"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+      </button>
+      <!-- Settings -->
+      <button class="iv3-icon-btn" onclick="showInboxSettings()" title="إعدادات الرسائل">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
   </div>
 
-  <!-- Chat Container: fills remaining height -->
-  <div style="flex:1;display:grid;grid-template-columns:240px minmax(0,1fr) 200px;gap:0;background:#fff;border-top:none;overflow:hidden;min-height:0;width:100%">
+  <!-- ── BODY: 3 columns ─────────────────────────────── -->
+  <div class="iv3-body">
 
-    <!-- Conversations List -->
-    <div style="border-inline-start:1px solid #e5e7eb;display:flex;flex-direction:column;min-height:0;background:#fafafa;overflow:hidden">
-      <div style="padding:10px 12px;border-bottom:1px solid #e5e7eb;flex-shrink:0;background:#fff">
-        <div style="font-size:12px;font-weight:700;color:#111827;margin-bottom:8px">المحادثات</div>
-        <div id="inbox-owner-controls"></div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-        <div style="position:relative">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" style="position:absolute;top:50%;transform:translateY(-50%);right:10px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="inbox-search" placeholder="بحث بالاسم..." oninput="filterInboxConversations()" style="width:100%;padding:7px 10px 7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:12px;box-sizing:border-box;background:#f9fafb">
+    <!-- ══ COL 1: Conversations List ══ -->
+    <div class="iv3-sidebar" id="iv3-sidebar">
+      <div class="iv3-sidebar-head">
+
+        <!-- Title row -->
+        <div class="iv3-sidebar-titlerow">
+          <span class="iv3-sidebar-title">المحادثات</span>
+          <span class="iv3-sidebar-count" id="iv3-conv-count">0</span>
         </div>
-        <div style="display:flex;gap:4px">
-          <select id="inbox-status-filter" onchange="filterInboxConversations()" style="flex:1;padding:5px 8px;border:1px solid #e5e7eb;border-radius:7px;font-family:Cairo,sans-serif;font-size:11px;background:#f9fafb;color:#374151">
-            <option value="">كل المحادثات</option>
-            <option value="open">• مفتوحة</option>
-            <option value="waiting">• انتظار</option>
-            <option value="closed">• مغلقة</option>
+
+        <!-- Agent filter (owner only) -->
+        <div class="iv3-agent-filter" id="iv3-agent-filter-wrap" style="display:none">
+          <select class="iv3-agent-select" id="iv3-agent-filter" onchange="iv3SetAgentFilter(this.value)">
+            <option value="">الكل — جميع الموظفين</option>
+            <option value="unassigned">❔ غير معيّنة</option>
           </select>
-          <button onclick="openInboxSearch()" style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:7px;padding:5px 9px;cursor:pointer;color:#6b7280;display:flex;align-items:center" title="بحث في الرسائل">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          </button>
         </div>
+
+        <!-- Search -->
+        <div class="iv3-search-wrap">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="iv3-search" class="iv3-search"
+            placeholder="بحث بالاسم أو الرسالة..."
+            oninput="iv3FilterConvs()">
+        </div>
+
+        <!-- Status filters -->
+        <div class="iv3-filters">
+          <button class="iv3-filt active" data-status="" onclick="iv3SetStatusFilter('',this)">الكل</button>
+          <button class="iv3-filt" data-status="open"    onclick="iv3SetStatusFilter('open',this)">● مفتوحة</button>
+          <button class="iv3-filt" data-status="waiting" onclick="iv3SetStatusFilter('waiting',this)">⏳ انتظار</button>
+          <button class="iv3-filt" data-status="closed"  onclick="iv3SetStatusFilter('closed',this)">✓ مغلقة</button>
         </div>
       </div>
-      <div id="inbox-conv-list" style="flex:1;overflow-y:auto">
-        <div style="padding:40px 20px;text-align:center;color:#9ca3af;font-size:12px">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" style="margin:0 auto 10px;display:block"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          جاري التحميل...
+
+      <!-- Conversations scroll list -->
+      <div class="iv3-conv-scroll" id="iv3-conv-list">
+        <!-- Skeleton loading -->
+        <div id="iv3-conv-skeleton">
+          <div class="iv3-skeleton-item">
+            <div class="iv3-skeleton iv3-skeleton-avatar"></div>
+            <div class="iv3-skeleton-body">
+              <div class="iv3-skeleton iv3-skeleton-line w70"></div>
+              <div class="iv3-skeleton iv3-skeleton-line w50"></div>
+            </div>
+          </div>
+          <div class="iv3-skeleton-item">
+            <div class="iv3-skeleton iv3-skeleton-avatar"></div>
+            <div class="iv3-skeleton-body">
+              <div class="iv3-skeleton iv3-skeleton-line w50"></div>
+              <div class="iv3-skeleton iv3-skeleton-line w40"></div>
+            </div>
+          </div>
+          <div class="iv3-skeleton-item">
+            <div class="iv3-skeleton iv3-skeleton-avatar"></div>
+            <div class="iv3-skeleton-body">
+              <div class="iv3-skeleton iv3-skeleton-line w70"></div>
+              <div class="iv3-skeleton iv3-skeleton-line w50"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Chat Window -->
-    <div style="display:flex;flex-direction:column;min-height:0">
+    <!-- ══ COL 2: Chat Window ══ -->
+    <div class="iv3-chat" id="iv3-chat">
 
       <!-- Chat Header -->
-      <div id="inbox-chat-header" style="padding:10px 14px;border-bottom:1px solid #e5e7eb;background:#fff;flex-shrink:0">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div id="inbox-chat-avatar" style="width:36px;height:36px;border-radius:50%;background:var(--brand,#1B5E30);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </div>
-          <div style="flex:1;min-width:0">
-            <div id="inbox-chat-name" style="font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#111827">اختار محادثة</div>
-            <div id="inbox-chat-platform" style="font-size:11px;color:#9ca3af"></div>
-          </div>
-          <!-- Action buttons group -->
-          <div style="display:flex;align-items:center;gap:4px">
-            <select id="conv-status-select" onchange="changeConvStatus(this.value)" style="display:none;padding:4px 8px;border:1px solid #e5e7eb;border-radius:7px;font-family:Cairo,sans-serif;font-size:11px;font-weight:600;cursor:pointer;background:#fff;color:#374151">
-              <option value="open">• مفتوحة</option>
-              <option value="waiting">• انتظار</option>
-              <option value="closed">• مغلقة</option>
+      <div class="iv3-chat-header" id="iv3-chat-header">
+        <!-- Back button (mobile) -->
+        <button class="iv3-back-btn" onclick="iv3BackToList()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          رجوع
+        </button>
+
+        <!-- Avatar -->
+        <div class="iv3-chat-avatar" id="iv3-hdr-avatar" style="background:#9CA3AF">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+
+        <!-- Name + sub -->
+        <div class="iv3-chat-info">
+          <div class="iv3-chat-name" id="iv3-hdr-name">اختار محادثة</div>
+          <div class="iv3-chat-sub">
+            <span class="iv3-plat-pill" id="iv3-hdr-plat" style="display:none"></span>
+            <span class="iv3-assigned-badge" id="iv3-hdr-assigned" style="display:none"></span>
+            <!-- Status selector -->
+            <select class="iv3-status-sel open" id="iv3-status-sel"
+              onchange="iv3ChangeStatus(this.value)"
+              style="display:none">
+              <option value="open">● مفتوحة</option>
+              <option value="waiting">⏳ انتظار</option>
+              <option value="closed">✓ مغلقة</option>
             </select>
-            <button id="inbox-lead-btn" onclick="convertToLead()" style="background:var(--brand-light,rgba(27,94,48,.08));border:1px solid rgba(27,94,48,.2);color:var(--brand,#1B5E30);padding:5px 10px;border-radius:7px;font-family:Cairo,sans-serif;font-size:11px;font-weight:700;cursor:pointer;display:none;white-space:nowrap;gap:4px;align-items:center">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block;vertical-align:middle"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Lead
-            </button>
-            <button onclick="openAssignModal()" id="inbox-assign-btn" title="تعيين لموظف" style="display:none;background:#f3f4f6;border:1px solid #e5e7eb;color:#374151;padding:5px 7px;border-radius:7px;cursor:pointer">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            </button>
-            <button onclick="openConvLabels()" id="inbox-labels-btn" title="تسميات" style="display:none;background:#f3f4f6;border:1px solid #e5e7eb;color:#374151;padding:5px 7px;border-radius:7px;cursor:pointer">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-            </button>
-            <button onclick="openConvNotes()" id="inbox-notes-btn" title="ملاحظات" style="display:none;background:#f3f4f6;border:1px solid #e5e7eb;color:#374151;padding:5px 7px;border-radius:7px;cursor:pointer">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            </button>
-            <button onclick="sendCSATRequest()" id="inbox-csat-btn" title="تقييم" style="display:none;background:#f3f4f6;border:1px solid #e5e7eb;color:#374151;padding:5px 7px;border-radius:7px;cursor:pointer">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            </button>
-            <!-- Archive / Delete conversation -->
-            <button onclick="archiveConversation()" id="inbox-archive-btn" title="أرشفة المحادثة" style="display:none;background:#f3f4f6;border:1px solid #e5e7eb;color:#374151;padding:5px 7px;border-radius:7px;cursor:pointer">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-            </button>
-            <button onclick="deleteConversationConfirm()" id="inbox-delete-btn" title="حذف المحادثة" style="display:none;background:#fff0f0;border:1px solid #fecaca;color:#ef4444;padding:5px 7px;border-radius:7px;cursor:pointer">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-            </button>
           </div>
         </div>
-        <div id="conv-assigned-badge" style="display:none;font-size:10px;color:#9ca3af;margin-top:4px"></div>
-      </div>
 
-      <!-- Messages: scrollable, fills space -->
-      <div id="inbox-messages" style="flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:10px;background:#f4f6f9;min-height:0">
-        <div style="text-align:center;padding:60px 20px">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1" style="margin:0 auto 12px;display:block"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          <div style="color:#9ca3af;font-size:13px;font-weight:600">اختار محادثة لترى الرسائل</div>
-          <div style="color:#d1d5db;font-size:11px;margin-top:4px">اضغط على أي محادثة من القائمة</div>
+        <!-- Actions -->
+        <div class="iv3-chat-actions" id="iv3-hdr-actions" style="display:none">
+          <button onclick="iv3AssignConv()" class="iv3-act-btn" id="iv3-assign-btn" title="تعيين لموظف">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            تعيين
+          </button>
+          <button onclick="iv3OpenLabels()" class="iv3-act-btn" id="iv3-labels-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            تسميات
+          </button>
+          <button onclick="iv3SendInvoice()" class="iv3-act-btn branded" id="iv3-invoice-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            إرسال فاتورة
+          </button>
+          <button onclick="iv3ConvertLead()" class="iv3-act-btn" id="iv3-lead-btn" style="display:none">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Lead
+          </button>
+          <button onclick="iv3DeleteConv()" class="iv3-act-btn red-soft" id="iv3-delete-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+          </button>
         </div>
       </div>
 
-      <!-- Reply Box: always pinned to bottom -->
-      <div id="inbox-reply-box" style="padding:10px 12px;border-top:1px solid #e5e7eb;background:#fff;flex-shrink:0;display:none">
+      <!-- Messages Area -->
+      <div class="iv3-msgs" id="iv3-msgs">
+        <!-- Empty state -->
+        <div class="iv3-msgs-empty" id="iv3-msgs-empty">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <h3>اختار محادثة</h3>
+          <p>اضغط على أي محادثة من القائمة على اليمين</p>
+        </div>
+      </div>
 
-        <!-- Media Preview -->
-        <div id="inbox-media-preview" style="display:none;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;padding:8px;margin-bottom:6px">
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <div style="display:flex;align-items:center;gap:6px">
-              <span id="inbox-media-icon" style="font-size:20px">📎</span>
-              <div>
-                <div id="inbox-media-name" style="font-size:12px;font-weight:700;color:#374151;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
-                <div id="inbox-media-size" style="font-size:10px;color:#9ca3af"></div>
-              </div>
-            </div>
-            <button onclick="cancelMediaUpload()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;padding:2px">✕</button>
-          </div>
-          <div id="inbox-img-preview-wrap" style="display:none;margin-top:6px">
-            <img id="inbox-img-preview" style="max-height:80px;border-radius:6px;object-fit:contain">
-          </div>
+      <!-- Reply Box -->
+      <div class="iv3-reply" id="iv3-reply" style="display:none">
+
+        <!-- Reply type tabs -->
+        <div class="iv3-reply-tabs">
+          <button class="iv3-reply-tab active" id="iv3-tab-reply" onclick="iv3SetReplyMode('reply')">💬 رد</button>
+          <button class="iv3-reply-tab note-tab" id="iv3-tab-note"  onclick="iv3SetReplyMode('note')">🔒 ملاحظة داخلية</button>
         </div>
 
-        <!-- Reply Row -->
-        <div style="display:flex;gap:6px;align-items:flex-end">
-          <!-- Templates + AI -->
-          <div style="position:relative;display:flex;flex-direction:column;gap:3px">
-            <button onclick="toggleTemplates()" style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:7px;padding:7px;cursor:pointer;color:#6b7280;display:flex;align-items:center;justify-content:center" title="ردود جاهزة">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            </button>
-            <button onclick="getAISuggestions()" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:7px;cursor:pointer;color:#2563eb;display:flex;align-items:center;justify-content:center" id="ai-reply-btn" title="ردود AI">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-            </button>
-          <div id="ai-suggestions-dropdown" style="display:none;position:absolute;bottom:calc(100% + 8px);right:0;width:300px;background:#fff;border:1px solid #bae6fd;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:500">
-            <div style="padding:10px 12px;border-bottom:1px solid #f0f9ff;font-size:11px;font-weight:700;color:#0369a1;display:flex;align-items:center;gap:5px">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-              ردود مقترحة بالـ AI
-            </div>
-            <div id="ai-suggestions-list" style="max-height:220px;overflow-y:auto"></div>
+        <!-- Media preview -->
+        <div class="iv3-media-preview" id="iv3-media-preview" style="display:none">
+          <div>
+            <img class="iv3-media-preview-img" id="iv3-media-img" style="display:none">
+            <span id="iv3-media-icon">📎</span>
           </div>
-            <div id="templates-dropdown" style="display:none;position:absolute;bottom:calc(100% + 8px);right:0;width:280px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:500;max-height:240px;overflow-y:auto">
-              <div style="padding:10px 12px;border-bottom:1px solid #f3f4f6;font-size:11px;font-weight:700;color:#374151;display:flex;align-items:center;gap:5px">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <div class="iv3-media-preview-info">
+            <div class="iv3-media-preview-name" id="iv3-media-name"></div>
+            <div class="iv3-media-preview-size" id="iv3-media-size"></div>
+          </div>
+          <button class="iv3-media-cancel" onclick="iv3CancelMedia()">✕</button>
+        </div>
+
+        <!-- Main reply row -->
+        <div class="iv3-reply-row" style="position:relative">
+
+          <!-- Side buttons -->
+          <div class="iv3-reply-side">
+            <button class="iv3-reply-btn" onclick="iv3ToggleTemplates()" title="ردود جاهزة (/)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            </button>
+            <button class="iv3-reply-btn ai" onclick="iv3GetAISuggestions()" id="iv3-ai-btn" title="ردود AI">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            </button>
+
+            <!-- Templates dropdown -->
+            <div class="iv3-dropdown" id="iv3-tmpl-dropdown" style="display:none">
+              <div class="iv3-dropdown-header">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
                 ردود جاهزة
               </div>
-              <div id="templates-list"></div>
+              <div class="iv3-dropdown-body" id="iv3-tmpl-list">
+                <div style="padding:20px;text-align:center;color:#9CA3AF;font-size:12px">جاري التحميل...</div>
+              </div>
+            </div>
+
+            <!-- AI dropdown -->
+            <div class="iv3-dropdown" id="iv3-ai-dropdown" style="display:none">
+              <div class="iv3-dropdown-header" style="color:#7C3AED">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                اقتراحات الـ AI
+              </div>
+              <div class="iv3-dropdown-body" id="iv3-ai-list">
+                <div style="padding:20px;text-align:center;color:#9CA3AF;font-size:12px">جاري التحليل...</div>
+              </div>
             </div>
           </div>
+
           <!-- Attach -->
-          <label style="cursor:pointer;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:7px;padding:7px" title="إرفاق ملف/صورة">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-            <input type="file" id="inbox-file-input" accept="image/*,video/*,audio/*,.pdf,.doc,.docx" style="display:none" onchange="handleInboxFileSelect(this)">
+          <label class="iv3-attach-label" title="إرفاق ملف">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            <input type="file" id="iv3-file-input" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xlsx"
+              style="display:none" onchange="iv3FileSelected(this)">
           </label>
-          <!-- Text area with char count -->
-          <div style="flex:1;position:relative">
-            <textarea id="inbox-reply-text" placeholder="اكتب ردك... (/ للقوالب | Enter للإرسال، Shift+Enter سطر جديد)" rows="3" style="width:100%;padding:10px 12px 24px 12px;border:1.5px solid #e5e7eb;border-radius:10px;font-family:Cairo,sans-serif;font-size:13.5px;resize:none;outline:none;min-height:70px;max-height:140px;background:#f9fafb;transition:.15s;line-height:1.5;box-sizing:border-box" onfocus="this.style.borderColor='var(--brand,#1B5E30)';this.style.background='#fff';this.style.boxShadow='0 0 0 3px var(--brand-light,rgba(27,94,48,.08))'" onblur="this.style.borderColor='#e5e7eb';this.style.background='#f9fafb';this.style.boxShadow='none'" onkeydown="inboxReplyKeydown(event)" oninput="onReplyTextInput(this)"></textarea>
-            <div id="reply-char-count" style="position:absolute;bottom:5px;left:10px;font-size:10px;color:#9ca3af">0</div>
+
+          <!-- Textarea + slash dropdown -->
+          <div class="iv3-textarea-wrap">
+            <textarea
+              id="iv3-textarea"
+              class="iv3-textarea"
+              placeholder="اكتب ردك... (/ للردود الجاهزة)"
+              rows="1"
+              onkeydown="iv3TextareaKeydown(event)"
+              oninput="iv3TextareaInput(this)"
+            ></textarea>
+            <div class="iv3-char-count" id="iv3-char-count">0</div>
             <!-- Slash command dropdown -->
-            <div id="slash-cmd-dropdown" style="display:none;position:absolute;bottom:100%;left:0;right:0;background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:200;max-height:180px;overflow-y:auto"></div>
+            <div class="iv3-slash-dropdown" id="iv3-slash-dropdown" style="display:none"></div>
           </div>
-          <!-- Voice record button -->
-          <button id="inbox-mic-btn" onclick="toggleVoiceRecord()" title="تسجيل رسالة صوتية" style="background:#f9fafb;border:1.5px solid #e5e7eb;color:#6b7280;padding:9px 10px;border-radius:10px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:.15s" onmouseenter="this.style.borderColor='#ef4444';this.style.color='#ef4444'" onmouseleave="if(!isRecording)this.style.borderColor='#e5e7eb';if(!isRecording)this.style.color='#6b7280'">
+
+          <!-- Voice -->
+          <button class="iv3-mic-btn" id="iv3-mic-btn" onclick="iv3ToggleVoice()" title="رسالة صوتية">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
           </button>
+
           <!-- Send -->
-          <button onclick="sendInboxReply()" style="background:var(--brand,#1B5E30);border:none;color:#fff;padding:9px 16px;border-radius:10px;font-family:Cairo,sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px">
+          <button class="iv3-send-btn" id="iv3-send-btn" onclick="iv3Send()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             إرسال
           </button>
         </div>
 
-        <!-- Upload Progress -->
-        <div id="inbox-upload-progress" style="display:none;margin-top:6px">
-          <div style="height:3px;background:#e5e7eb;border-radius:4px;overflow:hidden">
-            <div id="inbox-upload-bar" style="height:100%;background:var(--brand,#1B5E30);width:0%;transition:.3s"></div>
+        <!-- Upload progress -->
+        <div class="iv3-upload-bar" id="iv3-upload-bar">
+          <div class="iv3-upload-track">
+            <div class="iv3-upload-fill" id="iv3-upload-fill"></div>
           </div>
-          <div style="font-size:10px;color:#9ca3af;margin-top:2px">جاري الرفع...</div>
+          <div class="iv3-upload-label">جاري رفع الملف...</div>
         </div>
       </div>
     </div>
-    <!-- Contact Info Panel -->
-    <div id="inbox-contact-panel" style="border-inline-end:1px solid #e5e7eb;overflow-y:auto;background:#fff;display:flex;flex-direction:column">
-      <!-- Empty state when no conv selected -->
-      <div id="icp-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;color:#d1d5db">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin-bottom:10px;opacity:.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <div style="font-size:11px;color:#9ca3af;text-align:center">معلومات العميل<br>ستظهر هنا</div>
+
+    <!-- ══ COL 3: Customer Context ══ -->
+    <div class="iv3-context" id="iv3-context">
+
+      <!-- Empty state -->
+      <div class="iv3-ctx-empty" id="iv3-ctx-empty">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <p>معلومات العميل ستظهر هنا<br>عند اختيار محادثة</p>
       </div>
-      <div style="padding:14px 12px;border-bottom:1px solid #f0f0f0;text-align:center;background:#f9fafb;display:none" id="icp-header">
-        <div id="icp-avatar" style="width:44px;height:44px;border-radius:50%;background:var(--brand,#1B5E30);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;margin:0 auto 8px">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+
+      <!-- Customer header -->
+      <div class="iv3-ctx-header" id="iv3-ctx-header" style="display:none">
+        <div class="iv3-ctx-avatar" id="iv3-ctx-avatar" style="background:#9CA3AF">?</div>
+        <div class="iv3-ctx-name" id="iv3-ctx-name">—</div>
+        <div class="iv3-ctx-platform" id="iv3-ctx-plat"></div>
+        <div class="iv3-ctx-badges" id="iv3-ctx-badges"></div>
+      </div>
+
+      <!-- Contact details -->
+      <div class="iv3-ctx-section" id="iv3-ctx-details" style="display:none">
+        <div class="iv3-ctx-section-title">بيانات العميل</div>
+        <div class="iv3-ctx-info-row">
+          <span class="iv3-ctx-label">📞 تليفون</span>
+          <span class="iv3-ctx-val" id="iv3-ctx-phone">—</span>
         </div>
-        <div id="icp-name" style="font-weight:800;font-size:13px;color:#111827">اختار محادثة</div>
-        <div id="icp-platform" style="font-size:11px;color:#9ca3af;margin-top:2px;display:flex;align-items:center;justify-content:center;gap:4px"></div>
-      </div>
-      <div id="icp-details" style="padding:12px;border-bottom:1px solid #f3f4f6;display:none">
-        <div style="font-size:10px;font-weight:700;color:#9ca3af;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">بيانات العميل</div>
-        <div id="icp-phone" style="font-size:11px;color:#374151;margin-bottom:3px"></div>
-        <div id="icp-email" style="font-size:11px;color:#374151;margin-bottom:3px"></div>
-        <div id="icp-city" style="font-size:11px;color:#374151;margin-bottom:6px"></div>
-        <div id="icp-crm-badges" style="display:flex;gap:4px;flex-wrap:wrap"></div>
-      </div>
-      <div id="icp-actions" style="padding:10px 12px;border-bottom:1px solid #f3f4f6;display:none">
-        <div style="font-size:10px;font-weight:700;color:#9ca3af;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">إجراءات سريعة</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
-          <button id="icp-btn-profile" onclick="icpOpenProfile()" style="background:#f9fafb;border:1px solid #e5e7eb;color:#374151;padding:8px 6px;border-radius:8px;font-family:Cairo,sans-serif;font-size:11px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand,#1B5E30)" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            بروفايل
-          </button>
-          <button onclick="icpNewInvoice()" style="background:#f9fafb;border:1px solid #e5e7eb;color:#374151;padding:8px 6px;border-radius:8px;font-family:Cairo,sans-serif;font-size:11px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-            فاتورة
-          </button>
-          <button onclick="icpNewOrder()" style="background:#f9fafb;border:1px solid #e5e7eb;color:#374151;padding:8px 6px;border-radius:8px;font-family:Cairo,sans-serif;font-size:11px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-            طلب
-          </button>
-          <button onclick="icpSendLastInvoice()" style="background:#f9fafb;border:1px solid #e5e7eb;color:#374151;padding:8px 6px;border-radius:8px;font-family:Cairo,sans-serif;font-size:11px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            آخر PDF
-          </button>
-          <button id="icp-btn-add" onclick="icpAddContact()" style="background:#f9fafb;border:1px solid #e5e7eb;color:#d97706;padding:8px 6px;border-radius:8px;font-family:Cairo,sans-serif;font-size:11px;font-weight:600;cursor:pointer;display:none;flex-direction:column;align-items:center;gap:3px;grid-column:1/-1">
-            + إضافة كعميل
-          </button>
+        <div class="iv3-ctx-info-row">
+          <span class="iv3-ctx-label">✉️ إيميل</span>
+          <span class="iv3-ctx-val" id="iv3-ctx-email">—</span>
+        </div>
+        <div class="iv3-ctx-info-row">
+          <span class="iv3-ctx-label">📍 مدينة</span>
+          <span class="iv3-ctx-val" id="iv3-ctx-city">—</span>
         </div>
       </div>
-      <div id="icp-orders" style="padding:10px 12px;display:none">
-        <div style="font-size:10px;font-weight:700;color:#9ca3af;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">آخر الأوردرات</div>
-        <div id="icp-orders-list" style="display:flex;flex-direction:column;gap:4px"></div>
+
+      <!-- Balance alert -->
+      <div class="iv3-ctx-section" id="iv3-ctx-balance" style="display:none">
+        <div class="iv3-balance-alert" id="iv3-balance-inner"></div>
       </div>
-      <div id="icp-balance" style="padding:10px;border-top:1px solid #f3f4f6;display:none">
-        <div id="icp-balance-content"></div>
+
+      <!-- Quick actions -->
+      <div class="iv3-ctx-section" id="iv3-ctx-actions" style="display:none">
+        <div class="iv3-ctx-section-title">إجراءات سريعة</div>
+        <div class="iv3-ctx-actions">
+          <button class="iv3-ctx-act-btn" onclick="iv3CtxOpenProfile()" id="iv3-ctx-profile-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B5E30" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span class="iv3-ctx-act-label">بروفايل</span>
+          </button>
+          <button class="iv3-ctx-act-btn" onclick="iv3CtxNewInvoice()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            <span class="iv3-ctx-act-label">فاتورة جديدة</span>
+          </button>
+          <button class="iv3-ctx-act-btn" onclick="iv3CtxNewOrder()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EA580C" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            <span class="iv3-ctx-act-label">طلب جديد</span>
+          </button>
+          <button class="iv3-ctx-act-btn" onclick="iv3SendInvoice()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span class="iv3-ctx-act-label">بعت فاتورة</span>
+          </button>
+          <!-- Add as client (if not in CRM) -->
+          <button class="iv3-ctx-act-btn full" id="iv3-ctx-add-btn" onclick="iv3CtxAddContact()" style="display:none;border-color:#FDE68A">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span class="iv3-ctx-act-label" style="color:#D97706">+ إضافة كعميل في CRM</span>
+          </button>
+        </div>
       </div>
-    </div>
-  </div>
-</div>
+
+      <!-- Last invoices -->
+      <div class="iv3-ctx-section" id="iv3-ctx-invoices" style="display:none">
+        <div class="iv3-ctx-section-title">آخر الفواتير</div>
+        <div id="iv3-ctx-inv-list"></div>
+      </div>
+
+      <!-- Last orders -->
+      <div class="iv3-ctx-section" id="iv3-ctx-orders" style="display:none">
+        <div class="iv3-ctx-section-title">آخر الأوردرات</div>
+        <div id="iv3-ctx-ord-list"></div>
+      </div>
+
+    </div><!-- /iv3-context -->
+
+  </div><!-- /iv3-body -->
+</div><!-- /page-inbox -->
+
 
 <!-- Inbox Settings Modal -->
 <div class="overlay hidden" id="inboxSettingsModal" onclick="closeIfBg(event,'inboxSettingsModal')">
@@ -3486,6 +3609,7 @@
         <button class="btn btn-sm it-tab-btn" data-tab="it-distribution" onclick="itShowTab('it-distribution')">⚡ التوزيع</button>
         <button class="btn btn-sm it-tab-btn" data-tab="it-workhours" onclick="itShowTab('it-workhours')">🕐 ساعات العمل</button>
         <button class="btn btn-sm it-tab-btn" data-tab="it-reports" onclick="itShowTab('it-reports')">📊 تقارير الرد</button>
+        <button class="btn btn-sm it-tab-btn" data-tab="it-permissions" onclick="itShowTab('it-permissions')">🔐 الصلاحيات</button>
       </div>
 
       <!-- IT TAB: الفرق -->
@@ -3595,6 +3719,65 @@
           </table>
         </div>
       </div>
+      <!-- IT TAB: الصلاحيات ── جديد ── -->
+      <div class="it-section" data-tab="it-permissions" style="display:none">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div>
+            <div style="font-weight:800;font-size:14px;color:#111827">🔐 صلاحيات الـ Inbox</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:3px">تحكم كامل في من يشوف إيه ويعمل إيه في الرسائل</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="ipOpenAddUserModal()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            إضافة مستخدم
+          </button>
+        </div>
+
+        <!-- Permissions Legend -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:10px 12px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">
+          <span style="font-size:11px;font-weight:700;color:#374151">الصلاحيات:</span>
+          <span style="font-size:11px;background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:20px">● عرض الكل</span>
+          <span style="font-size:11px;background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:20px">● تعيين</span>
+          <span style="font-size:11px;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:20px">● حذف</span>
+          <span style="font-size:11px;background:#fce7f3;color:#be185d;padding:2px 8px;border-radius:20px">● تصدير</span>
+          <span style="font-size:11px;background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:20px">● أدمن</span>
+        </div>
+
+        <!-- Users Table -->
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px" id="ip-users-table">
+            <thead style="background:#f9fafb;border-bottom:1px solid #e5e7eb">
+              <tr>
+                <th style="padding:10px 16px;text-align:right;font-weight:700;color:#374151">الموظف</th>
+                <th style="padding:10px;text-align:center;font-weight:700;color:#374151">Inbox نشط</th>
+                <th style="padding:10px;text-align:center;font-weight:700;color:#374151">عرض الكل</th>
+                <th style="padding:10px;text-align:center;font-weight:700;color:#374151">تعيين</th>
+                <th style="padding:10px;text-align:center;font-weight:700;color:#374151">حذف</th>
+                <th style="padding:10px;text-align:center;font-weight:700;color:#374151">تصدير</th>
+                <th style="padding:10px;text-align:center;font-weight:700;color:#374151">أدمن Inbox</th>
+                <th style="padding:10px;text-align:center;font-weight:700;color:#374151">حد محادثات</th>
+                <th style="padding:10px 12px;text-align:center;font-weight:700;color:#374151">إجراء</th>
+              </tr>
+            </thead>
+            <tbody id="ip-users-tbody">
+              <tr><td colspan="9" style="text-align:center;padding:40px;color:#9ca3af">جاري التحميل...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Quick Presets -->
+        <div style="margin-top:16px">
+          <div style="font-weight:700;font-size:13px;color:#374151;margin-bottom:10px">⚡ تعيين سريع</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm" style="background:#f0fdf4;border-color:#bbf7d0;color:#16a34a" onclick="ipApplyPreset('agent')">👤 موظف رد عادي</button>
+            <button class="btn btn-sm" style="background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8" onclick="ipApplyPreset('supervisor')">👥 مشرف</button>
+            <button class="btn btn-sm" style="background:#fdf4ff;border-color:#e9d5ff;color:#7c3aed" onclick="ipApplyPreset('manager')">👑 مدير</button>
+          </div>
+          <div style="font-size:11px;color:#9ca3af;margin-top:6px">اختار موظف من الجدول أولاً، ثم اضغط على الـ preset المطلوب</div>
+        </div>
+
+      </div><!-- /it-tab-permissions -->
+
     </div><!-- /is-section-team-management -->
 
     <!-- ═══ SECTION: broadcast-send ═══ -->
@@ -4568,7 +4751,7 @@
      JavaScript — مقسّم لملفات منفصلة لسهولة التطوير
      ♻️ Phase 4 Refactor — كل ملف = موديول مستقل
      ════════════════════════════════════════════════════════ -->
-<script src="/dashboard/js/core.js?v=d5361aae"></script>
+<script src="/dashboard/js/core.js?v=1777716135"></script>
 <script src="/dashboard/js/inventory.js?v=c3b01169"></script>
 <script src="/dashboard/js/dashboard.js?v=ec63adc0"></script>
 <script src="/dashboard/js/affiliates.js?v=d44cfea0"></script>
@@ -4576,7 +4759,15 @@
 <script src="/dashboard/js/invoices.js?v=e64c2ce1"></script>
 <script src="/dashboard/js/contracts.js?v=bb274c61"></script>
 <script src="/dashboard/js/treasury.js?v=a379cf29"></script>
-<script src="/dashboard/js/inbox.js?v=b5b4caba"></script>
+<script src="/dashboard/js/inbox.js?v=1777716135"></script>
+<!-- Inbox v3 modules -->
+<script src="/dashboard/inbox-v3/inbox-state.js?v=20260502"></script>
+<script src="/dashboard/inbox-v3/inbox-api.js?v=1777716135"></script>
+<script src="/dashboard/inbox-v3/inbox-conv.js?v=20260502"></script>
+<script src="/dashboard/inbox-v3/inbox-chat.js?v=1777716135"></script>
+<script src="/dashboard/inbox-v3/inbox-reply.js?v=20260502"></script>
+<script src="/dashboard/inbox-v3/inbox-context.js?v=20260502"></script>
+<script src="/dashboard/inbox-v3/inbox-init.js?v=20260502"></script>
 <script src="/dashboard/js/inbox-settings.js?v=8eb85031"></script>
 <script src="/dashboard/js/team-settings.js?v=4b6f9871"></script>
 <script src="/dashboard/js/ui.js?v=fdf2b683"></script>
