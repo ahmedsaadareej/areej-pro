@@ -42,6 +42,7 @@ async function loadInvoices() {
 
     (inv.client_phone ? '<button class="btn btn-sm" style="background:#25D366;color:#fff;border:none;font-size:12px" onclick="sendInvWA('+inv.id+',\''+esc(inv.invoice_no)+'\','+inv.total+',\''+esc(inv.client_name||'')+'\',\''+esc(inv.client_phone||'')+'\')">📱 واتساب</button>' : '') +
     (inv.status !== 'paid' && inv.status !== 'cancelled' ? '<button class="btn btn-sm btn-gold" onclick="markPaid('+inv.id+')">✅ دفع</button>' : '') +
+    (inv.status !== 'paid' && inv.status !== 'cancelled' ? '<button class="btn btn-sm" style="background:#0891B2;color:#fff;border:none;font-size:12px" onclick="sendInvToPayment('+inv.id+',\''+esc(inv.invoice_no)+'\','+inv.total+',\''+esc(inv.client_name||'')+'\'\,\''+esc(inv.client_phone||'')+'\')" title="إرسال رابط دفع">💳 دفع</button>' : '') +
     (!inv.has_order && inv.status !== 'cancelled' ? '<button class="btn btn-sm" style="background:#e0f2fe;color:#0369a1;border:none;font-size:11px" onclick="convertToOrder('+inv.id+')">📋 طلب</button>' : '') +
     (inv.status === 'draft' ? '<button class="btn btn-sm btn-danger" onclick="deleteInvoice('+inv.id+')">🗑️</button>' : '') +
     '</div></td></tr>'
@@ -184,7 +185,11 @@ async function openInvoiceDetail(id) {
   if (inv.status !== 'paid' && inv.status !== 'cancelled') {
     html += '<div style="background:#fef3c7;border:1.5px solid #fde68a;border-radius:12px;padding:14px;text-align:center">';
     html += '<div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:8px">⚠️ متأخر السداد — ' + fmt(inv.total||0) + ' ج.م مستحقة</div>';
+    html += '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">';
     html += '<button onclick="markPaid('+id+')" style="background:#1B5E30;color:#fff;border:none;padding:9px 20px;border-radius:9px;font-family:Cairo,sans-serif;font-size:13px;font-weight:700;cursor:pointer">✅ تسجيل الدفع</button>';
+    const ipPhone = (contact?.phone||contact?.whatsapp||inv.client_phone||'');
+    html += '<button onclick="sendInvToPayment('+id+',\''+esc(inv.invoice_no)+'\','+( inv.total||0)+',\''+esc(inv.client_name||'')+'\'\,\''+esc(ipPhone)+'\')" style="background:#0891B2;color:#fff;border:none;padding:9px 20px;border-radius:9px;font-family:Cairo,sans-serif;font-size:13px;font-weight:700;cursor:pointer">💳 إرسال رابط دفع</button>';
+    html += '</div>';
     html += '</div>';
   } else if (inv.status === 'paid') {
     html += '<div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:12px;text-align:center;color:#16a34a;font-weight:700;font-size:14px">✅ مدفوعة' + (inv.paid_at ? ' — ' + (inv.paid_at||'').substring(0,10) : '') + '</div>';
@@ -421,6 +426,41 @@ async function deleteInvoice(id) {
   if (!confirm('حذف هذه المسودة؟')) return;
   await sysDel('/invoices/' + id);
   await Promise.all([loadInvoiceStats(), loadInvoices()]);
+}
+
+// ── إرسال رابط الدفع من الفاتورة ─────────────────────────────────────────────
+async function sendInvToPayment(invId, invNo, total, clientName, clientPhone) {
+  if (!confirm(`إنشاء رابط دفع بقيمة ${total} ج.م لـ ${clientName}؟`)) return;
+
+  try {
+    const d = await sysPost('/payment-links', {
+      invoice_id:   invId,
+      amount:       total,
+      client_name:  clientName  || '',
+      client_phone: clientPhone || '',
+      description:  'فاتورة رقم ' + invNo,
+    });
+    if (!d.ok) throw new Error(d.error || 'فشل إنشاء الرابط');
+
+    const link = d.link;
+    const msg  = `مرحباً يا ${clientName}😊\nتفضل سدد فاتورة رقم ${invNo} بقيمة ${total} ج.م عبر الرابط:\n${link}`;
+
+    // فتح واتساب إذا عنده تليفون
+    if (clientPhone) {
+      const phone = String(clientPhone).replace(/^0/, '').replace(/\D/g, '');
+      window.open('https://wa.me/2' + phone + '?text=' + encodeURIComponent(msg), '_blank');
+    } else {
+      // نسخ الرابط للـ clipboard
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(link).catch(() => {});
+      }
+      alert('رابط الدفع:\n' + link + '\n\n(تم نسخه للـ Clipboard)');
+    }
+
+    showToast('✅ تم إنشاء رابط الدفع');
+  } catch (e) {
+    alert('خطأ: ' + e.message);
+  }
 }
 
 // ── CONTRACTS ──
