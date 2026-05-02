@@ -35,6 +35,28 @@
 ## سجل الجلسات (الأحدث في الأعلى)
 
 ---
+## جلسة 2026-05-02 11:43 UTC — bug fixes بعد التقييم
+
+### وقفت عند:
+- الملف: تم إصلاح 4 bugs في `inbox-api.js`, `inbox-chat.js`, `inbox-reply.js`, `inbox.html`
+
+### Bug Fixes منجزة:
+1. **`addNote` كانت ترسل `{note}` والـ API يتوقع `{content}`** → إصلاح في inbox-api.js
+2. **`media_type` أولوية غلط** → `msg.media_type || msg.mime_type` (كان معكوس)
+3. **Voice Recording stream leak** → حفظ stream reference + cleanup قبل أي تسجيل جديد
+4. **`inbox.html` منفصل عن `index.html`** → inbox.html الآن يُحدَّث تلقائياً من index.html
+
+### ملاحظات تقنية:
+- `getMessages` يعمل mark-as-read تلقائياً في الـ server → `iv3ClearUnread` محلي (optimistic) صح
+- Polling 8 ثواني مقبول مع 2 مستخدمين حاليًا — يُراجع عند توسع Tenant
+- المرجع دائماً: `index.html` للـ HTML، وملفات `inbox-v3/` للـ JS/CSS
+
+### الخطوة التالية:
+- ربط WhatsApp QR (يحتاج أحمد) أو بدء مرحلة جديدة حسب الأولوية
+
+---
+
+---
 ## جلسة 2026-05-02 11:33 UTC
 
 ### وقفت عند:
