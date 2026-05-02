@@ -14,13 +14,16 @@
 /* ── Reset & Base ─────────────────────────────────────────── */
 #page-inbox * { box-sizing: border-box; }
 #page-inbox {
-  display: flex;
   flex-direction: column;
   height: 100%;
   background: #F1F5F9;
   font-family: 'Cairo', sans-serif;
   direction: rtl;
   overflow: hidden;
+  /* display يتحكم فيه .page / .page.active في main.css */
+}
+#page-inbox.active {
+  display: flex !important;
 }
 
 /* ══════════════════════════════════════════════════════════
