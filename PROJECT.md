@@ -1,7 +1,7 @@
 # 📋 PROJECT.md — مرجع مشروع Areej Pro
 > **قاعدة ذهبية:** هذا الملف يُحدَّث بعد كل خطوة بدون استثناء.
 > أي جلسة جديدة تبدأ بقراءة هذا الملف أولاً قبل أي شيء.
-> آخر تحديث: 2026-05-02 16:12 UTC
+> آخر تحديث: 2026-05-02 17:21 UTC
 
 ---
 
@@ -117,6 +117,56 @@ inbox_agent_status   (id, user_id, status)
 
 ---
 
+## 💳 مشروع Payment Gateway — White-Label SaaS
+
+### القرارات المعمارية المتفق عليها (2026-05-02):
+
+1. **areej-payment لا يُلمس** — يبقى مشروع أحمد الخاص كما هو
+2. **منطق الدفع يُعاد كتابته داخل areej-pro** كـ modules مستقلة (Xيار B)
+3. **كل Tenant عنده credentials خاصة** في جدول `payment_gateways` في tenant DB
+4. **صفحة الدفع White-Label** على نفس subdomain الـ tenant:
+   `{slug}.areejegypt.com/pay/{token}`
+5. **الـ tenant_profile موجود فعلاً** ويحتوي: `company_name`, `logo_url`, `brand_color`
+6. **جدول payment_links موجود فعلاً** في tenant DB — سيُستخدم مباشرة
+7. **نوعان من روابط الدفع:**
+   - رابط حر: `invoice_id = NULL` + مبلغ محدد أو مفتوح (عربون / مقدم)
+   - رابط فاتورة: `invoice_id = X` + مبلغ ثابت → يُحدّث الفاتورة بعد الدفع
+8. **البوابات المدعومة:** Fawaterk + Paymob + InstaPay (قابل للتوسع)
+9. **كل tenant يختار بوابته** من صفحة إعدادات الدفع في dashboard
+
+### Schema الجديد:
+```sql
+-- في كل tenant DB (lazy migration)
+payment_gateways (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  gateway_name TEXT NOT NULL,   -- 'fawaterk' | 'paymob' | 'instapay' | ...
+  display_name TEXT,
+  enabled INTEGER DEFAULT 0,
+  credentials_json TEXT,        -- مشفّر بـ AES
+  config_json TEXT,             -- integration IDs وإعدادات إضافية
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+)
+
+-- payment_links موجود فعلاً — تعديل بسيط:
+-- invoice_id = NULL → رابط حر
+-- amount = NULL → العميل يحدد المبلغ
+```
+
+### خطة ACUs المتبقية:
+| # | المهمة | الملفات | الحالة |
+|---|---|---|---|
+| **ACU-1** | جدول `payment_gateways` + route CRUD كامل | `server/routes/payment-gateways.js` + `app.js` | ✅ commit 99750a2 |
+| **ACU-2** | صفحة إعدادات بوابات الدفع في dashboard | `index.html` + route | ✅ |
+| **ACU-3** | Gateway modules (Fawaterk + Paymob) + route `/pay/:token` + صفحة White-Label | modules جديدة + route | ✅ |
+| **ACU-4** | زر "رابط دفع" في Inbox → token → يُرسل في المحادثة | `inbox-context.js` | ✅ commit ef3211f |
+| **ACU-5** | زر "إرسال للدفع" في الفواتير + تحديث status بعد الدفع | `invoices.js` | ✅ commit f7a854b |
+| **ACU-A** | ربط بوابات الدفع بالخزنة + العمولة (نسبة + ثابتة) | `payment-gateways.js` + `index.html` | ✅ commit 99750a2 |
+| **ACU-B** | `handlePaymentSuccess()` — دورة حياة كاملة بعد الدفع | `pay.js` | ✅ commit 897fa80 |
+| **ACU-C** | `conversation_id` في `payment_links` — ربط الإشعارات | `inbox.js` + `inbox-context.js` + `inbox-api.js` | ✅ commit e6d7c1d |
+
+---
+
 ## ✅ ما تم إنجازه حتى الآن (2026-05-02)
 
 ### Inbox v3 — البنية الكاملة
@@ -149,6 +199,24 @@ inbox_agent_status   (id, user_id, status)
 - [x] Quick actions (ملف عميل / فاتورة / أوردر جديد)
 - [x] Sound toggle
 - [x] Toast notifications
+- [x] Quote/Reply على رسالة محددة — commit bbe54f7
+- [x] Snooze المحادثة — commit 6920703
+- [x] Conversation Timeline — commit f3579d2
+- [x] زر "تحويل لأوردر" من المحادثة — commit 5c18915
+- [x] Bulk Actions — commit d4b9d94
+- [x] Collision Detection — commit 17c91cb
+- [x] Keyboard Shortcuts — commit 7b4fec8
+
+### منظومة الدفع (Payment Gateway) — مكتملة ✅
+- [x] جدول `payment_gateways` + CRUD + AES encryption — commit 99750a2
+- [x] صفحة إعدادات بوابات الدفع في dashboard
+- [x] Gateway modules: Fawaterk + Paymob + InstaPay
+- [x] صفحة دفع White-Label: `{slug}.areejegypt.com/pay/{token}`
+- [x] زر "رابط دفع" في Inbox Context Panel — commit ef3211f
+- [x] زر "إرسال للدفع" من صفحة الفواتير — commit f7a854b
+- [x] ربط بوابات الدفع بالخزنة + العمولة (نسبة + ثابتة) — commit 99750a2
+- [x] `handlePaymentSuccess()`: receivable خصم + خزنة صافي + عمولة مصروف + CRM + inbox — commit 897fa80
+- [x] `conversation_id` في `payment_links` — commit e6d7c1d
 
 ### إعدادات الرسائل (page-inbox-settings)
 - [x] صفحة منفصلة كاملة (مش modal) — شغّالة ✅
@@ -171,54 +239,30 @@ inbox_agent_status   (id, user_id, status)
 
 ## 🎯 المهام القادمة — مرتبة بالأولوية
 
+### ✅ منظومة الدفع مكتملة بالكامل
+→ ACU-1 → ACU-5 + ACU-A + ACU-B + ACU-C كلها مُنجزة
+
 ### 🔴 الأولوية القصوى (ابدأ هنا)
-
-#### ~~1. Quote/Reply على رسالة محددة~~ ✅ تم (commit bbe54f7)
-
-#### ~~2. Snooze المحادثة~~ ✅ تم (commit 6920703)
-
-#### ~~3. Conversation Timeline~~ ✅ تم (commit f3579d2)
-
-#### ~~1. زر "تحويل لأوردر" من المحادثة~~ ✅ تم (commit 5c18915)
-
-#### 1. Payment Link من المحادثة
-**الوصف:** زر في Context Panel → يفتح نموذج أوردر بمعلومات العميل جاهزة
-**الملفات:** `inbox-context.js` + ربط بـ orders module
-**التقدير:** 3-4 ساعات
-
-#### 5. Payment Link من المحادثة
-**الوصف:** زر في Context Panel أو Reply box → ينشئ رابط دفع ويرسله للعميل
-**الملفات:** `inbox-context.js` + `inbox-reply.js`
-**التقدير:** 2-3 ساعات
-
-### 🟡 الأولوية العالية
-
-#### ~~6. Bulk Actions~~ ✅ تم (commit d4b9d94)
-
-#### ~~3. Collision Detection~~ ✅ تم (commit 17c91cb)
-
-#### ~~8. Keyboard Shortcuts~~ ✅ تم (commit 7b4fec8)
+→ **Customer Lifetime Value Badge** — `inbox-context.js` — "12 فاتورة / 4,500 ج.م" يظهر تلقائياً في Context Panel لكل محادثة
 
 ### 🟢 تضيف قيمة تنافسية فريدة
 
-#### 9. Customer Lifetime Value Badge
+#### Customer Lifetime Value Badge
 **الوصف:** في Context Panel — "12 فاتورة / 4,500 جنيه" يظهر تلقائياً
 **الملفات:** `inbox-context.js`
 **التقدير:** 1-2 ساعة
 
-#### 10. Catalog العرض السريع
+#### Catalog العرض السريع
 **الوصف:** زر في Reply box → يعرض المنتجات من المخزون → موظف يختار ويبعت
 **الملفات:** `inbox-reply.js` + ربط بـ inventory API
 **التقدير:** 4-5 ساعات
 
 ### ⚪ يحتاج تدخّل أحمد
 
-#### 11. ربط WhatsApp QR
-**الوصف:** مسح QR مرة واحدة لربط رقم واتساب بـ pro-test
+#### ربط WhatsApp QR
 **المطلوب من أحمد:** فتح صفحة الإعدادات → قنوات التواصل → واتساب QR → مسح الـ QR
 
-#### 12. ربط Telegram Bot
-**الوصف:** Bot Token من @BotFather
+#### ربط Telegram Bot
 **المطلوب من أحمد:** 5 دقائق فقط — Token في إعدادات قنوات التواصل
 
 ---
@@ -258,3 +302,4 @@ sqlite3 /home/areej/areej-pro/data/master.db \
 7. **بروتوكول المهام:** ACU → تنفيذ → Syntax check → Commit → انتظار 10 ثواني
 8. **حد أقصى 5 مهام في الجلسة الواحدة**
 9. **SESSION_CONTEXT.md يُحدَّث في أعلى الملف قبل إغلاق الجلسة**
+10. **areej-payment لا يُلمس أبداً** — منطق الدفع يُعاد كتابته داخل areej-pro
