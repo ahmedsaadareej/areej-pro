@@ -3483,11 +3483,92 @@
           </div>
         </div>
 
-        <div class="is-action-buttons">
-          <button class="is-btn-primary" onclick="saveWhatsAppSettingsNew()">💾 حفظ الإعدادات</button>
-          <button class="is-btn-secondary" onclick="testWhatsAppConnection()" style="margin-right:8px">🔌 اختبار الاتصال</button>
+        <!-- wa tabs nav -->
+        <div style="display:flex;gap:6px;margin-bottom:0;border-bottom:2px solid #e5e7eb;padding-bottom:0">
+          <button id="wa-tab-btn-settings" onclick="waShowTab('settings')" style="padding:8px 14px;border:none;border-bottom:2.5px solid #1B5E30;background:none;font-size:12px;font-weight:800;color:#1B5E30;cursor:pointer;font-family:Cairo,sans-serif;margin-bottom:-2px">⚙️ إعدادات الربط</button>
+          <button id="wa-tab-btn-templates" onclick="waShowTab('templates')" style="padding:8px 14px;border:none;border-bottom:2.5px solid transparent;background:none;font-size:12px;font-weight:800;color:#6b7280;cursor:pointer;font-family:Cairo,sans-serif;margin-bottom:-2px">📝 Templates</button>
         </div>
-        <div id="wa-status-msg" style="margin-top:8px;font-size:12px"></div>
+
+        <!-- tab: settings -->
+        <div id="wa-tab-settings" style="padding-top:14px">
+          <div class="is-action-buttons">
+            <button class="is-btn-primary" onclick="saveWhatsAppSettingsNew()">💾 حفظ الإعدادات</button>
+            <button class="is-btn-secondary" onclick="testWhatsAppConnection()" style="margin-right:8px">🔌 اختبار الاتصال</button>
+          </div>
+          <div id="wa-status-msg" style="margin-top:8px;font-size:12px"></div>
+        </div>
+
+        <!-- tab: templates -->
+        <div id="wa-tab-templates" style="display:none;padding-top:14px">
+
+          <!-- status bar -->
+          <div id="wa-tpl-status" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px"></div>
+
+          <!-- toolbar -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <span style="font-size:13px;font-weight:800;color:#111827">📝 الـ Templates بتاعتك</span>
+            <div style="display:flex;gap:6px">
+              <button onclick="waLoadTemplates()" style="padding:5px 10px;border-radius:7px;border:1.5px solid #e5e7eb;background:#f9fafb;font-size:11px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">🔄 تحديث</button>
+              <button onclick="waOpenNewTemplate()" style="padding:5px 12px;border-radius:7px;border:none;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;cursor:pointer;font-family:Cairo,sans-serif">➕ Template جديد</button>
+            </div>
+          </div>
+
+          <!-- list -->
+          <div id="wa-tpl-list" style="display:flex;flex-direction:column;gap:8px;min-height:60px">
+            <div style="text-align:center;color:#9ca3af;font-size:12px;padding:20px 0">اضغط "تحديث" لعرض الـ Templates</div>
+          </div>
+
+          <!-- new/edit form -->
+          <div id="wa-tpl-form" style="display:none;margin-top:16px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;padding:14px">
+            <h4 style="margin:0 0 12px;font-size:13px;font-weight:800;color:#111827" id="wa-tpl-form-title">➕ Template جديد</h4>
+
+            <div class="is-field-group">
+              <label class="is-field-label">اسم الـ Template <span style="color:#ef4444">*</span></label>
+              <input id="wa-tpl-name" class="is-field-input" placeholder="مثال: order_confirmation" style="font-family:monospace" />
+              <div style="font-size:10px;color:#9ca3af;margin-top:3px">حروف صغيرة + _ فقط — مثال: order_confirmation</div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div class="is-field-group" style="margin-bottom:0">
+                <label class="is-field-label">اللغة <span style="color:#ef4444">*</span></label>
+                <select id="wa-tpl-lang" class="is-field-input" style="padding:8px 10px">
+                  <option value="ar">عربي (ar)</option>
+                  <option value="en_US">إنجليزي (en_US)</option>
+                  <option value="ar_EG">عربي مصري (ar_EG)</option>
+                </select>
+              </div>
+              <div class="is-field-group" style="margin-bottom:0">
+                <label class="is-field-label">النوع <span style="color:#ef4444">*</span></label>
+                <select id="wa-tpl-category" class="is-field-input" style="padding:8px 10px">
+                  <option value="UTILITY">UTILITY — تنبيهات / تأكيدات</option>
+                  <option value="MARKETING">MARKETING — تسويقي</option>
+                  <option value="AUTHENTICATION">AUTHENTICATION — كود OTP</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="is-field-group">
+              <label class="is-field-label">نص الرسالة (Body) <span style="color:#ef4444">*</span></label>
+              <textarea id="wa-tpl-body" class="is-field-input" rows="4" placeholder="مثال: أهلاً {{1}}، طلبك رقم {{2}} جاهز للشحن. المبلغ: {{3}} جنيه." style="font-size:12px;resize:vertical" oninput="waUpdatePreview()"></textarea>
+              <div style="font-size:10px;color:#9ca3af;margin-top:3px">استخدم {{1}} {{2}} للمتغيرات — كل رقم = متغير لازم تملأه لما تبعت الرسالة</div>
+            </div>
+
+            <!-- preview -->
+            <div style="background:#fff;border:1.5px solid #d1fae5;border-radius:8px;padding:10px;margin-bottom:12px">
+              <div style="font-size:10px;font-weight:700;color:#6b7280;margin-bottom:6px">👁 معاينة (WhatsApp bubble)</div>
+              <div id="wa-tpl-preview" style="background:#dcf8c6;padding:10px 14px;border-radius:10px;font-size:12px;color:#111827;line-height:1.7;min-height:36px;white-space:pre-wrap;direction:rtl;text-align:right"></div>
+            </div>
+
+            <input type="hidden" id="wa-tpl-edit-id" value="" />
+
+            <div style="display:flex;gap:8px">
+              <button onclick="waSaveTemplate()" style="flex:1;padding:9px;border-radius:8px;border:none;background:#1B5E30;color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:Cairo,sans-serif">🚀 إرسال لـ Meta للمراجعة</button>
+              <button onclick="waCloseTemplateForm()" style="padding:9px 14px;border-radius:8px;border:1.5px solid #e5e7eb;background:#f9fafb;font-size:12px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">إلغاء</button>
+            </div>
+          </div>
+
+        </div><!-- /wa-tab-templates -->
+
       </div><!-- /detail-whatsapp -->
 
       <!-- ─── DETAIL: Messenger ─── -->

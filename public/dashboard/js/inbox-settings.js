@@ -367,6 +367,134 @@ async function testWhatsAppConnection() {
   }
 }
 
+// ──────────────────────────────────────────────────────────────
+// WhatsApp API — Tab switcher
+// ──────────────────────────────────────────────────────────────
+function waShowTab(tab) {
+  const tabs = ['settings', 'templates'];
+  tabs.forEach(t => {
+    const panel = document.getElementById('wa-tab-' + t);
+    const btn   = document.getElementById('wa-tab-btn-' + t);
+    if (!panel || !btn) return;
+    const active = (t === tab);
+    panel.style.display = active ? 'block' : 'none';
+    btn.style.borderBottomColor = active ? '#1B5E30' : 'transparent';
+    btn.style.color = active ? '#1B5E30' : '#6b7280';
+    btn.style.fontWeight = active ? '800' : '700';
+  });
+  if (tab === 'templates') waLoadTemplates();
+}
+
+// ──────────────────────────────────────────────────────────────
+// WhatsApp Template Manager
+// ──────────────────────────────────────────────────────────────
+const WA_TPL_STATUS_COLORS = {
+  APPROVED:  { bg: '#dcfce7', color: '#166534', label: '✅ معتمد' },
+  PENDING:   { bg: '#fef9c3', color: '#854d0e', label: '⏳ قيد المراجعة' },
+  REJECTED:  { bg: '#fee2e2', color: '#991b1b', label: '❌ مرفوض' },
+  PAUSED:    { bg: '#f3f4f6', color: '#374151', label: '⏸ موقوف' },
+  DISABLED:  { bg: '#f3f4f6', color: '#9ca3af', label: '⚫ معطل' },
+};
+
+async function waLoadTemplates() {
+  const listEl   = document.getElementById('wa-tpl-list');
+  const statusEl = document.getElementById('wa-tpl-status');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="text-align:center;color:#9ca3af;font-size:12px;padding:20px 0">⏳ جاري التحميل...</div>';
+  if (statusEl) { statusEl.style.display = 'none'; }
+
+  const d = await apiFetch('/api/system/inbox/wa-templates');
+  if (!d.ok) {
+    listEl.innerHTML = '<div style="text-align:center;color:#ef4444;font-size:12px;padding:16px 0">❌ ' + (d.error || 'تعذّر التحميل') + '</div>';
+    return;
+  }
+  const templates = d.templates || [];
+  if (!templates.length) {
+    listEl.innerHTML = '<div style="text-align:center;color:#9ca3af;font-size:12px;padding:20px 0">مفيش templates لسه — اضغط "➕ Template جديد" لإنشاء أول</div>';
+    return;
+  }
+  listEl.innerHTML = templates.map(t => {
+    const sc = WA_TPL_STATUS_COLORS[t.status] || { bg: '#f3f4f6', color: '#374151', label: t.status };
+    const body = (t.components || []).find(c => c.type === 'BODY')?.text || '';
+    return `
+      <div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:9px;padding:10px 12px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:800;color:#111827;font-family:monospace">${t.name}</span>
+            <span style="padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:${sc.bg};color:${sc.color}">${sc.label}</span>
+            <span style="padding:2px 8px;border-radius:20px;font-size:10px;background:#f3f4f6;color:#6b7280">${t.language}</span>
+            <span style="padding:2px 8px;border-radius:20px;font-size:10px;background:#eff6ff;color:#1d4ed8">${t.category}</span>
+          </div>
+          ${body ? `<div style="font-size:11px;color:#4b5563;line-height:1.5;white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${body}</div>` : ''}
+        </div>
+        <button onclick="waDeleteTemplate('${t.name}')" style="flex-shrink:0;background:#fee2e2;border:none;color:#ef4444;border-radius:6px;padding:5px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif" title="حذف">🗑</button>
+      </div>`;
+  }).join('');
+}
+
+function waOpenNewTemplate() {
+  const formEl  = document.getElementById('wa-tpl-form');
+  const titleEl = document.getElementById('wa-tpl-form-title');
+  const editId  = document.getElementById('wa-tpl-edit-id');
+  if (!formEl) return;
+  document.getElementById('wa-tpl-name').value = '';
+  document.getElementById('wa-tpl-lang').value = 'ar';
+  document.getElementById('wa-tpl-category').value = 'UTILITY';
+  document.getElementById('wa-tpl-body').value = '';
+  document.getElementById('wa-tpl-preview').textContent = '';
+  if (editId) editId.value = '';
+  if (titleEl) titleEl.textContent = '➕ Template جديد';
+  formEl.style.display = 'block';
+  formEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function waCloseTemplateForm() {
+  const formEl = document.getElementById('wa-tpl-form');
+  if (formEl) formEl.style.display = 'none';
+}
+
+// live preview
+function waUpdatePreview() {
+  const body    = document.getElementById('wa-tpl-body')?.value || '';
+  const preview = document.getElementById('wa-tpl-preview');
+  if (preview) preview.textContent = body || 'النص هيظهر هنا...';
+}
+
+async function waSaveTemplate() {
+  const name      = document.getElementById('wa-tpl-name')?.value.trim();
+  const language  = document.getElementById('wa-tpl-lang')?.value;
+  const category  = document.getElementById('wa-tpl-category')?.value;
+  const body_text = document.getElementById('wa-tpl-body')?.value.trim();
+  const statusEl  = document.getElementById('wa-tpl-status');
+
+  if (!name || !body_text) { iv3Toast('أدخل الاسم ونص الرسالة', 'error'); return; }
+  if (!/^[a-z0-9_]+$/.test(name)) { iv3Toast('الاسم: حروف إنجليزية صغيرة + أرقام + _ فقط', 'error'); return; }
+
+  if (statusEl) { statusEl.style.display = 'block'; statusEl.style.background = '#f3f4f6'; statusEl.style.color = '#374151'; statusEl.textContent = '⏳ جاري الإرسال لـ Meta...'; }
+
+  const d = await apiFetch('/api/system/inbox/wa-templates', {
+    method: 'POST',
+    body: JSON.stringify({ name, language, category, body_text })
+  });
+
+  if (d.ok) {
+    if (statusEl) { statusEl.style.background = '#dcfce7'; statusEl.style.color = '#166534'; statusEl.textContent = '✅ تم الإرسال — سيظهر حالته "⏳ قيد المراجعة" حتى تعتمد Meta'; }
+    iv3Toast('✅ تم الإرسال لـ Meta');
+    waCloseTemplateForm();
+    setTimeout(waLoadTemplates, 1500);
+  } else {
+    if (statusEl) { statusEl.style.background = '#fee2e2'; statusEl.style.color = '#991b1b'; statusEl.textContent = '❌ ' + (d.error || 'خطأ في الإرسال'); }
+    iv3Toast('❌ ' + (d.error || 'خطأ'), 'error');
+  }
+}
+
+async function waDeleteTemplate(name) {
+  if (!confirm('حذف template "' + name + '"؟ لا يمكن التراجع.')) return;
+  const d = await apiFetch('/api/system/inbox/wa-templates/' + encodeURIComponent(name), { method: 'DELETE' });
+  if (d.ok) { iv3Toast('✅ تم الحذف'); waLoadTemplates(); }
+  else iv3Toast('❌ ' + (d.error || 'خطأ في الحذف'), 'error');
+}
+
 // WhatsApp API scenario toggle
 function waSetScenario(scenario) {
   const blockExisting = document.getElementById('wa-block-existing');

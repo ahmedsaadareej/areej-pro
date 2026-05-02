@@ -2690,4 +2690,79 @@ router.post('/inbox/new-conversation', requireAuth, async (req, res) => {
   }
 });
 
+// ──────────────────────────────────────────────────────────────────────────
+// WhatsApp API — Template Manager (proxy to Meta Graph API)
+// ──────────────────────────────────────────────────────────────────────────
+
+function getWaCredentials(db) {
+  const row = db.prepare('SELECT wa_token, wa_account_id, wa_phone_id FROM inbox_settings WHERE id=1').get();
+  return row || {};
+}
+
+// GET /api/system/inbox/wa-templates — list templates from Meta
+router.get('/inbox/wa-templates', requireAuth, async (req, res) => {
+  try {
+    const db = req.db;
+    const { wa_token, wa_account_id } = getWaCredentials(db);
+    if (!wa_token || !wa_account_id) return res.json({ ok: false, error: 'wa_token و wa_account_id غير مضبوطَين — احفظ الإعدادات أولاً' });
+    const url = `https://graph.facebook.com/v19.0/${wa_account_id}/message_templates?limit=50&access_token=${wa_token}`;
+    const r = await fetch(url);
+    const data = await r.json();
+    if (data.error) return res.json({ ok: false, error: data.error.message });
+    return res.json({ ok: true, templates: data.data || [] });
+  } catch(e) {
+    return res.json({ ok: false, error: e.message });
+  }
+});
+
+// POST /api/system/inbox/wa-templates — create new template
+router.post('/inbox/wa-templates', requireAuth, async (req, res) => {
+  try {
+    const db = req.db;
+    const { wa_token, wa_account_id } = getWaCredentials(db);
+    if (!wa_token || !wa_account_id) return res.json({ ok: false, error: 'wa_token و wa_account_id غير مضبوطَين' });
+    const { name, language, category, body_text } = req.body;
+    if (!name || !language || !category || !body_text) return res.json({ ok: false, error: 'name + language + category + body_text مطلوبة' });
+    // Validate name: lowercase + underscores only
+    if (!/^[a-z0-9_]+$/.test(name)) return res.json({ ok: false, error: 'الاسم: حروف إنجليزية صغيرة + أرقام + _ فقط' });
+    const payload = {
+      name,
+      language,
+      category,
+      components: [
+        { type: 'BODY', text: body_text }
+      ]
+    };
+    const r = await fetch(`https://graph.facebook.com/v19.0/${wa_account_id}/message_templates`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${wa_token}` },
+      body: JSON.stringify(payload)
+    });
+    const data = await r.json();
+    if (data.error) return res.json({ ok: false, error: data.error.message });
+    return res.json({ ok: true, template: data });
+  } catch(e) {
+    return res.json({ ok: false, error: e.message });
+  }
+});
+
+// DELETE /api/system/inbox/wa-templates/:name — delete template by name
+router.delete('/inbox/wa-templates/:name', requireAuth, async (req, res) => {
+  try {
+    const db = req.db;
+    const { wa_token, wa_account_id } = getWaCredentials(db);
+    if (!wa_token || !wa_account_id) return res.json({ ok: false, error: 'wa_token و wa_account_id غير مضبوطَين' });
+    const { name } = req.params;
+    const r = await fetch(`https://graph.facebook.com/v19.0/${wa_account_id}/message_templates?name=${encodeURIComponent(name)}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${wa_token}` }
+    });
+    const data = await r.json();
+    if (data.error) return res.json({ ok: false, error: data.error.message });
+    return res.json({ ok: true });
+  } catch(e) {
+    return res.json({ ok: false, error: e.message });
+  }
+});
+
 module.exports = router;
