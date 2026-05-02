@@ -52,4 +52,7 @@ const IV3 = {
 
   // ── Quote/Reply ────────────────────────────────────
   quotedMsg: null,      // { id, content, sender_name, direction } الرسالة المُقتبسة
+
+  // ── Timeline ───────────────────────────────────────
+  timeline: [],         // أحداث المحادثة الحالية ({ id, event_type, actor_name, meta, created_at })
 };

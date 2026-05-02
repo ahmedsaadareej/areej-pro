@@ -51,8 +51,13 @@ async function iv3LoadMessages(convId) {
   </div>`;
 
   try {
-    const data = await IV3_API.getMessages(convId);
-    IV3.messages = Array.isArray(data) ? data : (data.messages || []);
+    // تحميل الرسائل والتاريخ بالتوازي
+    const [msgData, timelineData] = await Promise.all([
+      IV3_API.getMessages(convId),
+      IV3_API.getTimeline(convId).catch(() => ({ events: [] })),
+    ]);
+    IV3.messages  = Array.isArray(msgData) ? msgData : (msgData.messages || []);
+    IV3.timeline  = timelineData?.events || [];
     iv3RenderMessages();
   } catch (e) {
     if (msgsEl) msgsEl.innerHTML = `
@@ -71,7 +76,7 @@ function iv3RenderMessages() {
   const container = document.getElementById('iv3-msgs');
   if (!container) return;
 
-  if (!IV3.messages.length) {
+  if (!IV3.messages.length && !(IV3.timeline || []).length) {
     container.innerHTML = `<div class="iv3-msgs-empty">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       <p>لا توجد رسائل بعد</p>
@@ -79,18 +84,37 @@ function iv3RenderMessages() {
     return;
   }
 
+  // دمج الرسائل + أحداث التاريخ وترتيبهم زمنياً
+  const msgItems = IV3.messages.map(m => ({
+    _kind: 'msg',
+    _ts: new Date(m.sent_at || m.created_at || 0).getTime(),
+    data: m,
+  }));
+  const tlItems = (IV3.timeline || []).map(e => ({
+    _kind: 'event',
+    _ts: new Date(e.created_at || 0).getTime(),
+    data: e,
+  }));
+  const combined = [...msgItems, ...tlItems].sort((a, b) => a._ts - b._ts);
+
   let html = '';
   let lastDate = null;
 
-  IV3.messages.forEach((msg, i) => {
-    // فاصل التاريخ — sent_at هو الحقل الفعلي
-    const msgDate = iv3DateLabel(msg.sent_at || msg.created_at);
+  combined.forEach(item => {
+    const dateTs = item._kind === 'msg'
+      ? (item.data.sent_at || item.data.created_at)
+      : item.data.created_at;
+    const msgDate = iv3DateLabel(dateTs);
     if (msgDate !== lastDate) {
       html += `<div class="iv3-date-sep"><span>${msgDate}</span></div>`;
       lastDate = msgDate;
     }
 
-    html += iv3BuildMsgBubble(msg);
+    if (item._kind === 'msg') {
+      html += iv3BuildMsgBubble(item.data);
+    } else {
+      html += iv3BuildTimelineEvent(item.data);
+    }
   });
 
   container.innerHTML = html;
@@ -152,6 +176,63 @@ function iv3BuildMsgBubble(msg) {
           ${statusIcon}
         </div>
       </div>
+    </div>`;
+}
+
+// ── Timeline Event Bubble ───────────────────────────────────
+
+function iv3BuildTimelineEvent(event) {
+  const meta  = event.meta || {};
+  const actor = iv3EscHtml(meta.actor || event.actor_name || 'النظام');
+  const time  = iv3FormatMsgTime(event.created_at);
+
+  let icon = 'ℹ️';
+  let text = '';
+
+  switch (event.event_type) {
+    case 'status_changed': {
+      const labels = { open: 'مفتوحة', closed: 'مغلقة', waiting: 'انتظار' };
+      const statusLabel = labels[meta.status] || meta.status || '';
+      icon = meta.status === 'closed' ? '✅' : meta.status === 'waiting' ? '⏳' : '🟢';
+      text = `قام <b>${actor}</b> بتغيير الحالة إلى “${iv3EscHtml(statusLabel)}”`;
+      break;
+    }
+    case 'assigned': {
+      const toName = iv3EscHtml(meta.to_name || '');
+      icon = '👤';
+      text = `عيّن <b>${actor}</b> المحادثة لـ <b>${toName}</b>`;
+      break;
+    }
+    case 'unassigned': {
+      icon = '👤';
+      text = `ألغى <b>${actor}</b> تعيين المحادثة`;
+      break;
+    }
+    case 'snoozed': {
+      icon = '⏰';
+      const untilLabel = meta.until ? iv3FormatSnoozeTime(meta.until) : '';
+      text = `أجّل <b>${actor}</b> المحادثة` + (untilLabel ? ` حتى ${iv3EscHtml(untilLabel)}` : '');
+      break;
+    }
+    case 'unsnoozed': {
+      icon = '⏰';
+      text = `عادت المحادثة من التأجيل`;
+      break;
+    }
+    case 'note_added': {
+      icon = '🔒';
+      text = `أضاف <b>${actor}</b> ملاحظة داخلية`;
+      break;
+    }
+    default:
+      text = iv3EscHtml(event.event_type || '');
+  }
+
+  return `
+    <div class="iv3-timeline-event">
+      <span class="iv3-tl-icon">${icon}</span>
+      <span class="iv3-tl-text">${text}</span>
+      <span class="iv3-tl-time">${time}</span>
     </div>`;
 }
 

@@ -1492,3 +1492,30 @@
   color: #D97706;
   border-color: #FCD34D;
 }
+
+/* ── Conversation Timeline Events ───────────────────────── */
+.iv3-timeline-event {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  padding: 4px 12px;
+  margin: 4px auto;
+  max-width: 80%;
+  background: #F3F4F6;
+  border-radius: 20px;
+  font-size: 11px;
+  color: #6B7280;
+  line-height: 1.4;
+  direction: rtl;
+  text-align: center;
+}
+.iv3-timeline-event b { color: #374151; font-weight: 600; }
+.iv3-tl-icon { font-size: 13px; flex-shrink: 0; }
+.iv3-tl-text { flex: 1; text-align: center; }
+.iv3-tl-time {
+  font-size: 10px;
+  color: #9CA3AF;
+  flex-shrink: 0;
+  white-space: nowrap;
+}

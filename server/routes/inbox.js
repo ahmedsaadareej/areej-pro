@@ -19,6 +19,37 @@ const https       = require('https');
 const { autoAssign, getConversationScope } = require('../inbox-distributor');
 
 // ============================================================
+// INBOX TIMELINE HELPER
+// ============================================================
+
+/**
+ * logTimeline(db, convId, eventType, meta)
+ * يسجّل حدث في تاريخ المحادثة. يتحقّق من وجود الجدول عند أول استدعاء.
+ * event_type: status_changed | assigned | unassigned | snoozed | unsnoozed | note_added | message_sent
+ */
+function logTimeline(db, convId, eventType, meta = {}) {
+  try {
+    const cols = db.prepare('PRAGMA table_info(inbox_timeline)').all().map(c => c.name);
+    if (!cols.length) {
+      db.prepare(`CREATE TABLE IF NOT EXISTS inbox_timeline (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        conversation_id INTEGER NOT NULL,
+        event_type      TEXT NOT NULL,
+        actor_name      TEXT,
+        meta            TEXT,
+        created_at      TEXT DEFAULT (datetime('now'))
+      )`).run();
+    }
+    db.prepare(
+      `INSERT INTO inbox_timeline (conversation_id, event_type, actor_name, meta) VALUES (?,?,?,?)`
+    ).run(convId, eventType, meta.actor || null, JSON.stringify(meta));
+  } catch(e) {
+    // تجاهل — لا يكسر الـ request الأصلي
+    console.warn('[Timeline] log error:', e.message);
+  }
+}
+
+// ============================================================
 // UNIFIED INBOX
 // ============================================================
 
@@ -1301,6 +1332,10 @@ router.post('/inbox/conversations/:id/assign', requireAuth, (req, res) => {
   try {
     const { user_id, user_name } = req.body;
     db.prepare('UPDATE inbox_conversations SET assigned_to_id=?, assigned_to_name=? WHERE id=?').run(user_id||null, user_name||null, req.params.id);
+    // تسجيل الحدث
+    const actor = req.user?.name || req.user?.email || null;
+    const eventType = user_id ? 'assigned' : 'unassigned';
+    logTimeline(db, req.params.id, eventType, { actor, to_name: user_name || null });
     res.json({ ok: true });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
@@ -1902,6 +1937,9 @@ router.put('/inbox/conversations/:id/status', requireAuth, (req, res) => {
     const { status } = req.body; // open | closed | waiting
     if (!['open','closed','waiting'].includes(status)) return res.json({ ok:false, error:'invalid status' });
     db.prepare('UPDATE inbox_conversations SET status=? WHERE id=?').run(status, req.params.id);
+    // تسجيل الحدث في التاريخ
+    const actor = req.user?.name || req.user?.email || null;
+    logTimeline(db, req.params.id, 'status_changed', { actor, status });
     res.json({ ok: true });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
@@ -1920,10 +1958,13 @@ router.post('/inbox/conversations/:id/snooze', requireAuth, (req, res) => {
     const { minutes } = req.body;
     const mins = parseInt(minutes, 10);
 
+    const actor = req.user?.name || req.user?.email || null;
+
     if (mins === 0) {
       // إلغاء snooze — أعِد الحالة لـ open
       db.prepare('UPDATE inbox_conversations SET snoozed_until=NULL, status=? WHERE id=?')
         .run('open', req.params.id);
+      logTimeline(db, req.params.id, 'unsnoozed', { actor });
       return res.json({ ok: true, action: 'unsnooze' });
     }
 
@@ -1937,8 +1978,26 @@ router.post('/inbox/conversations/:id/snooze', requireAuth, (req, res) => {
     db.prepare('UPDATE inbox_conversations SET snoozed_until=?, status=? WHERE id=?')
       .run(wakeAt, 'snoozed', req.params.id);
 
+    logTimeline(db, req.params.id, 'snoozed', { actor, minutes: mins, until: wakeAt });
     res.json({ ok: true, action: 'snoozed', snoozed_until: wakeAt });
   } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// GET /api/system/inbox/conversations/:id/timeline
+router.get('/inbox/conversations/:id/timeline', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const cols = db.prepare('PRAGMA table_info(inbox_timeline)').all().map(c => c.name);
+    if (!cols.length) return res.json({ ok: true, events: [] }); // الجدول ما اتنشأش
+    const events = db.prepare(
+      `SELECT * FROM inbox_timeline WHERE conversation_id=? ORDER BY created_at ASC`
+    ).all(req.params.id);
+    // parse meta JSON
+    events.forEach(e => {
+      try { e.meta = JSON.parse(e.meta || '{}'); } catch { e.meta = {}; }
+    });
+    res.json({ ok: true, events });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
 // GET /api/system/inbox/snooze-wakeup

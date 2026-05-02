@@ -202,4 +202,9 @@ const IV3_API = {
     return data;
   },
 
+  async getTimeline(convId) {
+    const data = await this._get(`/api/system/inbox/conversations/${convId}/timeline`);
+    return data;
+  },
+
 };
