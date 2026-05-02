@@ -35,6 +35,28 @@
 ## سجل الجلسات (الأحدث في الأعلى)
 
 ---
+## جلسة 2026-05-02 11:33 UTC
+
+### وقفت عند:
+- الملف: `public/dashboard/inbox-v3/inbox-reply.js` (Voice Recording) + `index.html` (Notes section)
+- آخر تغيير: Notes Panel كامل + Voice Recording كامل + اختبار حي ناجح
+
+### قرارات تقنية:
+- `inbox.html` و `index.html` ملفان منفصلان — أي تعديل على `inbox.html` لازم ينعكس يدوياً على `index.html` (الـ page-inbox الحقيقي)
+- Voice Recording يستخدم `MediaRecorder` API مباشرة في المتصفح — codec يُختار تلقائياً (webm/ogg)
+- الحد الأقصى للتسجيل: 60 ثانية — بعدها يوقف تلقائياً
+- Voice upload عبر `POST /api/system/inbox/upload-voice` (multer) ثم `sendMedia`
+- Notes: GET/POST/DELETE على `/api/system/inbox/conversations/:id/notes` — كلها موجودة
+- Notes section أُضيف في `index.html` لأنه الملف الفعلي (مش inbox.html)
+- `iv3LoadNotes` تُستدعى تلقائياً من `iv3UpdateContextPanel` لما تتفتح محادثة
+- CSS للـ Notes و Voice recording في `inbox.css`
+
+### المهمة الأولى للجلسة القادمة:
+- ربط WhatsApp QR بـ pro-test (يحتاج أحمد يمسح الـ QR) — أو الانتقال لتطوير مرحلة جديدة في المشروع (CRM / Orders / إلخ)
+
+---
+
+---
 ## جلسة 2026-05-02 11:21 UTC
 
 ### وقفت عند:
