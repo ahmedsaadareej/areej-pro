@@ -242,12 +242,17 @@ inbox_team_members        -- أعضاء الفرق
 - [x] pm2 reload — سيرفر شغال، inbox v3 يطلب الـ API فعلاً
 - [x] كل التغييرات commitية على GitHub
 
-- [x] **إصلاح تعارض Polling** — حذف `loadInbox()` القديم من `showPage` في `inbox.js` (commit: 92d0504)
-  - السبب: كان `loadInbox()` يشغّل polling v2 (`/api/system/inbox/...`) بالتوازي مع polling v3 (`/api/inbox/...`) → تعارض مزدوج
-  - الحل: `iv3OnPageShow()` يتولى كل شيء في v3
-  - الـ syntax check: ✅ | pm2: ✅ شغّال بدون errors
+- [x] **إصلاح تعارض Polling** — حذف `loadInbox()` القديم من `showPage` (commit: 92d0504)
+- [x] **إصلاح API prefix** — `/api/inbox/` → `/api/system/inbox/` في `inbox-api.js` + `inbox-chat.js` (commit: 2cb0ebe)
+- [x] **إصلاح Branding** — `loadAndApplyBranding` تستخدم `apiFetch` مباشرة (commit: 14a7021)
+- [x] **إصلاح 401** — `inbox-api.js` يستخدم `apiFetch` (Bearer token) بدل `fetch` المجرد (commit: 00b4406)
+- [x] **تأكيد حي من المتصفح (Chromium headless):**
+  - `IV3._initialized: true` ✅
+  - `IV3.pollTimer: شغّال` ✅
+  - `/api/system/inbox/me` → `{ok:true, isOwner:true}` ✅
+  - `/api/system/inbox/conversations` → `{ok:true, conversations:[]}` ✅
 
-**الخطوة التالية:** اختبار حي من pro-test.areejegypt.com — فتح قسم الرسائل ومراقبة الـ console
+**الخطوة التالية:** ربط WhatsApp QR بـ pro-test وإرسال رسالة تجريبية لاختبار العرض الكامل في الـ inbox v3
 
 ### المرحلة 2: الـ Core Features
 - [ ] عرض المحادثات مع فلترة وبحث
