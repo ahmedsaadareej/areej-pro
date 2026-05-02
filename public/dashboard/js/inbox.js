@@ -606,7 +606,7 @@ function showPage(name, btn, _skipHistory) {
     if (name === 'shipping')    { loadShipping(); loadShipCompaniesDropdown(); }
     if (name === 'sales-tools') { loadSalesTools(); }
     if (name === 'marketplace') { loadMarketplace(); }
-    if (name === 'inbox')      { loadInbox(); }
+    if (name === 'inbox')      { loadInbox(); if (typeof iv3OnPageShow === 'function') iv3OnPageShow(); }
     if (name === 'team-settings') { initTeamSettings(); }
     if (name === 'inbox-settings') {
       loadIntegrationsStatus();
@@ -616,7 +616,7 @@ function showPage(name, btn, _skipHistory) {
       document.querySelectorAll('.is-channel-detail').forEach(el => el.style.display = 'none');
       showInboxSettingsSection('integrations-channels');
     }
-    if (name !== 'inbox' && name !== 'inbox-settings') { stopInboxPolling(); } // الـ badge poll بيفضل شغال دايماً عبر setInterval الثابت
+    if (name !== 'inbox' && name !== 'inbox-settings') { stopInboxPolling(); if (typeof iv3OnPageHide === 'function') iv3OnPageHide(); } // الـ badge poll بيفضل شغال دايماً عبر setInterval الثابت
     // iframe pages (plan90, persona) need no loader
   } catch(e) {
     console.error('showPage error for', name, ':', e);
@@ -2142,9 +2142,10 @@ async function loadContactInfoPanel(conv) {
     detailsEl.style.display = 'block';
     actionsEl.style.display = 'block';
     if (addBtn) addBtn.style.display = 'none';
-    document.getElementById('icp-phone').innerHTML = contact.phone ? '📱 '+esc(contact.phone) : '';
-    document.getElementById('icp-email').innerHTML = contact.email ? '📧 '+esc(contact.email) : '';
-    document.getElementById('icp-city').innerHTML  = contact.city  ? '📍 '+esc(contact.city+(contact.governorate?' — '+contact.governorate:'')) : '';
+    const _setIcp = (id, val) => { const v=document.getElementById(id+'-val'); if(v) v.textContent=val||'—'; };
+    _setIcp('icp-phone', contact.phone);
+    _setIcp('icp-email', contact.email);
+    _setIcp('icp-city',  contact.city ? contact.city+(contact.governorate?' — '+contact.governorate:'') : '');
     const sc = { lead:'#9ca3af', prospect:'#F5A623', client:'#16a34a', vip:'#7c3aed' }[contact.status]||'#9ca3af';
     const sl = { lead:'Lead', prospect:'محتمل', client:'عميل', vip:'VIP' }[contact.status]||contact.status;
     document.getElementById('icp-crm-badges').innerHTML = '<span style="background:'+sc+'20;color:'+sc+';padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700">'+sl+'</span>';
@@ -2156,12 +2157,12 @@ async function loadContactInfoPanel(conv) {
       ordersEl.style.display = 'block';
       document.getElementById('icp-orders-list').innerHTML = orders.map(o => {
         const sc2 = { new:'#F5A623', preparing:'#F5A623', shipped:'#8b5cf6', delivered:'#16a34a', cancelled:'#ef4444' }[o.status]||'#9ca3af';
-        return '<div style="background:#fff;border:1px solid #f3f4f6;border-radius:6px;padding:5px 7px;font-size:11px">'
-          +'<div style="font-weight:700;color:var(--brand,#1B5E30)">'+esc(o.order_no)+'</div>'
-          +'<div style="display:flex;justify-content:space-between">'
-          +'<span style="color:#9ca3af">'+fmt(o.total)+' ج.م</span>'
-          +'<span style="color:'+sc2+'">'+( ORD_STATUS_LABELS[o.status]||o.status)+'</span>'
-          +'</div></div>';
+        const stLbl = (typeof ORD_STATUS_LABELS!=='undefined'?ORD_STATUS_LABELS:{})[o.status]||o.status;
+        return `<div class="icp-v2-order-item">
+          <span class="icp-v2-order-no">${esc(o.order_no)}</span>
+          <span class="icp-v2-order-status" style="color:${sc2}">${esc(stLbl)}</span>
+          <span style="font-size:10px;color:#9ca3af">${fmt(o.total)} ج.م</span>
+        </div>`;
       }).join('');
     }
 
@@ -2190,9 +2191,10 @@ async function loadContactInfoPanel(conv) {
     detailsEl.style.display = 'block';
     actionsEl.style.display = 'block';
     if (addBtn) addBtn.style.display = 'block';
-    document.getElementById('icp-phone').innerHTML = phone ? '📱 '+esc(phone) : '';
-    document.getElementById('icp-email').innerHTML = '';
-    document.getElementById('icp-city').innerHTML = '';
+    const _setIcp2 = (id, val) => { const v=document.getElementById(id+'-val'); if(v) v.textContent=val||'—'; };
+    _setIcp2('icp-phone', phone);
+    _setIcp2('icp-email', '');
+    _setIcp2('icp-city',  '');
     document.getElementById('icp-crm-badges').innerHTML = '<span style="background:#fee2e2;color:#ef4444;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700">غير مسجّل</span>';
     icpLastInvoiceId = null;
   }
@@ -2400,67 +2402,86 @@ async function loadInboxConversations() {
 
 function renderInboxConvList(convs) {
   const el = document.getElementById('inbox-conv-list');
+  // تحديث العداد
+  const countEl = document.getElementById('inbox-v2-count');
+  if (countEl) countEl.textContent = convs.length;
+
   if (!convs.length) {
-    el.innerHTML = '<div style="padding:30px;text-align:center;color:#9ca3af;font-size:12px">' +
-      (inboxCurrentPlatform ? 'لا توجد رسائل من هذه المنصة' : 'لا توجد رسائل بعد — اربط منصة من الإعدادات') + '</div>';
+    el.innerHTML = `<div style="padding:40px 20px;text-align:center;color:#9ca3af;font-size:12px">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" style="margin:0 auto 10px;display:block"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      ${inboxCurrentPlatform ? 'لا توجد رسائل من هذه المنصة' : 'لا توجد رسائل — اربط منصة من الإعدادات'}
+    </div>`;
     return;
   }
-  const platIcon = { telegram:'✈', whatsapp:'📲', messenger:'💬', instagram:'📷' };
-  const platColor = { telegram:'#0088cc', whatsapp:'#25D366', messenger:'#0099ff', instagram:'#E1306C' };
-  const statusColor = { open:'#22c55e', closed:'#6b7280', waiting:'#f59e0b' };
-  const platLabel = { telegram:'TG', whatsapp:'WA', messenger:'FB', instagram:'IG' };
-  
-  el.innerHTML = convs.map(c => {
-    const platBadge = platLabel[c.platform] || '??';
-    const platClr = platColor[c.platform] || '#6b7280';
-    const time = c.last_message_at ? timeAgo(c.last_message_at) : '';
-    const isActive = inboxCurrentConv && inboxCurrentConv.id === c.id;
-    const unread = (c.unread > 0) ? '<div style="min-width:18px;height:18px;background:#ef4444;color:#fff;font-size:9px;border-radius:9px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;flex-shrink:0">' + c.unread + '</div>' : '';
-    const statusDot = '<div style="width:7px;height:7px;border-radius:50%;background:'+(statusColor[c.status||'open']||'#22c55e')+';flex-shrink:0"></div>';
-    // Avatar with initials
-    const nameText = c.sender_name || c.sender_id || '?';
-    const initials = nameText.trim().split(' ').map(w=>w[0]||'').slice(0,2).join('').toUpperCase() || '?';
-    const avatarColors = ['#1B5E30','#0369a1','#7c3aed','#b45309','#be123c','#0f766e'];
-    const avatarColor = avatarColors[nameText.charCodeAt(0) % avatarColors.length];
-    const lastMsg = c.last_message || '';
-    const lastMsgPreview = lastMsg.startsWith('[') ? lastMsg : lastMsg.substring(0, 50);
-    // باج الموظف المعيّن (للأدمن فقط)
-    const agentBadge = inboxIsOwner && c.agent_name
-      ? `<span style="font-size:9px;background:#eff6ff;color:#1d4ed8;padding:1px 5px;border-radius:6px;margin-right:3px;flex-shrink:0">👤 ${esc(c.agent_name)}</span>`
-      : (inboxIsOwner && (!c.assigned_to_id || c.assigned_to_id === 0)
-          ? `<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:6px;margin-right:3px;flex-shrink:0">❔ Queue</span>`
-          : '');
 
-    return '<div class="conv-item' + (isActive ? ' active' : '') + '" onclick="openConversation(' + c.id + ')" style="padding:10px 12px">' +
-      '<div style="display:flex;align-items:center;gap:9px">' +
-      // Avatar
-      '<div style="position:relative;flex-shrink:0">' +
-      '<div style="width:40px;height:40px;border-radius:50%;background:'+avatarColor+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800">'+initials+'</div>' +
-      '<div style="position:absolute;bottom:-1px;right:-2px;background:'+platClr+';color:#fff;font-size:7px;font-weight:900;padding:1px 3px;border-radius:4px;line-height:1.2;border:1px solid #fff">'+platBadge+'</div>' +
-      '</div>' +
-      // Content
-      '<div style="flex:1;min-width:0">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;gap:4px">' +
-      '<div style="font-weight:800;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#111827">' + esc(nameText) + '</div>' +
-      '<div style="font-size:10px;color:#9ca3af;flex-shrink:0;white-space:nowrap">' + time + '</div>' +
-      '</div>' +
-      '<div style="display:flex;align-items:center;gap:4px;margin-top:2px">' +
-      statusDot +
-      '<div style="font-size:11px;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">' + esc(lastMsgPreview) + '</div>' +
-      unread +
-      '</div>' +
-      (agentBadge ? '<div style="margin-top:3px">' + agentBadge + '</div>' : '') +
-      '</div>' +
-      '</div></div>';
+  const platDotClass = { telegram:'tg', whatsapp:'wa', 'whatsapp-qr':'waqr', messenger:'fb', instagram:'ig' };
+  const platEmoji    = { telegram:'✈️', whatsapp:'💬', 'whatsapp-qr':'📱', messenger:'💙', instagram:'📸' };
+  const platLabel    = { telegram:'تيليجرام', whatsapp:'واتساب', 'whatsapp-qr':'واتساب QR', messenger:'ماسنجر', instagram:'إنستجرام' };
+  const avatarColors = ['#1B5E30','#0369a1','#7c3aed','#b45309','#be123c','#0f766e','#0891b2','#047857'];
+
+  el.innerHTML = convs.map(c => {
+    const nameText = c.sender_name || c.sender_id || '؟';
+    const initials  = nameText.trim().split(' ').map(w=>w[0]||'').slice(0,2).join('').toUpperCase() || '؟';
+    const avatarBg  = avatarColors[nameText.charCodeAt(0) % avatarColors.length];
+    const platClass = platDotClass[c.platform] || 'other';
+    const platEm    = platEmoji[c.platform] || '💬';
+    const time      = c.last_message_at ? timeAgo(c.last_message_at) : '';
+    const isActive  = inboxCurrentConv && inboxCurrentConv.id === c.id;
+    const isUnread  = c.unread > 0;
+    const status    = c.status || 'open';
+    const lastMsg   = (c.last_message || '').substring(0, 60);
+
+    const unreadBadge = isUnread
+      ? `<span class="conv-v2-unread">${c.unread}</span>` : '';
+    const statusDot = `<span class="conv-v2-status ${status}"></span>`;
+
+    // agent badge (owner only)
+    const agentMeta = inboxIsOwner
+      ? (c.agent_name
+          ? `<span style="font-size:9.5px;background:#eff6ff;color:#1d4ed8;padding:1px 6px;border-radius:6px;font-weight:700">👤 ${esc(c.agent_name)}</span>`
+          : `<span style="font-size:9.5px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:6px;font-weight:700">❔ غير معيّن</span>`)
+      : '';
+
+    return `<div class="conv-v2-item${isActive?' selected':''}${isUnread?' unread':''}" onclick="openConversation(${c.id})">
+      <div class="conv-v2-avatar" style="background:${avatarBg}">
+        ${initials}
+        <span class="plat-dot ${platClass}">${platEm.substring(0,1)}</span>
+      </div>
+      <div class="conv-v2-body">
+        <div class="conv-v2-row1">
+          <span class="conv-v2-name">${esc(nameText)}</span>
+          <span class="conv-v2-time">${time}</span>
+        </div>
+        <div class="conv-v2-row2">
+          <span class="conv-v2-preview">${esc(lastMsg)}</span>
+          <div class="conv-v2-badges">${statusDot}${unreadBadge}</div>
+        </div>
+        ${agentMeta ? `<div class="conv-v2-meta">${agentMeta}</div>` : ''}
+      </div>
+    </div>`;
   }).join('');
 }
 
+// فلتر الحالة الحالية
+let _inboxStatusFilter = '';
+
+function setInboxFilter(status, btn) {
+  _inboxStatusFilter = status;
+  document.querySelectorAll('.inbox-v2-filt').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  filterInboxConversations();
+}
+
 function filterInboxConversations() {
-  const q = (document.getElementById('inbox-search').value || '').toLowerCase();
-  const statusFilter = document.getElementById('inbox-status-filter')?.value || '';
-  let filtered = q ? inboxConversationsCache.filter(c =>
-    (c.sender_name||'').toLowerCase().includes(q) || (c.last_message||'').toLowerCase().includes(q)
-  ) : inboxConversationsCache;
+  const q = (document.getElementById('inbox-search')?.value || '').toLowerCase();
+  const statusFilter = _inboxStatusFilter ||
+    document.getElementById('inbox-status-filter')?.value || '';
+  let filtered = q
+    ? inboxConversationsCache.filter(c =>
+        (c.sender_name||'').toLowerCase().includes(q) ||
+        (c.last_message||'').toLowerCase().includes(q)
+      )
+    : inboxConversationsCache;
   if (statusFilter) filtered = filtered.filter(c => (c.status||'open') === statusFilter);
   renderInboxConvList(filtered);
 }
@@ -2495,9 +2516,25 @@ async function openConversation(convId) {
   // Highlight active
   renderInboxConvList(inboxConversationsCache);
   // Update header
-  const platNames = { telegram:'تيليجرام', whatsapp:'واتساب', messenger:'ماسنجر', instagram:'إنستجرام' };
+  const platNames = { telegram:'تيليجرام', whatsapp:'واتساب', 'whatsapp-qr':'واتساب QR', messenger:'ماسنجر', instagram:'إنسجرام' };
+  const platClasses = { telegram:'tg', whatsapp:'wa', 'whatsapp-qr':'waqr', messenger:'fb', instagram:'ig' };
   document.getElementById('inbox-chat-name').textContent = conv ? (conv.sender_name || conv.sender_id) : '';
-  document.getElementById('inbox-chat-platform').textContent = conv ? platNames[conv.platform] || conv.platform : '';
+  // تحديث الـ platform pill بالكلاس الصحيح
+  const platEl = document.getElementById('inbox-chat-platform');
+  if (platEl) {
+    platEl.textContent = conv ? (platNames[conv.platform] || conv.platform) : '';
+    platEl.className = 'chat-hdr-plat ' + (platClasses[conv?.platform] || '');
+    platEl.style.display = conv ? 'inline-flex' : 'none';
+  }
+  // تحديث الـ avatar بالإنشيالز
+  const hdrAvatar = document.getElementById('inbox-chat-avatar');
+  if (hdrAvatar && conv) {
+    const nm = conv.sender_name || conv.sender_id || '؟';
+    const initials = nm.trim().split(' ').map(w=>w[0]||'').slice(0,2).join('').toUpperCase() || '؟';
+    const avatarColors = ['#1B5E30','#0369a1','#7c3aed','#b45309','#be123c','#0f766e'];
+    hdrAvatar.style.background = avatarColors[nm.charCodeAt(0) % avatarColors.length];
+    hdrAvatar.textContent = initials;
+  }
   const leadBtn = document.getElementById('inbox-lead-btn');
   const invBtn = document.getElementById('inbox-inv-btn');
   if (leadBtn) leadBtn.style.display = conv && !conv.lead_id ? 'block' : 'none';
@@ -3033,8 +3070,9 @@ async function saveAutoMessages() {
 function switchInboxPlatform(plat, btn) {
   inboxCurrentPlatform = plat;
   inboxCurrentConv = null;
-  document.querySelectorAll('.inbox-ptab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  // دعم الـ classes الجديدة والقديمة
+  document.querySelectorAll('.inbox-ptab,.inbox-v2-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
   loadInboxConversations();
 }
 
