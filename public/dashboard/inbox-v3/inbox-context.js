@@ -402,6 +402,111 @@ async function iv3SubmitOrder(contactId) {
   }
 }
 
+// ── Payment Link ───────────────────────────────────────────────────────────────────────
+
+function iv3CreatePayLink() {
+  if (!IV3.activeConv) return;
+
+  const conv  = IV3.activeConv;
+  const name  = conv.sender_name || '';
+  const phone = iv3ExtractPhone(conv.sender_id) || '';
+
+  const html = `
+    <div class="iv3-modal-overlay" id="iv3-paylink-modal" onclick="iv3CloseModal('iv3-paylink-modal')">
+      <div class="iv3-modal" onclick="event.stopPropagation()" style="max-width:390px">
+        <div class="iv3-modal-title">💳 إنشاء رابط دفع</div>
+
+        <div class="iv3-order-form">
+          <div class="iv3-order-field">
+            <label>اسم العميل</label>
+            <input type="text" id="iv3-pl-name" value="${iv3EscHtml(name)}"
+              placeholder="اسم العميل" class="iv3-modal-input">
+          </div>
+          <div class="iv3-order-field">
+            <label>رقم التليفون</label>
+            <input type="text" id="iv3-pl-phone" value="${iv3EscHtml(phone)}"
+              placeholder="01xxxxxxxxx" class="iv3-modal-input">
+          </div>
+          <div class="iv3-order-field">
+            <label>المبلغ (ج.م) <span style="color:#EF4444">*</span></label>
+            <input type="number" id="iv3-pl-amount" value="" min="1" step="0.5"
+              class="iv3-modal-input" placeholder="مثل: 500">
+          </div>
+          <div class="iv3-order-field">
+            <label>وصف الدفعة (اختياري)</label>
+            <input type="text" id="iv3-pl-desc"
+              class="iv3-modal-input" placeholder="مثل: دفعة مقدم طباعة">
+          </div>
+        </div>
+
+        <div id="iv3-paylink-error" style="color:#EF4444;font-size:12px;display:none;margin-top:6px"></div>
+
+        <div class="iv3-modal-actions">
+          <button onclick="iv3CloseModal('iv3-paylink-modal')" class="iv3-modal-cancel">إلغاء</button>
+          <button onclick="iv3SubmitPayLink()" class="iv3-modal-confirm" id="iv3-paylink-submit-btn">💸 إنشاء و إرسال</button>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.insertAdjacentHTML('beforeend', html);
+  // focus على حقل المبلغ
+  setTimeout(() => document.getElementById('iv3-pl-amount')?.focus(), 50);
+}
+
+async function iv3SubmitPayLink() {
+  const nameEl   = document.getElementById('iv3-pl-name');
+  const phoneEl  = document.getElementById('iv3-pl-phone');
+  const amountEl = document.getElementById('iv3-pl-amount');
+  const descEl   = document.getElementById('iv3-pl-desc');
+  const errEl    = document.getElementById('iv3-paylink-error');
+  const btn      = document.getElementById('iv3-paylink-submit-btn');
+
+  const name   = nameEl?.value?.trim();
+  const phone  = phoneEl?.value?.trim();
+  const amount = parseFloat(amountEl?.value);
+  const desc   = descEl?.value?.trim();
+
+  // validation
+  if (!amount || amount <= 0) {
+    if (errEl) { errEl.textContent = 'المبلغ مطلوب (أكبر من صفر)'; errEl.style.display = ''; }
+    amountEl?.focus();
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+  if (errEl) errEl.style.display = 'none';
+
+  try {
+    // 1. إنشاء رابط الدفع عبر API
+    const result = await IV3_API.createPaymentLink({
+      amount,
+      description:  desc  || `دفعة من محادثة ${IV3.activeConv?.platform || ''} — ${IV3.activeConv?.sender_name || ''}`,
+      client_name:  name  || '',
+      client_phone: phone || '',
+    });
+
+    iv3CloseModal('iv3-paylink-modal');
+
+    // 2. تعبئة التكست برسالة جاهزة في reply box (للتعديل قبل الإرسال إذا أراد)
+    const payText = `مرحباً يا ${name || 'عميلنا'}😊
+تفضل اتم الدفعة عبر الرابط التالي:
+${result.link}`;
+
+    const textarea = document.getElementById('iv3-textarea');
+    if (textarea) {
+      textarea.value = payText;
+      if (typeof iv3ResizeTextarea === 'function') iv3ResizeTextarea(textarea);
+      textarea.focus();
+    }
+
+    iv3Toast(`✅ تم إنشاء رابط الدفع — انسخ الرسالة وأرسلها`, 'success');
+
+  } catch(e) {
+    if (errEl) { errEl.textContent = e.message; errEl.style.display = ''; }
+    if (btn) btn.disabled = false;
+  }
+}
+
 function iv3CtxAddContact() {
   if (!IV3.activeConv) return;
   const name  = IV3.activeConv.sender_name || '';
