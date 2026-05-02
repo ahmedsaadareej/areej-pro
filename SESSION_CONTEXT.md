@@ -1,3 +1,25 @@
+## Session 2026-05-02 17:41 UTC
+- الحالة: تم الإكمال
+- ما تم إنجازه:
+  - **fix**: إزالة `style="display:none"` من `page-payment-gateways` — commit 7388d2f
+  - **fix**: cache-bust inbox.js — commit 4f04e8a
+  - **feat**: إضافة Stripe + PayTabs + PayPal كـ gateway modules + SUPPORTED_GATEWAYS + test endpoints + description + requirements + رسالة بوابة أخرى — commit 4e118f2
+  - **feat**: ربط Stripe + PayTabs + PayPal في دورة الدفع الكاملة + handlePaymentSuccess كاملة — commit 1203734
+  - **fix**: logos رسمية لـ 6 بوابات + إصلاح setup_url لـ Paymob (accept.paymob.com) و InstaPay (www.instapay.eg) — commit b9cba21
+  - الملفات: `server/routes/payment-gateways.js` + `server/routes/pay.js` + `server/lib/gateways/stripe.js` + `server/lib/gateways/paytabs.js` + `server/lib/gateways/paypal.js` + `public/dashboard/index.html`
+- قرارات تقنية:
+  - Stripe: Checkout Session → redirect → verify session_id → handlePaymentSuccess
+  - PayTabs: Hosted Page → callback (server_url) + return redirect → handlePaymentSuccess
+  - PayPal: Orders v2 → approve → areej_token في return_url → capture → handlePaymentSuccess
+  - handlePaymentSuccess: 7 خطوات (payment_links + invoices + receivable_wallet + خزنة صافي + عمولة مصروف + CRM + inbox)
+  - logos: favicon.ico لكل بوابة — fallback للـ emoji لو فشل تحميل الصورة
+  - Paymob setup_url الصح: accept.paymob.com/portal2/en/login
+  - InstaPay setup_url الصح: www.instapay.eg (تطبيق موبايل، مش dashboard)
+- آخر Commit: `b9cba21` — fix: logos رسمية + إصلاح setup_url
+- نقطة البداية القادمة: Customer Lifetime Value Badge في `inbox-context.js` — عدد الفواتير + إجمالي المدفوع يظهر تلقائياً في Context Panel
+
+---
+
 # 📌 SESSION_CONTEXT.md — مرجع تقني للجلسات القادمة
 
 ---
