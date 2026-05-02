@@ -1663,3 +1663,18 @@
   flex-shrink: 0;
   text-align: center;
 }
+
+/* ── Collision Detection — Typing Banner ────────────────── */
+.iv3-typing-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: #FEF3C7;
+  border-top: 1px solid #FCD34D;
+  font-size: 12px;
+  color: #92400E;
+  font-weight: 500;
+  animation: iv3QuoteFadeIn .2s ease;
+  direction: rtl;
+}

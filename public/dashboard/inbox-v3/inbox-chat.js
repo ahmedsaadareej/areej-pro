@@ -8,6 +8,10 @@
 
 async function iv3OpenConv(convId) {
   if (IV3.activeConvId === convId) return;
+
+  // صفّر beacon الكتابة للمحادثة السابقة
+  if (typeof iv3ClearTypingBeacon === 'function') iv3ClearTypingBeacon();
+
   IV3.activeConvId = convId;
 
   // تحديد العنصر النشط في القائمة

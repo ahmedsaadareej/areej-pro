@@ -213,4 +213,22 @@ const IV3_API = {
     return data;
   },
 
+  async setTypingState(convId, typing) {
+    // نستخدم fetch مباشرة (fire-and-forget, لا ننتظر النتيجة)
+    try {
+      const token = localStorage.getItem('pro_token') || '';
+      fetch('/api/system/inbox/typing-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ conv_id: convId, typing }),
+        keepalive: true,
+      });
+    } catch(e) { /* تجاهل */ }
+  },
+
+  async getTypingAgents(convId) {
+    const data = await this._get(`/api/system/inbox/conversations/${convId}/typing-agents`);
+    return data?.agents || [];
+  },
+
 };

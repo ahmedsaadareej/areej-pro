@@ -2459,6 +2459,9 @@
         </div>
       </div>
 
+      <!-- Collision Detection Banner -->
+      <div class="iv3-typing-banner" id="iv3-typing-banner" style="display:none"></div>
+
       <!-- Reply Box -->
       <div class="iv3-reply" id="iv3-reply" style="display:none">
 
@@ -2542,6 +2545,7 @@
               rows="1"
               onkeydown="iv3TextareaKeydown(event)"
               oninput="iv3TextareaInput(this)"
+              onblur="if(typeof iv3ClearTypingBeacon==='function')iv3ClearTypingBeacon()"
             ></textarea>
             <div class="iv3-char-count" id="iv3-char-count">0</div>
             <!-- Slash command dropdown -->

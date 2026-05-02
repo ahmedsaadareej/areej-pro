@@ -54,6 +54,9 @@ async function iv3Send() {
   // تصفير الاقتباس فوراً
   if (typeof iv3ClearQuote === 'function') iv3ClearQuote();
 
+  // تصفير حالة الكتابة
+  if (typeof iv3ClearTypingBeacon === 'function') iv3ClearTypingBeacon();
+
   try {
     const result = await IV3_API.sendMessage(IV3.activeConvId, text, IV3.replyMode, quoted);
 
@@ -148,6 +151,44 @@ function iv3TextareaInput(el) {
     iv3FilterTemplates(val.slice(1));
   } else if (!val.startsWith('/')) {
     iv3CloseTemplatesDropdown();
+  }
+
+  // Collision Detection — أرسل beacon كل 3 ثواني عند الكتابة
+  iv3SendTypingBeacon(!!val.trim());
+}
+
+// ── Typing Beacon ─────────────────────────────────────────
+let _iv3TypingTimer  = null;
+let _iv3IsTyping     = false;
+
+function iv3SendTypingBeacon(isTyping) {
+  if (!IV3.activeConvId) return;
+  // لو تغيّرت الحالة أو انتهى 3 ثواني من آخر beacon
+  if (isTyping === _iv3IsTyping && _iv3TypingTimer) return;
+
+  clearTimeout(_iv3TypingTimer);
+  _iv3IsTyping = isTyping;
+
+  IV3_API.setTypingState(IV3.activeConvId, isTyping);
+
+  if (isTyping) {
+    // تجديد beacon كل 3 ثواني لو مازال يكتب
+    _iv3TypingTimer = setTimeout(() => {
+      _iv3IsTyping = false;
+      _iv3TypingTimer = null;
+      IV3_API.setTypingState(IV3.activeConvId, false);
+    }, 3000);
+  } else {
+    _iv3TypingTimer = null;
+  }
+}
+
+function iv3ClearTypingBeacon() {
+  clearTimeout(_iv3TypingTimer);
+  _iv3TypingTimer = null;
+  if (_iv3IsTyping && IV3.activeConvId) {
+    _iv3IsTyping = false;
+    IV3_API.setTypingState(IV3.activeConvId, false);
   }
 }
 

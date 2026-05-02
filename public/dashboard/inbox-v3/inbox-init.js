@@ -113,6 +113,8 @@ async function iv3PollUpdate() {
     // تحديث الرسائل لو في محادثة مفتوحة
     if (IV3.activeConvId) {
       await iv3PollActiveConvMessages();
+      // Collision Detection — التحقق من الموظفين الذين يكتبون
+      iv3CheckTypingAgents();
     }
 
   } catch (e) {
@@ -543,4 +545,29 @@ function iv3ShowShortcutsHelp() {
     </div>`;
 
   document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// ── Collision Detection ──────────────────────────────────────
+
+async function iv3CheckTypingAgents() {
+  if (!IV3.activeConvId) return;
+  try {
+    const agents = await IV3_API.getTypingAgents(IV3.activeConvId);
+    iv3UpdateTypingBanner(agents);
+  } catch(e) { /* تجاهل */ }
+}
+
+function iv3UpdateTypingBanner(agents) {
+  const banner = document.getElementById('iv3-typing-banner');
+  if (!banner) return;
+
+  if (!agents || !agents.length) {
+    banner.style.display = 'none';
+    return;
+  }
+
+  const names = agents.join(' و ');
+  const verb  = agents.length === 1 ? 'يرد' : 'يردون';
+  banner.textContent = `⚠️ ${names} ${verb} على هذه المحادثة الآن`;
+  banner.style.display = 'flex';
 }

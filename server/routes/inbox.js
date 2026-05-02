@@ -1783,6 +1783,70 @@ router.post('/inbox/agent-status', requireAuth, (req, res) => {
 });
 
 // ============================================================
+// COLLISION DETECTION (Typing State)
+// ============================================================
+
+// POST /api/system/inbox/typing-state
+// body: { conv_id, typing: true|false }
+// يُحدّث حالة "يكتب" للموظّف الحالي على محادثة محددة
+router.post('/inbox/typing-state', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    // lazy migrate — إضافة العمودين لو مش موجودين
+    const cols = db.prepare('PRAGMA table_info(inbox_agent_status)').all().map(c => c.name);
+    if (!cols.includes('typing_conv_id')) {
+      db.prepare('ALTER TABLE inbox_agent_status ADD COLUMN typing_conv_id INTEGER').run();
+    }
+    if (!cols.includes('typing_at')) {
+      db.prepare('ALTER TABLE inbox_agent_status ADD COLUMN typing_at TEXT').run();
+    }
+
+    const { conv_id, typing } = req.body;
+    const userId   = req.user.id;
+    const userName = req.user.name || req.user.email;
+    const now      = new Date().toISOString();
+
+    const existing = db.prepare('SELECT id FROM inbox_agent_status WHERE user_id=?').get(userId);
+    if (existing) {
+      db.prepare(`UPDATE inbox_agent_status
+        SET typing_conv_id=?, typing_at=?, updated_at=datetime('now')
+        WHERE user_id=?`
+      ).run(typing ? (conv_id || null) : null, typing ? now : null, userId);
+    } else {
+      db.prepare(`INSERT INTO inbox_agent_status (user_id, user_name, typing_conv_id, typing_at)
+        VALUES (?,?,?,?)`
+      ).run(userId, userName, typing ? (conv_id || null) : null, typing ? now : null);
+    }
+
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// GET /api/system/inbox/conversations/:id/typing-agents
+// يُرجع الموظّفين الذين يكتبون في هذه المحادثة (تجاهل المستخدم الحالي + القديمة > 10 ثواني)
+router.get('/inbox/conversations/:id/typing-agents', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const cols = db.prepare('PRAGMA table_info(inbox_agent_status)').all().map(c => c.name);
+    if (!cols.includes('typing_conv_id')) return res.json({ ok: true, agents: [] });
+
+    const convId  = parseInt(req.params.id, 10);
+    const myId    = req.user.id;
+    // نتجاهل النفس + نشاطات قديمة > 10 ثواني (heartbeat timeout)
+    const cutoff  = new Date(Date.now() - 10000).toISOString();
+    const agents  = db.prepare(`
+      SELECT user_name FROM inbox_agent_status
+      WHERE typing_conv_id=?
+        AND user_id != ?
+        AND typing_at IS NOT NULL
+        AND typing_at >= ?
+    `).all(convId, myId, cutoff);
+
+    res.json({ ok: true, agents: agents.map(a => a.user_name) });
+  } catch(e) { res.json({ ok: true, agents: [] }); }
+});
+
+// ============================================================
 // INBOX QUEUE (Phase 5b)
 // ============================================================
 router.get('/inbox/queue', requireAuth, (req, res) => {
