@@ -103,6 +103,11 @@ function iv3RenderConvs() {
 }
 
 function iv3BuildConvItem(c) {
+  // guard — لو IV3 أو selectedIds لست جاهزين بعد
+  if (!IV3 || !(IV3.selectedIds instanceof Set)) {
+    if (IV3 && !IV3.selectedIds) IV3.selectedIds = new Set();
+    else return '';
+  }
   const isActive  = c.id === IV3.activeConvId;
   const platIcon  = iv3PlatIcon(c.platform);
   const displayName = iv3CleanSenderDisplay(c.sender_name, c.sender_id);
@@ -434,3 +439,111 @@ async function iv3RunBulkAction(ids, action, payload, successMsg) {
     iv3Toast('فشل التنفيذ: ' + e.message, 'error');
   }
 }
+
+// ══════════════════════════════════════════════════════════════════
+// NEW CONVERSATION MODAL
+// ══════════════════════════════════════════════════════════════════
+
+const IV3_NEW_CONV_PLATFORMS = {
+  'whatsapp-qr': { label: '📱 واتساب QR',  placeholder: 'رقم الهاتف (مثال: 201012345678)',  hint: 'رقم دولي بدون +' },
+  'telegram':    { label: '✈️ تيليجرام',    placeholder: 'Chat ID أو @username',             hint: 'مثال: 123456789 أو @username' },
+};
+
+function iv3OpenNewConvModal() {
+  const modal = document.getElementById('iv3-new-conv-modal');
+  if (!modal) return;
+
+  // بناء أزرار المنصات
+  const btns = document.getElementById('iv3-new-plat-btns');
+  if (btns) {
+    btns.innerHTML = Object.entries(IV3_NEW_CONV_PLATFORMS).map(([k, v]) =>
+      `<button onclick="iv3SelectNewConvPlat('${k}',this)"
+        style="padding:7px 14px;border:1.5px solid #e5e7eb;background:#fff;border-radius:8px;cursor:pointer;font-size:12px;font-family:Cairo,sans-serif;transition:all .15s"
+        data-plat="${k}">${v.label}</button>`
+    ).join('');
+  }
+
+  // reset
+  const recip = document.getElementById('iv3-new-recipient');
+  const msg   = document.getElementById('iv3-new-message');
+  const err   = document.getElementById('iv3-new-conv-err');
+  if (recip) { recip.value = ''; recip.placeholder = 'اختر المنصة أولاً...'; }
+  if (msg)   msg.value = '';
+  if (err)   { err.style.display = 'none'; err.textContent = ''; }
+  modal._selectedPlat = '';
+
+  modal.style.display = 'flex';
+  setTimeout(() => { document.getElementById('iv3-new-plat-btns')?.querySelector('button')?.click(); }, 50);
+}
+
+function iv3SelectNewConvPlat(plat, btn) {
+  const modal = document.getElementById('iv3-new-conv-modal');
+  if (!modal) return;
+  modal._selectedPlat = plat;
+
+  // تمييز الزر المختار
+  document.querySelectorAll('#iv3-new-plat-btns button').forEach(b => {
+    b.style.background = b.dataset.plat === plat ? '#1B5E30' : '#fff';
+    b.style.color = b.dataset.plat === plat ? '#fff' : '#374151';
+    b.style.borderColor = b.dataset.plat === plat ? '#1B5E30' : '#e5e7eb';
+  });
+
+  // تحديث placeholder الـ recipient
+  const info = IV3_NEW_CONV_PLATFORMS[plat];
+  const recip = document.getElementById('iv3-new-recipient');
+  if (recip && info) recip.placeholder = info.placeholder;
+}
+
+function iv3CloseNewConvModal() {
+  const modal = document.getElementById('iv3-new-conv-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function iv3SendNewConversation() {
+  const modal   = document.getElementById('iv3-new-conv-modal');
+  const plat    = modal?._selectedPlat;
+  const recip   = document.getElementById('iv3-new-recipient')?.value.trim();
+  const msg     = document.getElementById('iv3-new-message')?.value.trim();
+  const err     = document.getElementById('iv3-new-conv-err');
+  const sendBtn = document.getElementById('iv3-new-conv-send-btn');
+
+  const showErr = (txt) => { if (err) { err.textContent = txt; err.style.display = 'block'; } };
+
+  if (!plat)  return showErr('⚠️ اختر المنصة أولاً');
+  if (!recip) return showErr('⚠️ أدخل رقم الهاتف أو الـ ID');
+  if (!msg)   return showErr('⚠️ اكتب رسالة أولاً');
+
+  if (err) err.style.display = 'none';
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = '⏳ جاري الإرسال...'; }
+
+  try {
+    const res = await apiFetch('/api/system/inbox/new-conversation', {
+      method: 'POST',
+      body: JSON.stringify({ platform: plat, recipient: recip, message: msg }),
+    });
+
+    if (res?.ok) {
+      iv3CloseNewConvModal();
+      if (typeof iv3Toast === 'function') iv3Toast('✅ تم إرسال الرسالة وإنشاء المحادثة', 'success');
+      // تحديث القائمة وفتح المحادثة الجديدة
+      await iv3LoadConvs(true);
+      if (res.conversation_id && typeof iv3OpenConv === 'function') {
+        setTimeout(() => iv3OpenConv(res.conversation_id), 400);
+      }
+    } else {
+      showErr('❌ ' + (res?.error || 'فشل الإرسال'));
+    }
+  } catch(e) {
+    showErr('❌ ' + e.message);
+  } finally {
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'إرسال →'; }
+  }
+}
+
+// إغلاق الـ modal بالضغط خارجه
+document.addEventListener('click', function(e) {
+  const modal = document.getElementById('iv3-new-conv-modal');
+  if (modal && modal.style.display !== 'none' && e.target === modal) {
+    iv3CloseNewConvModal();
+  }
+});

@@ -60,3 +60,10 @@ const IV3 = {
   bulkMode: false,      // وضع التحديد الجماعي
   selectedIds: new Set(), // IDs المحادثات المحددة
 };
+
+// guard: نضمن إن selectedIds دايماً Set (يُعيد بناء نفسه لو اتكسر)
+Object.defineProperty(IV3, 'selectedIds', {
+  get() { return this._selectedIds || (this._selectedIds = new Set()); },
+  set(v) { this._selectedIds = (v instanceof Set) ? v : new Set(); },
+  configurable: true,
+});

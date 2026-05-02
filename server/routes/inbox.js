@@ -2626,4 +2626,68 @@ router.post('/inbox/whatsapp-qr/stop', requireAuth, async (req, res) => {
 
 
 
+// POST /api/system/inbox/new-conversation
+// بدء محادثة جديدة مع رقم/ID غير مسجل على أي منصة
+router.post('/inbox/new-conversation', requireAuth, async (req, res) => {
+  const db  = req.db;
+  const { platform, recipient, message } = req.body || {};
+
+  if (!platform || !recipient || !message) {
+    return res.json({ ok: false, error: 'تأكد من platform + recipient + message' });
+  }
+
+  try {
+    // إرسال الرسالة حسب المنصة
+    let senderId = recipient.trim();
+
+    if (platform === 'whatsapp-qr') {
+      // تحويل الرقم لـ JID
+      const chatId = senderId.includes('@') ? senderId : senderId.replace(/\D/g,'') + '@c.us';
+      await waQR.sendMessage(req.user.id, chatId, message);
+      senderId = chatId;
+
+    } else if (platform === 'telegram') {
+      const settings = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get();
+      if (!settings?.telegram_token) return res.json({ ok: false, error: 'تيليجرام غير مفعّل' });
+      const tgPayload = JSON.stringify({ chat_id: senderId, text: message });
+      await new Promise((resolve, reject) => {
+        const https = require('https');
+        const req2 = https.request({
+          hostname: 'api.telegram.org',
+          path: `/bot${settings.telegram_token}/sendMessage`,
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(tgPayload) }
+        }, r => { r.resume(); resolve(); });
+        req2.on('error', reject);
+        req2.end(tgPayload);
+      });
+
+    } else {
+      return res.json({ ok: false, error: `المنصة ${platform} لا تدعم بدء محادثة جديدة` });
+    }
+
+    // إنشاء أو تحديث المحادثة في الـ DB
+    let conv = db.prepare('SELECT * FROM inbox_conversations WHERE platform=? AND sender_id=?').get(platform, senderId);
+    if (!conv) {
+      const r = db.prepare(
+        'INSERT INTO inbox_conversations (platform, sender_id, sender_name, last_message, last_message_at, status, unread_count) VALUES (?,?,?,?,datetime(\'now\'),\'open\',0)'
+      ).run(platform, senderId, senderId, message);
+      conv = { id: r.lastInsertRowid };
+    } else {
+      db.prepare('UPDATE inbox_conversations SET last_message=?, last_message_at=datetime(\'now\') WHERE id=?').run(message, conv.id);
+    }
+
+    // حفظ الرسالة الصادرة
+    db.prepare(
+      'INSERT INTO inbox_messages (conversation_id, platform, direction, content, message_type, sent_at) VALUES (?,?,?,?,?,datetime(\'now\'))'
+    ).run(conv.id, platform, 'out', message, 'text');
+
+    res.json({ ok: true, conversation_id: conv.id });
+
+  } catch(e) {
+    console.error('[new-conversation]', e.message);
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 module.exports = router;

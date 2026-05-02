@@ -2307,6 +2307,10 @@
           <span class="iv3-sidebar-title">المحادثات</span>
           <div style="display:flex;align-items:center;gap:6px">
             <span class="iv3-sidebar-count" id="iv3-conv-count">0</span>
+            <button class="iv3-icon-btn" onclick="iv3OpenNewConvModal()" title="محادثة جديدة"
+              style="width:26px;height:26px;background:#1B5E30;color:#fff;border-radius:6px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
             <button class="iv3-bulk-toggle-btn" id="iv3-bulk-toggle"
               onclick="iv3ToggleBulkMode()" title="تحديد جماعي">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="4" height="4" rx="1"/><rect x="3" y="11" width="4" height="4" rx="1"/><rect x="3" y="17" width="4" height="4" rx="1"/><line x1="11" y1="7" x2="21" y2="7"/><line x1="11" y1="13" x2="21" y2="13"/><line x1="11" y1="19" x2="21" y2="19"/></svg>
@@ -2705,6 +2709,44 @@
     </div><!-- /iv3-context -->
 
   </div><!-- /iv3-body -->
+
+  <!-- ══ New Conversation Modal ══ -->
+  <div id="iv3-new-conv-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:14px;padding:24px;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.25);direction:rtl;font-family:Cairo,sans-serif">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+        <h3 style="margin:0;font-size:15px;font-weight:700;color:#111827">💬 محادثة جديدة</h3>
+        <button onclick="iv3CloseNewConvModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:#6b7280;line-height:1">×</button>
+      </div>
+
+      <!-- Platform -->
+      <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">المنصة</label>
+      <div id="iv3-new-plat-btns" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+
+      <!-- Recipient -->
+      <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">
+        المستقبِل
+      </label>
+      <input id="iv3-new-recipient" type="text" style="width:100%;box-sizing:border-box;border:1.5px solid #e5e7eb;border-radius:8px;padding:9px 12px;font-size:13px;font-family:Cairo,sans-serif;outline:none;margin-bottom:14px"
+        placeholder="رقم الهاتف أو الـ ID..."
+        onfocus="this.style.borderColor='#1B5E30'" onblur="this.style.borderColor='#e5e7eb'">
+
+      <!-- Message -->
+      <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">الرسالة</label>
+      <textarea id="iv3-new-message" rows="3" style="width:100%;box-sizing:border-box;border:1.5px solid #e5e7eb;border-radius:8px;padding:9px 12px;font-size:13px;font-family:Cairo,sans-serif;outline:none;resize:none;margin-bottom:6px"
+        placeholder="اكتب رسالتك..."
+        onfocus="this.style.borderColor='#1B5E30'" onblur="this.style.borderColor='#e5e7eb'"></textarea>
+
+      <div id="iv3-new-conv-err" style="font-size:12px;color:#ef4444;margin-bottom:10px;display:none"></div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="iv3CloseNewConvModal()" style="padding:9px 18px;border:1.5px solid #e5e7eb;background:#fff;border-radius:8px;cursor:pointer;font-size:13px;font-family:Cairo,sans-serif;color:#374151">إلغاء</button>
+        <button onclick="iv3SendNewConversation()" id="iv3-new-conv-send-btn"
+          style="padding:9px 20px;background:#1B5E30;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:Cairo,sans-serif">
+          إرسال →
+        </button>
+      </div>
+    </div>
+  </div>
 </div><!-- /page-inbox -->
 
 
@@ -5162,9 +5204,9 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="/dashboard/js/treasury.js?v=a379cf29"></script>
 <script src="/dashboard/js/inbox.js?v=1777743631"></script>
 <!-- Inbox v3 modules -->
-<script src="/dashboard/inbox-v3/inbox-state.js?v=20260502"></script>
+<script src="/dashboard/inbox-v3/inbox-state.js?v=1777747810"></script>
 <script src="/dashboard/inbox-v3/inbox-api.js?v=1777722319"></script>
-<script src="/dashboard/inbox-v3/inbox-conv.js?v=1777747004"></script>
+<script src="/dashboard/inbox-v3/inbox-conv.js?v=1777747810"></script>
 <script src="/dashboard/inbox-v3/inbox-chat.js?v=1777747195"></script>
 <script src="/dashboard/inbox-v3/inbox-reply.js?v=1777745561"></script>
 <script src="/dashboard/inbox-v3/inbox-context.js?v=1777747004"></script>
