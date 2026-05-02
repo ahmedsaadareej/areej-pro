@@ -1,3 +1,17 @@
+## Session 2026-05-02 18:03 UTC
+- الحالة: تم الإكمال
+- ما تم إنجازه:
+  - **feat**: Customer Lifetime Value Badge — `invoice_count` في `by-phone` API + badge 🏆 في Context Panel يعرض: عدد الفواتير + إجمالي المدفوع + الإجمالي الكلي لو مختلف
+  - الملفات: `server/routes-crm.js` + `public/dashboard/inbox-v3/inbox-context.js` + `public/dashboard/index.html`
+- قرارات تقنية:
+  - invoice_count يُجلب من COUNT على sys_invoices بـ contact_id (try/catch صامت)
+  - Badge يظهر فقط لو عدد الفواتير > 0 أو total_paid > 0
+  - يختفي تلقائياً لو العميل مش في CRM (نفس قائمة إخفاء الـ sections)
+  - تصميم: gradient أخضر + أيقونة 🏆 + 3 معلومات في صف واحد
+- آخر Commit: `b9729ff` — feat: Customer Lifetime Value Badge
+- نقطة البداية القادمة: Catalog العرض السريع في `inbox-reply.js` — زر في Reply box يعرض المنتجات من المخزون
+
+---
 ## Session 2026-05-02 17:41 UTC
 - الحالة: تم الإكمال
 - ما تم إنجازه:
