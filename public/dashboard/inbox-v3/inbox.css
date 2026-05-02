@@ -1631,3 +1631,35 @@
   background: #F0FDF4 !important;
   border-right: 3px solid var(--brand, #1B5E30);
 }
+
+/* ── Keyboard Shortcuts Help Modal ──────────────────────── */
+.iv3-shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.iv3-shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #374151;
+}
+.iv3-shortcut-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  padding: 3px 8px;
+  background: #F3F4F6;
+  border: 1px solid #D1D5DB;
+  border-bottom: 2px solid #9CA3AF;
+  border-radius: 5px;
+  font-family: monospace;
+  font-size: 11px;
+  color: #111827;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-align: center;
+}

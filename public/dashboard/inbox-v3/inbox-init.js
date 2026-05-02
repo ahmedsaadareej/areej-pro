@@ -341,3 +341,206 @@ function iv3OnPageShow() {
 function iv3OnPageHide() {
   iv3StopPolling();
 }
+
+// ── Keyboard Shortcuts ───────────────────────────────────────
+// يُفعَّل فقط لما صفحة الـ inbox نشطة
+// الاختصارات:
+//   Tab / J / ↓  → المحادثة التالية
+//   Shift+Tab / K / ↑ → المحادثة السابقة
+//   R             → فوكس على textarea الرد
+//   E             → إغلاق المحادثة الحالية
+//   A             → فتح نافذة التعيين
+//   N             → ملاحظة داخلية (note mode)
+//   Escape        → إغلاق modals / خروج من bulk mode
+
+(function iv3BindKeyboard() {
+  document.addEventListener('keydown', function iv3KeyHandler(e) {
+    // تجاهل لو مش في صفحة الـ inbox
+    const page = document.getElementById('page-inbox');
+    if (!page || !page.classList.contains('active')) return;
+
+    // تجاهل لو المستخدم يكتب في input/textarea/select
+    const tag = document.activeElement?.tagName?.toLowerCase();
+    const isTyping = (tag === 'input' || tag === 'textarea' || tag === 'select')
+      && document.activeElement?.id !== 'iv3-search';
+
+    // Escape يعمل دائماً حتى في وضع الكتابة
+    if (e.key === 'Escape') {
+      // 1. إغلاق أي modal مفتوح
+      const modals = document.querySelectorAll('.iv3-modal-overlay');
+      if (modals.length) {
+        modals[modals.length - 1].remove();
+        return;
+      }
+      // 2. خروج من bulk mode
+      if (IV3.bulkMode && typeof iv3ToggleBulkMode === 'function') {
+        iv3ToggleBulkMode();
+        return;
+      }
+      // 3. مسح الاقتباس
+      if (IV3.quotedMsg && typeof iv3ClearQuote === 'function') {
+        iv3ClearQuote();
+        return;
+      }
+      // 4. إغلاق dropdowns
+      if (typeof iv3CloseDropdowns === 'function') iv3CloseDropdowns();
+      return;
+    }
+
+    // باقي الـ shortcuts تعمل فقط لما مش في وضع كتابة
+    if (isTyping) return;
+
+    switch (e.key) {
+      // ── التنقل بين المحادثات ─────────────────────────────
+      case 'Tab':
+      case 'j':
+      case 'J':
+      case 'ArrowDown': {
+        e.preventDefault();
+        if (e.shiftKey && e.key === 'Tab') {
+          iv3NavigateConv(-1);
+        } else {
+          iv3NavigateConv(1);
+        }
+        break;
+      }
+      case 'k':
+      case 'K':
+      case 'ArrowUp': {
+        e.preventDefault();
+        iv3NavigateConv(-1);
+        break;
+      }
+
+      // ── إجراءات المحادثة الحالية ─────────────────────────
+      case 'r':
+      case 'R': {
+        if (!IV3.activeConvId) break;
+        e.preventDefault();
+        const ta = document.getElementById('iv3-textarea');
+        if (ta) {
+          // تأكد الـ reply box ظاهر
+          const replyBox = document.getElementById('iv3-reply');
+          if (replyBox) replyBox.style.display = '';
+          if (typeof iv3SetReplyMode === 'function') iv3SetReplyMode('reply');
+          ta.focus();
+          iv3Toast('R — وضع الرد', 'info');
+        }
+        break;
+      }
+
+      case 'n':
+      case 'N': {
+        if (!IV3.activeConvId) break;
+        e.preventDefault();
+        const ta = document.getElementById('iv3-textarea');
+        if (ta) {
+          const replyBox = document.getElementById('iv3-reply');
+          if (replyBox) replyBox.style.display = '';
+          if (typeof iv3SetReplyMode === 'function') iv3SetReplyMode('note');
+          ta.focus();
+          iv3Toast('N — ملاحظة داخلية', 'info');
+        }
+        break;
+      }
+
+      case 'e':
+      case 'E': {
+        if (!IV3.activeConvId) break;
+        e.preventDefault();
+        if (typeof iv3ChangeStatus === 'function') {
+          iv3ChangeStatus('closed');
+          iv3Toast('E — تم إغلاق المحادثة', 'success');
+        }
+        break;
+      }
+
+      case 'a':
+      case 'A': {
+        if (!IV3.activeConvId) break;
+        e.preventDefault();
+        if (typeof iv3AssignConv === 'function') iv3AssignConv();
+        break;
+      }
+
+      case 's':
+      case 'S': {
+        if (!IV3.activeConvId) break;
+        e.preventDefault();
+        if (typeof iv3SnoozeConv === 'function') iv3SnoozeConv();
+        break;
+      }
+
+      case '?': {
+        e.preventDefault();
+        iv3ShowShortcutsHelp();
+        break;
+      }
+    }
+  });
+})();
+
+// ── التنقل بين المحادثات ─────────────────────────────────────
+
+function iv3NavigateConv(dir) {
+  if (!IV3.convs.length) return;
+
+  const currentIdx = IV3.convs.findIndex(c => c.id === IV3.activeConvId);
+  let nextIdx;
+
+  if (currentIdx === -1) {
+    nextIdx = dir > 0 ? 0 : IV3.convs.length - 1;
+  } else {
+    nextIdx = currentIdx + dir;
+    if (nextIdx < 0) nextIdx = IV3.convs.length - 1;
+    if (nextIdx >= IV3.convs.length) nextIdx = 0;
+  }
+
+  const nextConv = IV3.convs[nextIdx];
+  if (!nextConv) return;
+
+  if (typeof iv3OpenConv === 'function') iv3OpenConv(nextConv.id);
+
+  // Scroll للـ item المحدد في القائمة
+  requestAnimationFrame(() => {
+    const el = document.querySelector(`.iv3-conv-item[data-id="${nextConv.id}"]`);
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  });
+}
+
+// ── لوحة مساعدة الـ Shortcuts ────────────────────────────────
+
+function iv3ShowShortcutsHelp() {
+  if (document.getElementById('iv3-shortcuts-modal')) return; // مفتوحة مسبقاً
+
+  const shortcuts = [
+    { key: 'Tab / J / ↓',      desc: 'المحادثة التالية' },
+    { key: 'Shift+Tab / K / ↑', desc: 'المحادثة السابقة' },
+    { key: 'R',                 desc: 'فتح صندوق الرد' },
+    { key: 'N',                 desc: 'ملاحظة داخلية' },
+    { key: 'E',                 desc: 'إغلاق المحادثة' },
+    { key: 'A',                 desc: 'تعيين لموظف' },
+    { key: 'S',                 desc: 'تأجيل (Snooze)' },
+    { key: 'Esc',               desc: 'إغلاق / إلغاء' },
+    { key: '?',                 desc: 'عرض هذه المساعدة' },
+  ];
+
+  const rows = shortcuts.map(s => `
+    <div class="iv3-shortcut-row">
+      <kbd class="iv3-shortcut-kbd">${iv3EscHtml(s.key)}</kbd>
+      <span>${iv3EscHtml(s.desc)}</span>
+    </div>`).join('');
+
+  const html = `
+    <div class="iv3-modal-overlay" id="iv3-shortcuts-modal" onclick="iv3CloseModal('iv3-shortcuts-modal')">
+      <div class="iv3-modal" onclick="event.stopPropagation()" style="max-width:360px">
+        <div class="iv3-modal-title">⌨️ اختصارات لوحة المفاتيح</div>
+        <div class="iv3-shortcuts-list">${rows}</div>
+        <div class="iv3-modal-actions">
+          <button onclick="iv3CloseModal('iv3-shortcuts-modal')" class="iv3-modal-confirm">حسناً</button>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.insertAdjacentHTML('beforeend', html);
+}
