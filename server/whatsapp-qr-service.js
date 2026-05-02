@@ -194,7 +194,12 @@ async function handleIncomingMessage(userId, msg) {
 
   // Detect message type and content
   let msgType = 'text';
-  let content = msg.body || '';
+  // msg.body في whatsapp-web.js بيكون undefined للستيكرز وبعض أنواع الرسائل
+  // نجرب خيارات أكثر قبل الاستسلام للميديا
+  let content = msg.body
+    || msg._data?.body
+    || msg._data?.caption
+    || '';
   let mediaUrl = null;
   let mediaType = null;
 
@@ -229,10 +234,17 @@ async function handleIncomingMessage(userId, msg) {
     }
   } else if (msg.type === 'location') {
     content = `📍 موقع: ${msg.location?.latitude},${msg.location?.longitude}`;
-  } else if (msg.type === 'vcard') {
+  } else if (msg.type === 'vcard' || msg.type === 'multi_vcard') {
     content = `👤 جهة اتصال`;
+  } else if (msg.type === 'sticker') {
+    // stickers تُعامَل كصور
+    msgType = 'image';
+    content = '🎭 ملصق';
+  } else if (msg.type === 'reaction') {
+    content = msg._data?.reactionText || '❤️';
   } else {
-    content = msg.body || '[رسالة]';
+    // أي نوع آخر — نحاول نجيب النص من كل المصادر
+    content = msg.body || msg._data?.body || msg._data?.caption || msg._data?.text || `[${msg.type || 'رسالة'}]`;
   }
 
   const displayContent = content || (mediaType ? `[${mediaType}]` : '[رسالة]');

@@ -147,7 +147,9 @@ function iv3BuildMsgBubble(msg) {
     </div>`;
   }
 
-  if (msg.media_url || msg.file_id) {
+  const isMedia = msg.media_url || msg.file_id ||
+    ['image','video','audio','file'].includes(msg.message_type);
+  if (isMedia) {
     content = iv3BuildMediaContent(msg);
   } else {
     content = `<div class="iv3-msg-text">${iv3EscHtml(msg.content || msg.message || '').replace(/\n/g, '<br>')}</div>`;
@@ -241,23 +243,40 @@ function iv3BuildTimelineEvent(event) {
 }
 
 function iv3BuildMediaContent(msg) {
-  const url = msg.media_url || `/api/system/inbox/media-proxy/${msg.id}`;
-  const mimeType = msg.media_type || msg.mime_type || '';  // media_type هو الحقل الفعلي في الـ schema
+  const url      = msg.media_url;
+  const rawType  = (msg.media_type || msg.mime_type || '').toLowerCase();
+  const text     = msg.content || msg.message || '';
 
-  if (mimeType.startsWith('image/')) {
-    return `<img class="iv3-msg-img" src="${url}" onclick="iv3PreviewImg('${url}')" loading="lazy">`;
+  // لو ما فيش URL حقيقي — عرض النص فقط
+  if (!url) {
+    return `<div class="iv3-msg-text">${iv3EscHtml(text || '[مرفق]').replace(/\n/g, '<br>')}</div>`;
   }
-  if (mimeType.startsWith('video/')) {
-    return `<video class="iv3-msg-video" controls src="${url}"></video>`;
+
+  // نورمل الـ type: 'image' أو 'image/jpeg' → 'image'
+  const kind = rawType.split('/')[0]; // 'image','video','audio','application','text'
+
+  if (kind === 'image' || rawType === 'image') {
+    const caption = text && text !== '[\u0635\u0648\u0631\u0629]' ? `<div class="iv3-msg-caption">${iv3EscHtml(text)}</div>` : '';
+    return `<img class="iv3-msg-img" src="${url}" onclick="iv3PreviewImg('${url}')" loading="lazy">${caption}`;
   }
-  if (mimeType.startsWith('audio/')) {
+  if (kind === 'video' || rawType === 'video') {
+    const caption = text && text !== '[\u0641\u064a\u062f\u064a\u0648]' ? `<div class="iv3-msg-caption">${iv3EscHtml(text)}</div>` : '';
+    return `<video class="iv3-msg-video" controls src="${url}"></video>${caption}`;
+  }
+  if (kind === 'audio' || rawType === 'audio') {
     return `<audio class="iv3-msg-audio" controls src="${url}"></audio>`;
   }
-  // ملف عام
-  const fname = msg.file_name || 'ملف مرفق';
+
+  // ملف عام (PDF, ZIP, إلخ)
+  const ext   = url.split('.').pop()?.split('?')[0]?.toUpperCase() || 'FILE';
+  const fname = msg.file_name || text || ('\u0645\u0644\u0641 ' + ext);
+  const icon  = ext === 'PDF' ? '📕' : ext === 'ZIP' || ext === 'RAR' ? '🗄️' : '📎';
   return `<a class="iv3-msg-file" href="${url}" target="_blank" download>
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-    ${iv3EscHtml(fname)}
+    <span style="font-size:20px;margin-left:8px">${icon}</span>
+    <span>
+      <div style="font-weight:700;font-size:13px">${iv3EscHtml(fname)}</div>
+      <div style="font-size:11px;color:#6b7280">${ext} — اضغط للتحميل</div>
+    </span>
   </a>`;
 }
 
