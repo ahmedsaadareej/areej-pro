@@ -1,7 +1,7 @@
 # 📋 PROJECT.md — مرجع مشروع Areej Pro
 > **قاعدة ذهبية:** هذا الملف يُحدَّث بعد كل خطوة بدون استثناء.
 > أي جلسة جديدة تبدأ بقراءة هذا الملف أولاً قبل أي شيء.
-> آخر تحديث: 2026-05-02 15:23 UTC
+> آخر تحديث: 2026-05-02 15:57 UTC
 
 ---
 
@@ -173,22 +173,13 @@ inbox_agent_status   (id, user_id, status)
 
 ### 🔴 الأولوية القصوى (ابدأ هنا)
 
-#### 1. Quote/Reply على رسالة محددة
-**الوصف:** المستخدم يضغط على رسالة → يظهر زر Reply → يُرسل الرد مقتبساً منها
-**الملفات:** `inbox-chat.js` + `inbox-reply.js` + `index.html`
-**التقدير:** 2-3 ساعات
+#### ~~1. Quote/Reply على رسالة محددة~~ ✅ تم (commit bbe54f7)
 
-#### 2. Snooze المحادثة
-**الوصف:** زر Snooze في header المحادثة → يختار وقت (30 دق / ساعة / 3 ساعات / غداً) → المحادثة تختفي وترجع تلقائياً
-**الملفات:** `inbox-chat.js` + `inbox-init.js` (polling يتحقق من snooze) + `server/routes/inbox.js` (endpoint جديد)
-**التقدير:** 3-4 ساعات
+#### ~~2. Snooze المحادثة~~ ✅ تم (commit 6920703)
 
-#### 3. Conversation Timeline
-**الوصف:** سجل أحداث داخل المحادثة — "تم التعيين لـ X" / "تم الإغلاق" / "تم تغيير الحالة"
-**الملفات:** `inbox-chat.js` + `server/routes/inbox.js`
-**التقدير:** 2-3 ساعات
+#### ~~3. Conversation Timeline~~ ✅ تم (commit f3579d2)
 
-#### 4. زر "تحويل لأوردر" من المحادثة
+#### 1. زر "تحويل لأوردر" من المحادثة
 **الوصف:** زر في Context Panel → يفتح نموذج أوردر بمعلومات العميل جاهزة
 **الملفات:** `inbox-context.js` + ربط بـ orders module
 **التقدير:** 3-4 ساعات
@@ -200,20 +191,14 @@ inbox_agent_status   (id, user_id, status)
 
 ### 🟡 الأولوية العالية
 
-#### 6. Bulk Actions
-**الوصف:** checkbox على كل محادثة → إغلاق / تعيين / label دفعة واحدة
-**الملفات:** `inbox-conv.js` + `inbox-chat.js` + `index.html`
-**التقدير:** 4-5 ساعات
+#### ~~6. Bulk Actions~~ ✅ تم (commit d4b9d94)
 
-#### 7. Collision Detection
+#### 3. Collision Detection
 **الوصف:** "أحمد يرد على هذه المحادثة الآن" — يمنع ردين في نفس الوقت
 **الملفات:** `inbox-init.js` (polling) + `inbox-chat.js` + `server/routes/inbox.js`
 **التقدير:** 3-4 ساعات
 
-#### 8. Keyboard Shortcuts
-**الوصف:** Tab للانتقال بين محادثات / R للرد / E للإغلاق / A للتعيين
-**الملفات:** `inbox-init.js`
-**التقدير:** 2-3 ساعات
+#### ~~8. Keyboard Shortcuts~~ ✅ تم (commit 7b4fec8)
 
 ### 🟢 تضيف قيمة تنافسية فريدة
 

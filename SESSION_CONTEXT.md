@@ -2,6 +2,94 @@
 
 ---
 
+## Session 2026-05-02 15:53 UTC
+- الحالة: تم الإكمال
+- ما تم إنجازه:
+  - `inbox-init.js`: keyboard handler (`iv3BindKeyboard`) مربوط بدورة حياة الصفحة + `iv3NavigateConv()` + `iv3ShowShortcutsHelp()` مع modal كامل
+  - `inbox.css`: تصميم `<kbd>` للمساعدة
+  - `index.html`: زر ؟ في header الـ inbox
+- قرارات تقنية:
+  - الـ listener مربوط بـ `page-inbox.classList.contains('active')` — لا يتدخل مع صفحات أخرى
+  - تجاهل الضغط لو المستخدم يكتب في input/textarea/select (إلا Escape)
+  - `?` يفتح modal بكل الاختصارات
+- آخر Commit: `7b4fec8` — feat: Keyboard Shortcuts
+- نقطة البداية القادمة: `inbox-init.js` + `inbox-chat.js` + `server/routes/inbox.js` — Collision Detection ("أحمد يرد الآن")
+
+---
+
+## Session 2026-05-02 15:49 UTC
+- الحالة: تم الإكمال
+- ما تم إنجازه:
+  - `server/routes/inbox.js`: endpoint `POST /conversations/bulk-action` (close/open/waiting/assign/label)
+  - `inbox-state.js`: إضافة `IV3.bulkMode` + `IV3.selectedIds`
+  - `inbox-api.js`: إضافة `bulkAction()`
+  - `inbox-conv.js`: checkbox في كل item + `iv3ConvItemClick` + `iv3ToggleBulkMode` + `iv3ToggleSelect` + `iv3SelectAll` + دوال التنفيذ (BulkClose/Open/Assign)
+  - `index.html`: زر تحديد جماعي في sidebar + شريط `#iv3-bulk-bar` مع أزرار الإجراء
+  - `inbox.css`: CSS لـ bulk bar + checkbox + selected state
+- قرارات تقنية:
+  - `IV3.selectedIds` هو `Set` للحصول على تحقق O(1) لدوال التحقق والحذف
+  - الخروج من bulk mode يتم تلقائياً بعد تنفيذ أي إجراء
+  - `bulk-action` endpoint يستخدم `logTimeline` لتسجيل كل حدث
+- آخر Commit: `d4b9d94` — feat: Bulk Actions
+- نقطة البداية القادمة: `inbox-init.js` + `inbox-chat.js` — Collision Detection ("أحمد يرد الآن") أو Keyboard Shortcuts
+
+---
+
+## Session 2026-05-02 15:44 UTC
+- الحالة: تم الإكمال
+- ما تم إنجازه:
+  - `server/routes/inbox.js`: `logTimeline()` helper + `GET /conversations/:id/timeline` endpoint + تسجيل تلقائي في `/status` + `/assign` + `/snooze`
+  - `inbox-state.js`: إضافة `IV3.timeline[]`
+  - `inbox-api.js`: إضافة `getTimeline()`
+  - `inbox-chat.js`: `iv3LoadMessages()` يحمّل الرسائل + التاريخ بالتوازي + `iv3RenderMessages()` يدمجهما زمنياً + `iv3BuildTimelineEvent()` لـ render كل حدث
+  - `inbox.css`: تصميم كبسول الحدث `.iv3-timeline-event`
+- قرارات تقنية:
+  - جدول `inbox_timeline` يُنشأ بـ lazy migration عند أول `logTimeline()` call
+  - الأحداث تُعرض مدمجة بين الرسائل بترتيب زمني دقيق (sort by timestamp)
+  - `logTimeline` لا تكسر الـ request لو فشلت (try/catch صامت)
+  - `req.user?.name` هو مصدر اسم الفاعل
+- آخر Commit: `f3579d2` — feat: Conversation Timeline
+- نقطة البداية القادمة: مهام من قائمة الأولوية العالية (Bulk Actions / Collision Detection / Keyboard Shortcuts)
+
+---
+
+## Session 2026-05-02 15:33 UTC
+- الحالة: تم الإكمال
+- ما تم إنجازه:
+  - `server/routes/inbox.js`: إضافة `POST /snooze` (migrate column + snooze/unsnooze) + `GET /snooze-wakeup` (polling يعيد الحالة لـ open تلقائياً)
+  - `inbox-api.js`: إضافة `snoozeConv()` + `checkSnoozeWakeup()`
+  - `inbox-chat.js`: إضافة `iv3SnoozeConv()` + `iv3ConfirmSnooze()` + `iv3FormatSnoozeTime()`
+  - `inbox-init.js`: polling يتحقق من snoozed wakeup كل 8 ثواني
+  - `inbox.css`: CSS لـ snooze modal + حالة snoozed
+  - `index.html`: زر تأجيل في header المحادثة
+- قرارات تقنية:
+  - column `snoozed_until` يُضاف بـ lazy migration عند أول snooze request
+  - status `snoozed` مضاف كقيمة جديدة في inbox_conversations.status
+  - الإيقاظ يحدث تلقائياً في polling كل 8 ثواني عبر `snooze-wakeup` endpoint
+  - unsnooze: minutes=0 يعيد الحالة لـ open ويحذف snoozed_until
+- آخر Commit: `6920703` — feat: Snooze المحادثة
+- نقطة البداية القادمة: `inbox-chat.js` + `server/routes/inbox.js` — Conversation Timeline (سجل أحداث: تعيين / تغيير حالة / إغلاق)
+
+---
+
+## Session 2026-05-02 15:29 UTC
+- الحالة: تم الإكمال
+- ما تم إنجازه: ميزة Quote/Reply كاملة
+  - `inbox-state.js`: إضافة `quotedMsg` للـ IV3 state
+  - `inbox-chat.js`: دالة `iv3QuoteMsg()` + `iv3ShowQuotePreview()` + `iv3ClearQuote()` + hover action button على كل bubble + عرض quote block داخل الـ bubble لو كانت الرسالة مقتبسة
+  - `inbox-reply.js`: ربط الاقتباس بالإرسال في `iv3Send()` + تصفير الاقتباس بعد الإرسال
+  - `inbox-api.js`: تحديث `sendMessage()` ليقبل `quoted` payload (quoted_msg_id + quoted_content + quoted_sender)
+  - `inbox.css`: CSS لـ quote preview في reply box + quote block داخل الـ bubble + hover actions
+  - `index.html`: إضافة `#iv3-quote-preview` داخل reply box
+- قرارات تقنية:
+  - الاقتباس يُخزّن في `IV3.quotedMsg` (client-side state) ويُرسل في `quoted_msg_id + quoted_content + quoted_sender` للـ backend
+  - الـ backend لم يتغيّر (send endpoint يستقبل الحقول الإضافية بدون كسر) — لو أحمد أراد حفظ الاقتباس في الـ DB يحتاج migrate لـ `inbox_messages`
+  - الـ notes مستثناة من الاقتباس (لا تُقتبس)
+- آخر Commit: `bbe54f7` — feat: Quote/Reply على رسالة محددة
+- نقطة البداية القادمة: `inbox-chat.js` + `server/routes/inbox.js` — Snooze المحادثة (زر Snooze + وقت + رجوع تلقائي)
+
+---
+
 ## 📋 بروتوكول بداية أي جلسة جديدة (الأمر الرسمي)
 
 ```
