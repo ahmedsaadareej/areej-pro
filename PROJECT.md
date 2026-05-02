@@ -1,7 +1,7 @@
 # 📋 PROJECT.md — مرجع مشروع Areej Pro
 > **قاعدة ذهبية:** هذا الملف يُحدَّث بعد كل خطوة بدون استثناء.
 > أي جلسة جديدة تبدأ بقراءة هذا الملف أولاً قبل أي شيء.
-> آخر تحديث: 2026-05-02 09:30 UTC
+> آخر تحديث: 2026-05-02 09:24 UTC (جلسة ثانية)
 
 ---
 
@@ -242,7 +242,12 @@ inbox_team_members        -- أعضاء الفرق
 - [x] pm2 reload — سيرفر شغال، inbox v3 يطلب الـ API فعلاً
 - [x] كل التغييرات commitية على GitHub
 
-**الخطوة التالية:** تحديث عنوانات الكاشات في inbox-v3/inbox.js للتفعيل الكامل — ثم اختبار حي من pro-test.areejegypt.com
+- [x] **إصلاح تعارض Polling** — حذف `loadInbox()` القديم من `showPage` في `inbox.js` (commit: 92d0504)
+  - السبب: كان `loadInbox()` يشغّل polling v2 (`/api/system/inbox/...`) بالتوازي مع polling v3 (`/api/inbox/...`) → تعارض مزدوج
+  - الحل: `iv3OnPageShow()` يتولى كل شيء في v3
+  - الـ syntax check: ✅ | pm2: ✅ شغّال بدون errors
+
+**الخطوة التالية:** اختبار حي من pro-test.areejegypt.com — فتح قسم الرسائل ومراقبة الـ console
 
 ### المرحلة 2: الـ Core Features
 - [ ] عرض المحادثات مع فلترة وبحث
