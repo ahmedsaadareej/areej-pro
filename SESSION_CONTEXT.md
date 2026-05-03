@@ -1,3 +1,19 @@
+## Review Session 2026-05-03 (13:39 → 14:15 UTC) — مراجعة شاملة + إصلاح كامل
+- الحالة: مراجعة + إصلاحات critical
+- المشاكل المكتشفة والمحلولة:
+  1. المهام 1, 2, 4 كانت تطبّق التغييرات على inbox.html فقط (standalone) — لكن الـ dashboard يستخدم index.html
+  2. أزرار التنسيق (B/I/S) لم تكن موجودة في index.html
+  3. Channel Selector لم يكن موجوداً في index.html
+  4. Inline Contact Edit لم يكن موجوداً في index.html
+  5. iv3FmtWrap كانت تبحث عن iv3-reply-input بدل iv3-textarea
+  6. .iv3-fmt-btn كان يُخفى بـ .iv3-reply-btn { display:none }
+- الإصلاحات:
+  - index.html: Channel Selector + Format Buttons + Inline Contact Edit
+  - inbox-reply.js: iv3FmtWrap() تدعم كلا الـ id
+  - inbox.css: specificity fix للـ fmt-btn
+- تحقق في pro-test.areejegypt.com: صفر errors، كل الدوال تعمل
+- آخر commit: dfb8a33
+
 ## Session 2026-05-03 (13:35 → 13:55 UTC) — مهمة 4 مكتملة
 - الحالة: تم الإكمال (مهمة 4 من 5)
 - ما تم إنجازه:
