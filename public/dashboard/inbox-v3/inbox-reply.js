@@ -495,14 +495,25 @@ function iv3RenderCatalog(products) {
     const price    = p.sell_price ? Number(p.sell_price).toLocaleString('ar-EG') + ' ج.م' : '—';
     const stock    = p.stock_qty  != null ? p.stock_qty : '?';
     const lowStock = p.is_low_stock;
+    const pId      = p.id   || 0;
+    const pName    = JSON.stringify(p.name   || '').replace(/'/g, '&#39;');
+    const pPrice   = p.sell_price || 0;
     return `
-      <div class="iv3-catalog-item" onclick="iv3InsertProduct(${JSON.stringify(p.name).replace(/'/g, '&#39;')}, '${p.sell_price || 0}')">
-        <div class="iv3-catalog-item-name">${p.name}</div>
+      <div class="iv3-catalog-item">
+        <div class="iv3-catalog-item-name">${iv3EscHtml(p.name)}</div>
         <div class="iv3-catalog-item-meta">
           <span class="iv3-catalog-price">${price}</span>
           <span class="iv3-catalog-stock ${lowStock ? 'low' : ''}">
             ${lowStock ? '⚠️' : '📦'} ${stock} قطعة
           </span>
+        </div>
+        <div class="iv3-catalog-item-actions">
+          <button class="iv3-catalog-btn-insert" onclick="iv3InsertProduct(${pName},'${pPrice}')" title="إدراج في الرسالة">
+            ✉️ إرسال
+          </button>
+          <button class="iv3-catalog-btn-invoice" onclick="iv3AddToInvoice(${pId},${pName},'${pPrice}')" title="إضافة للفاتورة">
+            📝 فاتورة
+          </button>
         </div>
       </div>`;
   }).join('');
@@ -533,6 +544,79 @@ function iv3InsertProduct(name, price) {
 function iv3CatalogSearch(val) {
   clearTimeout(_iv3CatalogTimer);
   _iv3CatalogTimer = setTimeout(() => iv3LoadCatalog(val.trim()), 300); // debounce 300ms
+}
+
+// ── إضافة منتج للفاتورة ───────────────────────────────────────────────────────────────────────
+
+async function iv3AddToInvoice(productId, productName, productPrice) {
+  iv3CloseCatalog();
+
+  // جلب الفواتير المتاحة من IV3
+  const recentInvs = (IV3._ctxRecentInvoices || []).filter(i => i.id && i.status !== 'paid' && i.status !== 'cancelled');
+
+  if (!recentInvs.length) {
+    iv3Toast('لا توجد فواتير مفتوحة لهذا العميل — أنشئ فاتورة أولاً', 'warning');
+    return;
+  }
+
+  // لو فاتورة واحدة فقط → أضف مباشرة
+  if (recentInvs.length === 1) {
+    await iv3DoAddToInvoice(recentInvs[0].id, recentInvs[0].number, productId, productName, productPrice);
+    return;
+  }
+
+  // لو أكثر → أظهر picker بسيط
+  let modal = document.getElementById('iv3-invoice-picker-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'iv3-invoice-picker-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    document.body.appendChild(modal);
+  }
+
+  const options = recentInvs.map(i => `
+    <div class="iv3-inv-pick-item" onclick="iv3PickInvoice(${i.id},'${iv3EscHtml(i.number||String(i.id))}',${productId},${JSON.stringify(productName).replace(/"/g,"'")},'${productPrice}')">
+      <span>📝 فاتورة #${iv3EscHtml(i.number || String(i.id))}</span>
+      <span style="color:#6b7280;font-size:12px">${i.total} ج.م — ${i.status}</span>
+    </div>`).join('');
+
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:14px;padding:20px;width:100%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,.18)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <span style="font-weight:700;font-size:14px">📝 اختر الفاتورة</span>
+        <button onclick="document.getElementById('iv3-invoice-picker-modal').style.display='none'" style="background:none;border:none;font-size:18px;color:#9ca3af;cursor:pointer">×</button>
+      </div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:12px">إضافة “${iv3EscHtml(productName)}” لـ:</div>
+      <div style="display:flex;flex-direction:column;gap:6px">${options}</div>
+    </div>`;
+
+  modal.style.display = 'flex';
+}
+
+async function iv3PickInvoice(invoiceId, invoiceNo, productId, productName, productPrice) {
+  const modal = document.getElementById('iv3-invoice-picker-modal');
+  if (modal) modal.style.display = 'none';
+  await iv3DoAddToInvoice(invoiceId, invoiceNo, productId, productName, productPrice);
+}
+
+async function iv3DoAddToInvoice(invoiceId, invoiceNo, productId, productName, productPrice) {
+  iv3Toast('جاري الإضافة...', 'info');
+  try {
+    const res = await apiFetch(`/api/system/invoices/${invoiceId}/add-item`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        product_id:  productId || null,
+        description: productName,
+        qty:         1,
+        unit_price:  parseFloat(productPrice) || 0
+      })
+    });
+    if (!res.ok) throw new Error(res.error || 'فشل الإضافة');
+    iv3Toast(`✅ تم إضافة “${iv3EscHtml(productName)}” للفاتورة #${iv3EscHtml(invoiceNo || String(invoiceId))}`, 'success');
+  } catch(e) {
+    iv3Toast('فشل: ' + e.message, 'error');
+  }
 }
 
 // ── WA Template Sender ─────────────────────────────────────────────────────

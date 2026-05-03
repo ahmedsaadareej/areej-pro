@@ -1725,7 +1725,6 @@
 /* ── Catalog Dropdown ───────────────────────────────────────────── */
 .iv3-catalog-item {
   padding: 9px 12px;
-  cursor: pointer;
   border-bottom: 1px solid #f9fafb;
   transition: background .12s;
 }
@@ -1760,6 +1759,53 @@
 .iv3-catalog-stock.low {
   color: #ef4444;
   font-weight: 600;
+}
+.iv3-catalog-item-actions {
+  display: flex;
+  gap: 5px;
+  margin-top: 6px;
+}
+.iv3-catalog-btn-insert,
+.iv3-catalog-btn-invoice {
+  flex: 1;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-family: Cairo, sans-serif;
+  border-radius: 6px;
+  border: 1.5px solid;
+  cursor: pointer;
+  transition: background .12s, color .12s;
+  font-weight: 600;
+}
+.iv3-catalog-btn-insert {
+  color: #0891b2;
+  border-color: #0891b2;
+  background: #fff;
+}
+.iv3-catalog-btn-insert:hover { background: #e0f2fe; }
+.iv3-catalog-btn-invoice {
+  color: #16a34a;
+  border-color: #16a34a;
+  background: #fff;
+}
+.iv3-catalog-btn-invoice:hover { background: #dcfce7; }
+
+/* Invoice Picker */
+.iv3-inv-pick-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: Cairo, sans-serif;
+  transition: background .12s, border-color .12s;
+}
+.iv3-inv-pick-item:hover {
+  background: #f0fdf4;
+  border-color: #16a34a;
 }
 
 /* ── Platform Badge (في قائمة المحادثات) ─────────────────────── */

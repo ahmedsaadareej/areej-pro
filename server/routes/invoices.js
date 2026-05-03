@@ -194,6 +194,38 @@ router.post('/invoices', requirePerm('invoices.create'), (req, res) => {
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// POST /api/system/invoices/:id/add-item — إضافة منتج لفاتورة موجودة
+router.post('/invoices/:id/add-item', (req, res) => {
+  const db = req.db;
+  try {
+    const invoiceId = parseInt(req.params.id);
+    const { product_id, description, qty = 1, unit_price } = req.body;
+    if (!description) return res.json({ ok: false, error: 'description مطلوب' });
+
+    const inv = db.prepare('SELECT * FROM sys_invoices WHERE id=?').get(invoiceId);
+    if (!inv) return res.json({ ok: false, error: 'الفاتورة غير موجودة' });
+    if (inv.status === 'paid' || inv.status === 'cancelled')
+      return res.json({ ok: false, error: `لا يمكن تعديل فاتورة بحالة ${inv.status}` });
+
+    const priceNum = parseFloat(unit_price) || 0;
+    const qtyNum   = parseInt(qty)          || 1;
+    const total    = qtyNum * priceNum;
+
+    db.transaction(() => {
+      db.prepare(`INSERT INTO sys_invoice_items (invoice_id, product_id, description, qty, unit_price, total)
+        VALUES (?,?,?,?,?,?)`).run(invoiceId, product_id||null, description, qtyNum, priceNum, total);
+
+      // تحديث totals الفاتورة
+      const items   = db.prepare('SELECT * FROM sys_invoice_items WHERE invoice_id=?').all(invoiceId);
+      const subtotal = items.reduce((s, i) => s + (+i.total), 0);
+      const newTotal = subtotal - (+inv.discount||0) + (+inv.tax||0);
+      db.prepare('UPDATE sys_invoices SET subtotal=?, total=? WHERE id=?').run(subtotal, newTotal, invoiceId);
+    })();
+
+    return res.json({ ok: true, invoice_id: invoiceId, item_total: total });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
 // PUT /api/system/invoices/:id/status
 router.put('/invoices/:id/status', (req, res) => {
   const db = req.db;

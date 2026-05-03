@@ -98,11 +98,16 @@ async function iv3LoadCustomerContext(conv) {
       recentInvoices = (invData?.data || []).filter(i => i.contact_id === contact.id).slice(0, 4);
       // تحويل الحقول للصيغة المتوقعة
       recentInvoices = recentInvoices.map(i => ({
+        id:     i.id,
         number: i.invoice_no,
-        total: i.total,
+        total:  i.total,
         status: i.status
       }));
     } catch (_) {}
+
+    // حفظ contact id في IV3 لاستخدامه في Catalog → إضافة للفاتورة
+    IV3._ctxContactId = contact.id || null;
+    IV3._ctxRecentInvoices = recentInvoices;
 
     iv3RenderCustomerERP({ ...contact, invoice_count: contact.invoice_count || 0, recent_invoices: recentInvoices, recent_orders: recentOrders });
 
