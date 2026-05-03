@@ -2666,51 +2666,118 @@ router.get('/inbox/revenue', requireAuth, (req, res) => {
 });
 
 // ============================================================
-// AI SMART REPLY
+// AI SMART REPLY — FEAT-6: OpenAI API مباشر (Genspark proxy)
+// آخر تحديث: 2026-05-03
 // ============================================================
+
+// دالة مساعدة: الردود الاحتياطية بناءً على كلمات مفتاحية
+function _aiKeywordFallback(msg) {
+  const m = (msg || '').toLowerCase();
+  if (m.includes('سعر') || m.includes('بكم'))
+    return ['أسعارنا تبدأ من 80 ج.م للتيشيرت المطبوع. تفضل موقعنا أو أخبرني بالمنتج 🌿', 'السعر يتوقف على الكمية والطباعة. كم قطعة تحتاج؟', 'سنرسل لك قائمة الأسعار الكاملة الآن 📋'];
+  if (m.includes('توصيل') || m.includes('شحن'))
+    return ['الشحن لجميع المحافظات 3-5 أيام 🚚', 'التوصيل متاح لكل مصر. تكلفة الشحن تبدأ من 45 ج.م', 'نشحن لعنوانك خلال 3-5 أيام عمل بعد التأكيد ✅'];
+  if (m.includes('مرحبا') || m.includes('هاي') || m.includes('السلام'))
+    return ['أهلاً وسهلاً! كيف يمكنني مساعدتك اليوم؟ 🌿', 'مرحباً! يسعدنا خدمتك. ماذا تحتاج؟', 'أهلاً! نحن هنا للمساعدة 😊'];
+  return ['شكراً لتواصلك! سنرد عليك في أقرب وقت 🌿', 'وصلت رسالتك. هل يمكنك توضيح طلبك أكثر؟', 'سنساعدك بكل سرور! ما الذي تحتاجه؟'];
+}
+
 router.post('/inbox/ai-reply', requireAuth, async (req, res) => {
   const db = req.db;
   try {
     const { conversation_id, last_message } = req.body;
-    if (!last_message) return res.json({ ok:false, error:'last_message required' });
-    // Get conversation context
-    const msgs = db.prepare('SELECT * FROM inbox_messages WHERE conversation_id=? ORDER BY sent_at DESC LIMIT 5').all(conversation_id||0);
-    const context = msgs.reverse().map(m => (m.direction==='in'?'عميل: ':'أنت: ') + m.content).join('\n');
-    // Get business context
-    const profile = db.prepare('SELECT * FROM tenant_profile WHERE id=1').get() || {};
+    if (!last_message) return res.json({ ok: false, error: 'last_message required' });
+
+    // سياق آخر 5 رسائل
+    const msgs = db.prepare(
+      'SELECT direction, content FROM inbox_messages WHERE conversation_id=? AND content IS NOT NULL ORDER BY sent_at DESC LIMIT 5'
+    ).all(conversation_id || 0);
+    const context = msgs.reverse()
+      .map(m => (m.direction === 'in' ? 'عميل: ' : 'أنت: ') + (m.content || '').substring(0, 120))
+      .join('\n');
+
+    // بيانات الشركة والمنتجات
+    const profile  = db.prepare('SELECT company_name FROM tenant_profile WHERE id=1').get() || {};
     const products = db.prepare('SELECT name, sell_price FROM sys_products WHERE stock_qty > 0 LIMIT 10').all();
-    const productList = products.map(p => p.name + ' - ' + p.sell_price + ' ج.م').join('، ');
-    // Build AI prompt
-    const systemPrompt = `أنت مساعد خدمة عملاء لشركة "${profile.company_name||'أريج للملابس'}" المتخصصة في ملابس وتيشيرتات مطبوعة في مصر.
-منتجاتنا: ${productList || 'تيشيرتات، هوديات، ملابس مطبوعة'}
-أسلوبك: ودود، محترف، مختصر. اكتب بالعربية.
-السياق: ${context}`;
-    const userMsg = `رسالة العميل: "${last_message}"\nاكتب 3 ردود مقترحة مختصرة (كل رد في سطر) مناسبة للرد على هذه الرسالة:`;
-    // Call AI (using available model)
-    const { execSync } = require('child_process');
+    const productList = products.map(p => `${p.name} - ${p.sell_price} ج.م`).join('، ') || 'تيشيرتات، هوديات، ملابس مطبوعة';
+
+    const systemPrompt = [
+      `أنت مساعد خدمة عملاء لشركة "${profile.company_name || 'أريج'}".`,
+      `منتجاتنا: ${productList}`,
+      'أسلوبك: ودود، محترف، مختصر. اكتب بالعربية فقط.',
+      context ? `سياق المحادثة:\n${context}` : '',
+    ].filter(Boolean).join('\n');
+
+    const userPrompt = `رسالة العميل: "${last_message}"\nاكتب 3 ردود مقترحة مختلفة ومختصرة. كل رد في سطر منفصل.`;
+
+    // إعدادات الـ API
+    const apiKey  = process.env.OPENAI_API_KEY;
+    const baseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
+    const model   = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+
     let suggestions = [];
-    try {
-      const result = execSync(`gsk ai "${userMsg.replace(/"/g,"'")} System: ${systemPrompt.replace(/"/g,"'").substring(0,200)}"`, 
-        { timeout: 15000, encoding: 'utf8', maxBuffer: 1024*1024 });
-      const lines = result.trim().split('\n').filter(l => l.trim().length > 5).slice(0,3);
-      suggestions = lines.map(l => l.replace(/^\d+\.\s*/, '').trim()).filter(Boolean);
-    } catch(e) {
-      // Fallback suggestions based on message keywords
-      const msg = last_message.toLowerCase();
-      if (msg.includes('سعر') || msg.includes('بكم')) {
-        suggestions = ['أسعارنا تبدأ من 80 ج.م للتيشيرت المطبوع. تفضل موقعنا أو أخبرني بالمنتج 🌿', 'السعر يتوقف على الكمية والطباعة. كم قطعة تحتاج؟', 'سنرسل لك قائمة الأسعار الكاملة الآن 📋'];
-      } else if (msg.includes('توصيل') || msg.includes('شحن')) {
-        suggestions = ['الشحن لجميع المحافظات 3-5 أيام 🚚', 'التوصيل متاح لكل مصر. تكلفة الشحن تبدأ من 45 ج.م', 'نشحن لعنوانك خلال 3-5 أيام عمل بعد التأكيد ✅'];
-      } else if (msg.includes('مرحبا') || msg.includes('هاي') || msg.includes('السلام')) {
-        suggestions = ['أهلاً وسهلاً! كيف يمكنني مساعدتك اليوم؟ 🌿', 'مرحباً! يسعدنا خدمتك. ماذا تحتاج؟', 'أهلاً! نحن هنا للمساعدة 😊'];
-      } else {
-        suggestions = ['شكراً لتواصلك! سنرد عليك في أقرب وقت 🌿', 'وصلت رسالتك. هل يمكنك توضيح طلبك أكثر؟', 'سنساعدك بكل سرور! ما الذي تحتاجه؟'];
+
+    if (!apiKey) {
+      suggestions = _aiKeywordFallback(last_message);
+    } else {
+      try {
+        const url     = new URL(`${baseUrl}/chat/completions`);
+        const payload = JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user',   content: userPrompt   },
+          ],
+          temperature: 0.7,
+          max_tokens:  400,
+        });
+
+        const aiResponse = await new Promise((resolve, reject) => {
+          const reqOpts = {
+            hostname: url.hostname,
+            path:     url.pathname + (url.search || ''),
+            method:   'POST',
+            headers:  {
+              'Content-Type':   'application/json',
+              'Authorization':  `Bearer ${apiKey}`,
+              'Content-Length': Buffer.byteLength(payload),
+            },
+          };
+          const r = https.request(reqOpts, (res2) => {
+            let body = '';
+            res2.on('data', d => body += d);
+            res2.on('end', () => {
+              try { resolve(JSON.parse(body)); }
+              catch(e) { reject(new Error('JSON parse: ' + body.substring(0, 200))); }
+            });
+          });
+          r.on('error', reject);
+          r.setTimeout(20000, () => { r.destroy(); reject(new Error('AI timeout')); });
+          r.write(payload);
+          r.end();
+        });
+
+        const text = aiResponse?.choices?.[0]?.message?.content || '';
+        suggestions = text
+          .split('\n')
+          .map(l => l.replace(/^[\d\-\*\.\)]+\s*/, '').trim())
+          .filter(l => l.length > 5)
+          .slice(0, 3);
+
+        if (!suggestions.length) suggestions = _aiKeywordFallback(last_message);
+
+      } catch (aiErr) {
+        console.warn('[AI-Reply] API error:', aiErr.message);
+        suggestions = _aiKeywordFallback(last_message);
       }
     }
-    res.json({ ok:true, suggestions: suggestions.slice(0,3) });
-  } catch(e) { res.json({ ok:false, error:e.message }); }
-});
 
+    res.json({ ok: true, suggestions: suggestions.slice(0, 3) });
+  } catch(e) {
+    console.error('[AI-Reply] Error:', e.message);
+    res.json({ ok: false, error: e.message });
+  }
+});
 // ============================================================
 // INBOX SEND INVOICE — إرسال فاتورة عبر التيليجرام
 // ============================================================
