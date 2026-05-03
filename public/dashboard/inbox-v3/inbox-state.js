@@ -30,6 +30,8 @@ const IV3 = {
   convHasMore: false,
   loadingConvs: false,
   loadingMsgs: false,
+  loadingMoreMsgs: false,   // جاري تحميل رسائل أقدم
+  hasMoreMessages: false,   // هل يوجد رسائل أقدم قابلة للتحميل
 
   // ── المستخدم الحالي ────────────────────────────────
   me: null,             // { id, name, role, inbox_role }

@@ -61,8 +61,9 @@ const IV3_API = {
     return data;
   },
 
-  async getMessages(convId) {
-    const data = await this._get(`/api/system/inbox/messages/${convId}`);
+  async getMessages(convId, before = null) {
+    const q = before ? `?before=${before}&limit=50` : `?limit=50`;
+    const data = await this._get(`/api/system/inbox/messages/${convId}${q}`);
     if (!data) throw new Error('فشل تحميل الرسائل');
     return data;
   },

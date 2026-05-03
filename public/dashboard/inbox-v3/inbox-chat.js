@@ -51,6 +51,7 @@ async function iv3OpenConv(convId) {
 
 async function iv3LoadMessages(convId) {
   IV3.loadingMsgs = true;
+  IV3.hasMoreMessages = false;
   const msgsEl = document.getElementById('iv3-msgs');
   if (msgsEl) msgsEl.innerHTML = `<div class="iv3-msgs-loading">
     <div class="iv3-spinner"></div>
@@ -63,6 +64,7 @@ async function iv3LoadMessages(convId) {
       IV3_API.getTimeline(convId).catch(() => ({ events: [] })),
     ]);
     IV3.messages  = Array.isArray(msgData) ? msgData : (msgData.messages || []);
+    IV3.hasMoreMessages = !!(msgData?.has_more);
     IV3.timeline  = timelineData?.events || [];
     iv3RenderMessages();
   } catch (e) {
@@ -73,6 +75,44 @@ async function iv3LoadMessages(convId) {
       </div>`;
   } finally {
     IV3.loadingMsgs = false;
+  }
+}
+
+// ── تحميل رسائل أقدم (pagination) ─────────────────────────
+
+async function iv3LoadMoreMessages() {
+  if (!IV3.activeConvId || IV3.loadingMoreMsgs || !IV3.hasMoreMessages) return;
+  IV3.loadingMoreMsgs = true;
+
+  const btn = document.getElementById('iv3-load-more-btn');
+  if (btn) btn.textContent = 'جاري التحميل...';
+
+  try {
+    const firstId = IV3.messages.length ? IV3.messages[0].id : null;
+    if (!firstId) return;
+
+    const msgData = await IV3_API.getMessages(IV3.activeConvId, firstId);
+    const older   = Array.isArray(msgData) ? msgData : (msgData.messages || []);
+    IV3.hasMoreMessages = !!(msgData?.has_more);
+
+    if (older.length) {
+      // احفظ موقع الـ scroll الحالي قبل الإضافة
+      const msgsEl = document.getElementById('iv3-msgs');
+      const prevHeight = msgsEl ? msgsEl.scrollHeight : 0;
+
+      IV3.messages = [...older, ...IV3.messages];
+      iv3RenderMessages();
+
+      // استعد لنفس الموضع بعد إعادة الرسم
+      requestAnimationFrame(() => {
+        if (!msgsEl) return;
+        msgsEl.scrollTop = msgsEl.scrollHeight - prevHeight;
+      });
+    }
+  } catch(e) {
+    iv3Toast('فشل تحميل الرسائل القديمة', 'error');
+  } finally {
+    IV3.loadingMoreMsgs = false;
   }
 }
 
@@ -123,7 +163,16 @@ function iv3RenderMessages() {
     }
   });
 
-  container.innerHTML = html;
+  // زر "تحميل المزيد" في الأعلى
+  const loadMoreHtml = IV3.hasMoreMessages
+    ? `<div class="iv3-load-more-wrap">
+        <button id="iv3-load-more-btn" onclick="iv3LoadMoreMessages()" class="iv3-load-more-btn">
+          ⬆ تحميل رسائل أقدم
+        </button>
+      </div>`
+    : '';
+
+  container.innerHTML = loadMoreHtml + html;
 
   // اسكرول للآخر
   requestAnimationFrame(() => {

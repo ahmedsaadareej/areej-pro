@@ -2257,3 +2257,22 @@ body.ltr .iv3-ctx-icon-btn::before {
   font-family: Cairo, sans-serif;
 }
 .iv3-date-clear:hover { background: #fef2f2; }
+
+/* ── Load More Messages ─────────────────────────────────── */
+.iv3-load-more-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 6px;
+}
+.iv3-load-more-btn {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 5px 18px;
+  font-size: 12px;
+  color: #475569;
+  cursor: pointer;
+  font-family: Cairo, sans-serif;
+  transition: background .15s;
+}
+.iv3-load-more-btn:hover { background: #e2e8f0; color: #1e293b; }

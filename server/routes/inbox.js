@@ -111,16 +111,37 @@ router.get('/inbox/conversations', requireAuth, (req, res) => {
   } catch(e) { console.error('[inbox/conversations]', e.message); res.json({ ok: true, conversations: [], isOwner: false }); }
 });
 
-// GET /api/system/inbox/messages/:convId
+// GET /api/system/inbox/messages/:convId?before=<msg_id>&limit=<n>
 router.get('/inbox/messages/:convId', requireAuth, (req, res) => {
   const db = req.db;
   try {
-    const msgs = db.prepare(`SELECT * FROM inbox_messages WHERE conversation_id=? ORDER BY sent_at ASC LIMIT 100`).all(req.params.convId);
-    // Mark as read
-    db.prepare(`UPDATE inbox_messages SET is_read=1 WHERE conversation_id=? AND direction='in'`).run(req.params.convId);
-    db.prepare(`UPDATE inbox_conversations SET unread_count=0 WHERE id=?`).run(req.params.convId);
-    res.json({ ok: true, messages: msgs });
-  } catch(e) { res.json({ ok: true, messages: [] }); }
+    const limit  = Math.min(parseInt(req.query.limit) || 50, 100);
+    const before = parseInt(req.query.before) || null;
+
+    let msgs;
+    if (before) {
+      // تحميل رسائل أقدم (pagination)
+      msgs = db.prepare(
+        `SELECT * FROM inbox_messages WHERE conversation_id=? AND id < ? ORDER BY sent_at DESC LIMIT ?`
+      ).all(req.params.convId, before, limit).reverse();
+    } else {
+      // أحدث 50 رسالة (أول تحميل)
+      msgs = db.prepare(
+        `SELECT * FROM inbox_messages WHERE conversation_id=? ORDER BY sent_at DESC LIMIT ?`
+      ).all(req.params.convId, limit).reverse();
+      // Mark as read فقط في الطلب الأول
+      db.prepare(`UPDATE inbox_messages SET is_read=1 WHERE conversation_id=? AND direction='in'`).run(req.params.convId);
+      db.prepare(`UPDATE inbox_conversations SET unread_count=0 WHERE id=?`).run(req.params.convId);
+    }
+
+    // هل يوجد رسائل أقدم؟
+    const hasMore = msgs.length > 0
+      ? db.prepare(`SELECT COUNT(*) as cnt FROM inbox_messages WHERE conversation_id=? AND id < ?`)
+          .get(req.params.convId, msgs[0].id).cnt > 0
+      : false;
+
+    res.json({ ok: true, messages: msgs, has_more: hasMore });
+  } catch(e) { res.json({ ok: true, messages: [], has_more: false }); }
 });
 
 // POST /api/system/inbox/typing — Telegram typing indicator
