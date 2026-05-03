@@ -324,11 +324,21 @@ const InboxAPI = (() => {
     overview({ from, to } = {}) {
       return _get('/inbox/analytics/overview', { from, to });
     },
-
+    sla({ from, to } = {}) {
+      return _get('/inbox/analytics/sla', { from, to });
+    },
     agentStats({ from, to } = {}) {
       return _get('/inbox/analytics/agents', { from, to });
     },
-
+    platforms({ from, to } = {}) {
+      return _get('/inbox/analytics/platforms', { from, to });
+    },
+    volume({ from, to } = {}) {
+      return _get('/inbox/analytics/volume', { from, to });
+    },
+    hourly({ from, to } = {}) {
+      return _get('/inbox/analytics/hourly', { from, to });
+    },
     csatStats() {
       return _get('/inbox/csat-stats');
     },

@@ -1,6 +1,6 @@
 /**
  * inbox/analytics.js — Analytics & SLA Reports لـ Inbox v4
- * آخر تحديث: 2026-05-03 (P3-6 SLA Tracking)
+ * آخر تحديث: 2026-05-03 (P6-1 Analytics Dashboard)
  *
  * Endpoints:
  *   GET /api/inbox/analytics/sla          — SLA overview (نسبة الالتزام + متوسطات)
@@ -354,6 +354,69 @@ router.get('/platforms', (req, res) => {
     });
   } catch (e) {
     console.error('[inbox/analytics/platforms]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ─── GET /api/inbox/analytics/volume ────────────────────────────────────────
+// حجم المحادثات يومياً خلال الفترة (للرسم البياني)
+
+router.get('/volume', (req, res) => {
+  try {
+    const db = req.db;
+    const { fromTs, toTs, fromIso, toIso } = _parseRange(req.query);
+
+    // محادثات جديدة لكل يوم
+    const rows = db.prepare(`
+      SELECT
+        date(created_at, 'unixepoch') AS day,
+        COUNT(*) AS total,
+        SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) AS closed,
+        SUM(CASE WHEN platform = 'whatsapp' THEN 1 ELSE 0 END) AS whatsapp,
+        SUM(CASE WHEN platform = 'telegram' THEN 1 ELSE 0 END) AS telegram,
+        SUM(CASE WHEN platform = 'instagram' THEN 1 ELSE 0 END) AS instagram
+      FROM inbox_conversations_v4
+      WHERE created_at BETWEEN ? AND ?
+      GROUP BY day
+      ORDER BY day ASC
+    `).all(fromTs, toTs);
+
+    res.json({ ok: true, period: { from: fromIso, to: toIso }, volume: rows });
+  } catch (e) {
+    console.error('[inbox/analytics/volume]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ─── GET /api/inbox/analytics/hourly ─────────────────────────────────────────
+// توزيع الرسائل الواردة على ساعات اليوم (لمعرفة أوقات الذروة)
+
+router.get('/hourly', (req, res) => {
+  try {
+    const db = req.db;
+    const { fromTs, toTs, fromIso, toIso } = _parseRange(req.query);
+
+    const rows = db.prepare(`
+      SELECT
+        CAST(strftime('%H', sent_at, 'unixepoch') AS INTEGER) AS hour,
+        COUNT(*) AS count
+      FROM inbox_messages_v4
+      WHERE direction = 'in'
+        AND sent_at BETWEEN ? AND ?
+      GROUP BY hour
+      ORDER BY hour ASC
+    `).all(fromTs, toTs);
+
+    // إملأ الساعات الفارغة بـ 0
+    const byHour = Array.from({ length: 24 }, (_, h) => ({
+      hour: h,
+      count: 0,
+    }));
+    rows.forEach(r => { byHour[r.hour].count = r.count; });
+
+    res.json({ ok: true, period: { from: fromIso, to: toIso }, hourly: byHour });
+  } catch (e) {
+    console.error('[inbox/analytics/hourly]', e.message);
     res.status(500).json({ ok: false, error: e.message });
   }
 });

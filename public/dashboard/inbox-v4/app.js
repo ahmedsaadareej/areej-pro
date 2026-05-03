@@ -1,6 +1,6 @@
 /**
  * app.js — Inbox v4 Entry Point
- * آخر تحديث: 2026-05-03
+ * آخر تحديث: 2026-05-03 (P6-1 Analytics Dashboard)
  *
  * يُشغَّل آخر script في index.html بعد تحميل:
  *   store.js → api.js → stream.js → [conv-list.js → chat.js → ...] → app.js
@@ -218,6 +218,14 @@
 
     // Phase 5 — Context Panel
     if (typeof InboxContext !== 'undefined') InboxContext.init(); // P5-1 ✅
+
+    // Phase 6 — Analytics Dashboard
+    if (typeof InboxAnalytics !== 'undefined') {
+      const analyticsBtn = $('iv4-analytics-btn');
+      if (analyticsBtn) {
+        analyticsBtn.addEventListener('click', () => InboxAnalytics.open());
+      }
+    }
 
     // expose showInboxToast globally (for team.js + other modules)
     window.showInboxToast = toast;
