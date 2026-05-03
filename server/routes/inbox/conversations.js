@@ -1,6 +1,6 @@
 /**
  * inbox/conversations.js — Conversations Routes لـ Inbox v4
- * آخر تحديث: 2026-05-03
+ * آخر تحديث: 2026-05-03 (P3-6 SLA Tracking)
  *
  * Endpoints:
  *   GET    /api/inbox/conversations           — قائمة محادثات مع فلاتر + pagination
@@ -20,6 +20,8 @@
  *   DELETE /api/inbox/labels/:labelId            — حذف label
  *   POST   /api/inbox/conversations/:id/labels   — إضافة label لمحادثة
  *   DELETE /api/inbox/conversations/:id/labels/:labelId — إزالة label
+ *   GET    /api/inbox/conversations/:id/sla      — SLA بيانات محادثة واحدة (P3-6)
+ *   POST   /api/inbox/conversations/:id/sla/backfill — إعادة حساب SLA من الرسائل (P3-6)
  */
 
 'use strict';
@@ -516,6 +518,170 @@ router.post('/conversations/:id/read', (req, res) => {
   }
 });
 
+// ─── SLA Helpers (P3-6) ──────────────────────────────────────────────────────
+
+/**
+ * SLA thresholds بالثواني — قابلة للتخصيص لاحقاً عبر inbox_channel_settings_v4
+ * الأولوية urgent: 15 دقيقة / high: 1 ساعة / normal: 4 ساعات / low: 24 ساعة
+ */
+const SLA_THRESHOLDS_SEC = {
+  urgent: 15  * 60,
+  high:   60  * 60,
+  normal: 4   * 60 * 60,
+  low:    24  * 60 * 60,
+};
+
+/**
+ * حساب بيانات SLA لمحادثة واحدة
+ *
+ * @param {Object} conv - صف من inbox_conversations_v4
+ * @returns {Object} slaInfo
+ *   - first_response_sec    : وقت أول رد بالثواني (null لو لم يحدث)
+ *   - resolution_sec        : وقت الإغلاق بالثواني (null لو ما زالت مفتوحة)
+ *   - threshold_sec         : الحد المسموح به حسب الأولوية
+ *   - first_response_status : 'met' | 'breached' | 'pending'
+ *   - resolution_status     : 'met' | 'breached' | 'pending'
+ *   - first_response_pct    : نسبة الوقت المستهلك من الـ threshold (للـ UI)
+ */
+function _computeSLA(conv) {
+  const threshold = SLA_THRESHOLDS_SEC[conv.priority] || SLA_THRESHOLDS_SEC.normal;
+  const now       = Math.floor(Date.now() / 1000);
+
+  // ── وقت أول رد ──────────────────────────────────────────────────────────────
+  let firstResponseSec    = null;
+  let firstResponseStatus = 'pending';
+  let firstResponsePct    = null;
+
+  if (conv.first_response_at && conv.first_message_at) {
+    firstResponseSec    = conv.first_response_at - conv.first_message_at;
+    firstResponseStatus = firstResponseSec <= threshold ? 'met' : 'breached';
+    firstResponsePct    = Math.round((firstResponseSec / threshold) * 100);
+  } else if (conv.first_message_at) {
+    // لم يرد الفريق بعد → نحسب الوقت المنقضي
+    const elapsed       = now - conv.first_message_at;
+    firstResponseStatus = elapsed > threshold ? 'breached' : 'pending';
+    firstResponsePct    = Math.round((elapsed / threshold) * 100);
+  }
+
+  // ── وقت الإغلاق (Resolution) ─────────────────────────────────────────────────
+  // نستخدم threshold مضاعف × 3 للإغلاق (ضبط افتراضي)
+  const resolutionThreshold = threshold * 3;
+  let resolutionSec    = null;
+  let resolutionStatus = 'pending';
+  let resolutionPct    = null;
+
+  if (conv.resolved_at && conv.first_message_at) {
+    resolutionSec    = conv.resolved_at - conv.first_message_at;
+    resolutionStatus = resolutionSec <= resolutionThreshold ? 'met' : 'breached';
+    resolutionPct    = Math.round((resolutionSec / resolutionThreshold) * 100);
+  } else if (conv.first_message_at && conv.status !== 'closed') {
+    const elapsed    = now - conv.first_message_at;
+    resolutionStatus = elapsed > resolutionThreshold ? 'breached' : 'pending';
+    resolutionPct    = Math.round((elapsed / resolutionThreshold) * 100);
+  }
+
+  return {
+    first_response_sec:    firstResponseSec,
+    first_response_status: firstResponseStatus,
+    first_response_pct:    firstResponsePct,
+    resolution_sec:        resolutionSec,
+    resolution_status:     resolutionStatus,
+    resolution_pct:        resolutionPct,
+    threshold_sec:         threshold,
+    resolution_threshold_sec: resolutionThreshold,
+  };
+}
+
+/**
+ * تسجيل first_response_at عند أول رسالة صادرة (تُستدعى من messages.js)
+ * لو already set → no-op
+ *
+ * @param {Object} db
+ * @param {number} convId
+ * @param {number} sentAt - Unix timestamp للرسالة الصادرة
+ */
+function recordFirstResponse(db, convId, sentAt) {
+  try {
+    const conv = db.prepare(
+      'SELECT first_response_at, first_message_at FROM inbox_conversations_v4 WHERE id = ?'
+    ).get(convId);
+
+    if (!conv || conv.first_response_at) return; // already set
+
+    db.prepare(
+      'UPDATE inbox_conversations_v4 SET first_response_at = ?, updated_at = ? WHERE id = ?'
+    ).run(sentAt, Math.floor(Date.now() / 1000), convId);
+  } catch (e) {
+    console.warn('[SLA] recordFirstResponse failed:', e.message);
+  }
+}
+
+// ─── GET /api/inbox/conversations/:id/sla ────────────────────────────────────
+
+router.get('/conversations/:id/sla', (req, res) => {
+  try {
+    const db = req.db;
+    const id = parseInt(req.params.id);
+    if (!id) return res.status(400).json({ ok: false, error: 'invalid id' });
+
+    const conv = db.prepare(
+      'SELECT * FROM inbox_conversations_v4 WHERE id = ?'
+    ).get(id);
+    if (!conv) return res.status(404).json({ ok: false, error: 'not found' });
+
+    const sla = _computeSLA(conv);
+    res.json({ ok: true, sla, conv_id: id, priority: conv.priority });
+  } catch (e) {
+    console.error('[inbox/conversations/:id/sla GET]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ─── POST /api/inbox/conversations/:id/sla/backfill ──────────────────────────
+// إعادة حساب first_response_at + first_message_at من الرسائل الفعلية
+// مفيد للمحادثات القديمة التي لا تحتوي على هذه القيم
+
+router.post('/conversations/:id/sla/backfill', (req, res) => {
+  try {
+    const db = req.db;
+    const id = parseInt(req.params.id);
+    if (!id) return res.status(400).json({ ok: false, error: 'invalid id' });
+
+    // أول رسالة واردة = first_message_at
+    const firstIn = db.prepare(`
+      SELECT MIN(sent_at) as t FROM inbox_messages_v4
+      WHERE conversation_id = ? AND direction = 'in'
+    `).get(id);
+
+    // أول رسالة صادرة (رد الفريق) بعد first_message_at = first_response_at
+    const firstOut = db.prepare(`
+      SELECT MIN(sent_at) as t FROM inbox_messages_v4
+      WHERE conversation_id = ? AND direction = 'out'
+    `).get(id);
+
+    const now = Math.floor(Date.now() / 1000);
+    db.prepare(`
+      UPDATE inbox_conversations_v4
+      SET first_message_at = ?, first_response_at = ?, updated_at = ?
+      WHERE id = ?
+    `).run(
+      firstIn?.t  || null,
+      firstOut?.t || null,
+      now,
+      id
+    );
+
+    // إعادة حساب SLA بعد التحديث
+    const conv = db.prepare('SELECT * FROM inbox_conversations_v4 WHERE id = ?').get(id);
+    const sla  = _computeSLA(conv);
+
+    res.json({ ok: true, sla, backfilled: { first_message_at: firstIn?.t, first_response_at: firstOut?.t } });
+  } catch (e) {
+    console.error('[inbox/conversations/:id/sla/backfill POST]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // ─── SSE Broadcast Helper ─────────────────────────────────────────────────────
 // ملاحظة: Labels endpoints انتقلت لـ server/routes/inbox/labels.js (P3-1)
 
@@ -547,3 +713,6 @@ function _broadcastConvUpdate(req, convId, patch) {
 }
 
 module.exports = router;
+module.exports.recordFirstResponse = recordFirstResponse;
+module.exports.computeSLA          = _computeSLA;
+module.exports.SLA_THRESHOLDS_SEC  = SLA_THRESHOLDS_SEC;

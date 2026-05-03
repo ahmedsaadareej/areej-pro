@@ -499,6 +499,15 @@ router.post('/conversations/:id/messages', async (req, res) => {
       }
     }
 
+    // ── SLA: تسجيل أول رد صادر (P3-6) ──────────────────────────────────
+    // فقط للرسائل الصادرة الحقيقية (ليس النوتس ولا المحذوفة)
+    if (!isNote && savedMsg.status !== 'failed') {
+      try {
+        const { recordFirstResponse } = require('./conversations');
+        recordFirstResponse(db, convId, savedMsg.sent_at || Math.floor(Date.now() / 1000));
+      } catch (_) { /* لو conversations.js لم يتحمل بعد */ }
+    }
+
     // ── @Mentions notification (P2-4) ─────────────────────────────────
     if (isNote && Array.isArray(mention_ids) && mention_ids.length > 0) {
       const mentionIdsInt = mention_ids

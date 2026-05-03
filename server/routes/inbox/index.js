@@ -1,6 +1,6 @@
 /**
  * Inbox v4 Routes — /api/inbox/*
- * آخر تحديث: 2026-05-03
+ * آخر تحديث: 2026-05-03 (P3-6 analytics route)
  *
  * مسجّل في app.js كـ:
  *   app.use('/api/inbox', require('./routes/inbox/index'))
@@ -47,8 +47,8 @@ router.use('/', require('./search'));
 // [Phase 4] Automation
 // router.use('/', require('./automation'));
 
-// [Phase 5] Analytics
-// router.use('/', require('./analytics'));
+// Phase 3 cont. — Analytics + SLA (P3-6)
+router.use('/analytics', require('./analytics'));
 
 // [Phase 6] Settings
 // router.use('/', require('./settings'));
