@@ -8,11 +8,11 @@
 | # | المهمة | الملفات | الحالة |
 |---|--------|---------|--------|
 | P0-1 | إنشاء scaffold (هذا الملف + SESSIONS + DECISIONS + SCHEMA) | `inbox-v4/*.md` | ✅ مكتملة |
-| P0-2 | بناء InboxStore (state management) | `public/dashboard/inbox-v4/store.js` | ⬜ |
-| P0-3 | بناء InboxAPI layer (كل الـ fetch calls) | `public/dashboard/inbox-v4/api.js` | ⬜ |
-| P0-4 | SSE endpoint في backend | `server/routes/inbox/stream.js` | ⬜ |
-| P0-5 | SSE receiver في frontend | `public/dashboard/inbox-v4/stream.js` | ⬜ |
-| P0-6 | Layout الأساسي (3 columns + shell) | `public/dashboard/inbox-v4/index.html` + `inbox.css` | ⬜ |
+| P0-2 | بناء InboxStore (state management) | `public/dashboard/inbox-v4/store.js` | ✅ مكتملة |
+| P0-3 | بناء InboxAPI layer (كل الـ fetch calls) | `public/dashboard/inbox-v4/api.js` | ✅ مكتملة |
+| P0-4 | SSE endpoint في backend | `server/routes/inbox/stream.js` | ✅ مكتملة |
+| P0-5 | SSE receiver في frontend | `public/dashboard/inbox-v4/stream.js` | ✅ مكتملة |
+| P0-6 | Layout الأساسي (3 columns + shell) | `public/dashboard/inbox-v4/index.html` + `inbox.css` | ✅ مكتملة |
 | P0-7 | Migrations جديدة (inbox tables v4) | `server/migrations/inbox-v4/001_*.js` … | ⬜ |
 
 ---
@@ -116,4 +116,4 @@
 ---
 
 ## 🔴 المهمة القادمة
-**P0-2: بناء InboxStore** — `public/dashboard/inbox-v4/store.js`
+**P0-7: Migrations** — `server/migrations/inbox-v4/001_init.js` … `007_*.js`
