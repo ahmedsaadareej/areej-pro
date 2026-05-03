@@ -1,6 +1,6 @@
 /**
  * conv-list.js — Conversations List لـ Inbox v4
- * آخر تحديث: 2026-05-03 (P3-3 Snooze)
+ * آخر تحديث: 2026-05-03 (P3-4 Bulk Actions)
  *
  * المسؤوليات:
  *   - جلب المحادثات من backend وعرضها
@@ -48,6 +48,7 @@ const InboxConvList = (() => {
   let _labelUnsub   = null;    // إلغاء الاستماع للـ label filter
   let _priorityMenu = null;    // القائمة المنسدلة للأولوية الحالية (مرجع DOM)
   let _snoozeModal  = null;    // مودال الـ Snooze الحالي (مرجع DOM)
+  const _selectedIds = new Set(); // IDs المحادثات المحددة (Bulk)
 
   // ─── الدالة الرئيسية: جلب المحادثات ─────────────────────────────────────
 
@@ -191,15 +192,20 @@ const InboxConvList = (() => {
       ? `<span class="iv4-snooze-badge--active" title="مؤجل حتى ${snoozeLabel} — انقر لإلغاء">⏰ ${snoozeLabel}</span>`
       : '';
 
+      // Bulk checkbox: محدد لو الـ ID في _selectedIds
+    const isSelected = _selectedIds.has(conv.id);
+
     return `
 <div
-  class="iv4-conv-item ${isActive ? 'active' : ''} ${unread ? 'unread' : ''} ${priClass} ${isSnoozed ? 'iv4-conv-snoozed' : ''}"
+  class="iv4-conv-item ${isActive ? 'active' : ''} ${unread ? 'unread' : ''} ${priClass} ${isSnoozed ? 'iv4-conv-snoozed' : ''} ${isSelected ? 'bulk-selected' : ''}"
   data-conv-id="${conv.id}"
   data-priority="${_escHtml(pri)}"
   role="button"
   tabindex="0"
   aria-label="محادثة مع ${name}"
->
+>  <label class="iv4-bulk-check" title="تحديد">
+    <input type="checkbox" class="iv4-conv-checkbox" data-conv-id="${conv.id}" ${isSelected ? 'checked' : ''} />
+  </label>
   <div class="iv4-conv-avatar" style="background:${avatarColor}">
     ${initial}
     <span class="iv4-conv-platform">${icon}</span>
@@ -220,7 +226,8 @@ const InboxConvList = (() => {
     ${conv.labels && conv.labels.length ? _renderLabels(conv.labels) : ''}
   </div>
   <button class="iv4-snooze-trigger" title="تأجيل">⏰</button>
-</div>`.trim();
+</div>`
+    .replace(/^[ \t]+/gm, '').trim();
   }
 
   /**
@@ -245,6 +252,18 @@ const InboxConvList = (() => {
     listEl.replaceWith(newListEl);
 
     newListEl.addEventListener('click', e => {
+      // كليك على صندوق التحديد → toggle bulk selection
+      const chk = e.target.closest('.iv4-conv-checkbox');
+      if (chk) {
+        e.stopPropagation();
+        const id = Number(chk.dataset.convId);
+        if (!id) return;
+        if (_selectedIds.has(id)) _selectedIds.delete(id);
+        else _selectedIds.add(id);
+        _syncBulkUI();
+        return;
+      }
+
       // كليك على زر Priority
       const priBtn = e.target.closest('.iv4-priority-badge');
       if (priBtn) {
@@ -352,6 +371,130 @@ const InboxConvList = (() => {
     const itemsEl = container.querySelector('.iv4-conv-items');
     if (itemsEl && existing.parentElement === itemsEl && itemsEl.firstElementChild !== existing) {
       itemsEl.prepend(existing);
+    }
+  }
+
+  // ─── Bulk Actions ───────────────────────────────────────────────────────────
+
+  /**
+   * مزامنة الـ Bulk Toolbar مع حالة التحديد
+   * يُستدعى بعد كل تغيير في _selectedIds
+   */
+  function _syncBulkUI() {
+    const toolbar   = document.getElementById('iv4-bulk-toolbar');
+    const countEl   = document.getElementById('iv4-selected-count');
+    const selectAll = document.getElementById('iv4-select-all');
+    const container = $list();
+    const count     = _selectedIds.size;
+
+    if (!toolbar) return;
+
+    toolbar.classList.toggle('hidden', count === 0);
+
+    if (countEl) countEl.textContent = `${count} محددة`;
+
+    // حالة صندوق تحديد الكل
+    if (selectAll && container) {
+      const totalVisible = container.querySelectorAll('.iv4-conv-checkbox').length;
+      selectAll.checked       = count > 0 && count === totalVisible;
+      selectAll.indeterminate = count > 0 && count < totalVisible;
+    }
+
+    // تحديث الـ DOM (checked state + class)
+    if (container) {
+      container.querySelectorAll('.iv4-conv-item').forEach(item => {
+        const id  = Number(item.dataset.convId);
+        const chk = item.querySelector('.iv4-conv-checkbox');
+        const sel = _selectedIds.has(id);
+        item.classList.toggle('bulk-selected', sel);
+        if (chk) chk.checked = sel;
+      });
+    }
+  }
+
+  /**
+   * تنفيذ Bulk action وإظهار toast وإعادة تحميل القائمة
+   * @param {string} action - status | assign | priority | delete
+   * @param {string} value  - قيمة الاكشن
+   */
+  async function _executeBulkAction(action, value) {
+    const ids = [..._selectedIds];
+    if (!ids.length) return;
+
+    // تأكيد الحذف (destructive action)
+    if (action === 'delete') {
+      if (!confirm(`حذف ${ids.length} محادثة؟ لا يمكن التراجع`)) return;
+    }
+
+    // Optimistic: أزل من التمثيل مباشرة
+    if (action === 'delete') {
+      ids.forEach(id => InboxStore.removeConversation(id));
+    } else if (action === 'status') {
+      ids.forEach(id => {
+        const c = InboxStore.state.conversations.find(x => x.id === id);
+        if (c) InboxStore.upsertConversation({ ...c, status: value });
+      });
+      // لو الفلتر لا يشمل الحالة الجديدة → أزل
+      const { filters } = InboxStore.state;
+      if (filters.status !== 'all' && filters.status !== value) {
+        ids.forEach(id => InboxStore.removeConversation(id));
+      }
+    }
+
+    // صفّر التحديد وأغلق الـ toolbar
+    _selectedIds.clear();
+    _syncBulkUI();
+    renderList();
+
+    const { data, error } = await InboxAPI.conversations.bulkUpdate(ids, action, value);
+    if (error) {
+      console.error('[Bulk] فشل:', error);
+      // أعد التحميل بعد الفشل
+      fetchConversations(true);
+    } else {
+      _refreshCountsThrottled();
+    }
+  }
+
+  /**
+   * ربط أحداث الـ Bulk Toolbar (يُستدعى مرة واحدة من init)
+   */
+  function _bindBulkToolbar() {
+    const toolbar = document.getElementById('iv4-bulk-toolbar');
+    if (!toolbar) return;
+
+    // أزرار الاكشن
+    toolbar.addEventListener('click', async e => {
+      const btn = e.target.closest('[data-bulk-action]');
+      if (btn) {
+        const action = btn.dataset.bulkAction;
+        const value  = btn.dataset.bulkValue || '';
+        await _executeBulkAction(action, value);
+        return;
+      }
+
+      // إلغاء
+      if (e.target.closest('#iv4-bulk-cancel')) {
+        _selectedIds.clear();
+        _syncBulkUI();
+        renderList();
+      }
+    });
+
+    // تحديد الكل
+    const selectAllChk = document.getElementById('iv4-select-all');
+    if (selectAllChk) {
+      selectAllChk.addEventListener('change', () => {
+        const container = $list();
+        if (!container) return;
+        const allIds = [...container.querySelectorAll('.iv4-conv-checkbox')]
+          .map(c => Number(c.dataset.convId))
+          .filter(Boolean);
+
+        if (selectAllChk.checked) allIds.forEach(id => _selectedIds.add(id));
+        else _selectedIds.clear();
+        _syncBulkUI();
+      });
     }
   }
 
@@ -1004,6 +1147,9 @@ const InboxConvList = (() => {
 
     // Priority filters في الـ sidebar
     _renderPriorityFilters();
+
+    // Bulk toolbar
+    _bindBulkToolbar();
 
     // جلب البيانات الأولية
     fetchConversations(true);

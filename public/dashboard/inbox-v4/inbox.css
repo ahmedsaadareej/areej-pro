@@ -2342,3 +2342,88 @@
   .iv4-snooze-preset:hover  { background: #0f172a; }
   .iv4-snooze-badge--active { background: #422006; color: #fde68a; border-color: #78350f; }
 }
+
+/* ── Bulk Actions ──────────────────────────────────────────────────────────── */
+
+/* الـ Toolbar */
+.iv4-bulk-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--iv4-accent-light);
+  border-bottom: 1px solid var(--iv4-border);
+  animation: iv4-fade-in .15s ease;
+  flex-wrap: wrap;
+}
+.iv4-bulk-toolbar.hidden { display: none; }
+
+.iv4-bulk-select-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--iv4-accent);
+  cursor: pointer;
+  user-select: none;
+}
+
+.iv4-bulk-actions {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.iv4-bulk-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--iv4-border);
+  background: var(--iv4-surface);
+  border-radius: var(--iv4-radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--iv4-text);
+  transition: background var(--iv4-transition), border-color var(--iv4-transition);
+  white-space: nowrap;
+}
+.iv4-bulk-btn:hover          { background: var(--iv4-surface-2); }
+.iv4-bulk-btn--danger        { color: var(--iv4-red); border-color: #fca5a5; }
+.iv4-bulk-btn--danger:hover  { background: #fee2e2; }
+
+/* صندوق التحديد على كل كارد */
+.iv4-bulk-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.iv4-conv-item:hover .iv4-bulk-check,
+.iv4-conv-item.bulk-selected .iv4-bulk-check {
+  opacity: 1;
+}
+.iv4-conv-checkbox {
+  width: 15px; height: 15px;
+  cursor: pointer;
+  accent-color: var(--iv4-accent);
+}
+
+/* الكارد المحدد: highlight خفيف */
+.iv4-conv-item.bulk-selected {
+  background: var(--iv4-accent-light);
+  border-right-color: var(--iv4-accent) !important;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .iv4-bulk-toolbar  { background: #1e293b; border-color: #334155; }
+  .iv4-bulk-btn      { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+  .iv4-bulk-btn:hover { background: #1e293b; }
+  .iv4-bulk-btn--danger:hover { background: #450a0a; }
+  .iv4-conv-item.bulk-selected { background: #1e1b4b; }
+}
