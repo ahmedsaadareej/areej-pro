@@ -13,7 +13,9 @@ module.exports = {
     env: {
       NODE_ENV: 'production',
       PORT: '3002',
-      NODE_PATH: '/home/work/.openclaw/workspace/areej-pro/server'
+      NODE_PATH: '/home/work/.openclaw/workspace/areej-pro/server',
+      // حل مشكلة puppeteer chrome — المكتبات موجودة لكن linker لا يجدها
+      LD_LIBRARY_PATH: '/usr/lib/x86_64-linux-gnu:/usr/lib:/lib/x86_64-linux-gnu'
     },
     error_file: '/home/work/.pm2/logs/areej-pro-error.log',
     out_file: '/home/work/.pm2/logs/areej-pro-out.log',

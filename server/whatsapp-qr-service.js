@@ -35,27 +35,54 @@ async function startSession(userId) {
 
   sessions[userId] = { status: 'loading', qrDataUrl: null, phone: null, client: null, reconnectAttempts: 0 };
 
+  // اكتشاف Chrome: نجرب puppeteer أولاً ثم system chromium
   const CHROME_PATH = (() => {
-    try { const p = require('puppeteer'); const ep = p.executablePath(); if (require('fs').existsSync(ep)) return ep; } catch(_) {}
+    try {
+      const p  = require('puppeteer');
+      const ep = p.executablePath();
+      if (require('fs').existsSync(ep)) return ep;
+    } catch(_) {}
+    // الـ snap chromium binary المباشر
+    const snapBin = '/snap/chromium/current/usr/lib/chromium-browser/chrome';
+    if (require('fs').existsSync(snapBin)) return snapBin;
     return '/usr/bin/chromium-browser';
   })();
 
+  // متغيرات بيئة لحل مشكلة المكتبات الناقصة في puppeteer chrome
+  const chromeEnv = {
+    ...process.env,
+    LD_LIBRARY_PATH: [
+      '/usr/lib/x86_64-linux-gnu',
+      '/usr/lib',
+      '/lib/x86_64-linux-gnu',
+      process.env.LD_LIBRARY_PATH,
+    ].filter(Boolean).join(':'),
+    DISPLAY: process.env.DISPLAY || '',
+  };
+
   const client = new Client({
     authStrategy: new LocalAuth({ clientId: `user_${userId}`, dataPath: SESSION_DIR }),
-    takeoverOnConflict: true,   // لو في متصفح تاني — يأخذ الجلسة
+    takeoverOnConflict: true,
     takeoverTimeoutMs: 5000,
     puppeteer: {
       headless: true,
       executablePath: CHROME_PATH,
+      env: chromeEnv,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
+        '--no-zygote',
+        // ملاحظة: --single-process يسبّب SIGTRAP crash في بعض بيئات VPS — محذوف
         '--disable-extensions',
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
         '--disable-renderer-backgrounding',
+        '--disable-features=TranslateUI',
+        '--disable-ipc-flooding-protection',
+        '--memory-pressure-off',
+        '--max_old_space_size=512',
         '--window-size=1280,800',
       ]
     }
@@ -308,6 +335,38 @@ async function handleIncomingMessage(userId, msg) {
  * Called from app.js after server starts
  * Restores sessions for all users who have saved session data
  */
+// ── health check: تأكد أن Chrome يعمل قبل autoRestore ───────────────────────────
+async function checkChromeHealth() {
+  const LIB_PATH = '/usr/lib/x86_64-linux-gnu:/usr/lib:/lib/x86_64-linux-gnu';
+  const env = { ...process.env, LD_LIBRARY_PATH: LIB_PATH };
+
+  // المسارات بالأولوية: puppeteer chrome أولاً لأنه binary حقيقي
+  const chromePaths = [];
+  try { const ep = require('puppeteer').executablePath(); if (require('fs').existsSync(ep)) chromePaths.push(ep); } catch(_) {}
+  // snap binary الحقيقي (ليس wrapper)
+  const snapBin = '/snap/chromium/current/usr/lib/chromium-browser/chrome';
+  if (require('fs').existsSync(snapBin)) chromePaths.push(snapBin);
+
+  if (!chromePaths.length) {
+    console.error('[WA-QR] ❌ لم يتم العثور على Chrome binary');
+    return false;
+  }
+
+  const { spawnSync } = require('child_process');
+  for (const p of chromePaths) {
+    const r = spawnSync(p,
+      ['--headless', '--no-sandbox', '--no-zygote', '--disable-gpu', '--dump-dom', 'about:blank'],
+      { timeout: 20000, env, encoding: 'utf8' }
+    );
+    if (r.stdout && r.stdout.includes('<html>')) {
+      console.log(`[WA-QR] ✅ Chrome health check OK: ${p}`);
+      return true;
+    }
+    console.warn(`[WA-QR] ⚠️ Chrome health check failed (${p}): exit ${r.status}`);
+  }
+  return false;
+}
+
 async function autoRestoreAllSessions() {
   try {
     const { getTenantDb } = require('./db-tenant');
@@ -319,6 +378,13 @@ async function autoRestoreAllSessions() {
       users = masterDb.prepare('SELECT id FROM users WHERE status IN (?,?,?)').all('active','trial','admin');
     } catch(e) {
       console.error('[WA-QR] autoRestore: failed to query users:', e.message);
+      return;
+    }
+
+    // تحقق من Chrome قبل بدء الاستعادة
+    const chromeOk = await checkChromeHealth();
+    if (!chromeOk) {
+      console.error('[WA-QR] autoRestore: Chrome غير جاهز — تم إيقاف autoRestore');
       return;
     }
 
@@ -356,4 +422,4 @@ async function autoRestoreAllSessions() {
   }
 }
 
-module.exports = { startSession, getStatus, stopSession, sendMessage, autoRestoreAllSessions };
+module.exports = { startSession, getStatus, stopSession, sendMessage, autoRestoreAllSessions, checkChromeHealth };
