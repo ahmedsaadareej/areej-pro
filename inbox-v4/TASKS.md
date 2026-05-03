@@ -107,7 +107,7 @@
 
 | # | المهمة | الملفات | الحالة |
 |---|--------|---------|--------|
-| P8-1 | Email Channel | backend `settings.js` + frontend | ⬜ |
+| P8-1 | Email Channel | backend `email.js` + frontend | ✅ مكتملة |
 | P8-2 | WA Interactive Messages (Buttons/Lists) | backend `messages.js` | ✅ مكتملة |
 | P8-3 | WA Catalog Products | backend `messages.js` | ✅ مكتملة |
 | P8-4 | Broadcast V2 (multi-platform) | backend `broadcast.js` | ✅ مكتملة |
@@ -116,4 +116,4 @@
 ---
 
 ## 🔴 المهمة القادمة
-**P8-1: Email Channel** — backend `settings.js` + frontend + SMTP integration
+**Phase 8 ✅ مكتملة** — التالي: Phase 9 QA + Integration Tests أو مهمة جديدة

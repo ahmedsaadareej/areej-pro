@@ -1,3 +1,37 @@
+## جلسة 2026-05-03 23:42 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P8-1: server/migrations.js — migration v32
+    - جدول inbox_email_accounts_v4: SMTP + IMAP + Webhook (Sendgrid/Mailgun/Postmark)
+    - جدول inbox_email_messages_v4: thread tracking per conversation
+    - ALTER inbox_conversations_v4: email_account_id + email_subject + email_thread_id
+  - P8-1: server/routes/inbox/email.js — backend كامل (جديد 430+ سطر)
+    - CRUD accounts + toggle + test-smtp + test-imap + poll manual
+    - POST /email/webhook/:token — inbound (Sendgrid/Mailgun/Postmark) بدون auth
+    - GET /email/messages/:convId — email thread
+    - POST /email/messages/:convId/send — إرسال عبر SMTP
+    - pollImapAccount() + runEmailPolling() — IMAP polling engine
+    - getOrCreateEmailConv() — thread detection + contact auto-create
+  - P8-1: server/routes/inbox/index.js — تسجيل email route
+  - P8-1: server/app.js — email webhook public route
+  - P8-1: public/dashboard/inbox-v4/email.js — frontend كامل (جديد 380+ سطر)
+    - Settings panel: قائمة حسابات + form SMTP/IMAP/Webhook
+    - test + poll + toggle + delete + copy webhook URL
+    - renderEmailThread() — email thread في chat window
+    - sendEmailReply() — SMTP إرسال من reply box
+  - P8-1: api.js — InboxAPI.email (11 methods)
+  - P8-1: app.js — InboxEmail.init()
+  - P8-1: index.html — زر ✉️ إيميل + email.js script
+  - P8-1: chat.js — زر "📧 Thread" في محادثات email + email thread overlay
+  - P8-1: reply.js — إرسال SMTP عند platform=email (بدلاً من WA)
+  - P8-1: inbox.css — ~170 سطر CSS + dark mode
+  - server/package.json: imap-simple@5.1.0
+- قرارات: لا جديد
+- آخر commit: 1ba603f
+- المهمة القادمة: Phase 9 — QA + Integration Tests أو مهمة جديدة حسب أحمد
+
+---
+
 ## جلسة 2026-05-03 23:33 UTC
 - الحالة: مكتملة
 - ما تم:
