@@ -99,7 +99,7 @@
 | P7-2 | Conversation Summary | `chat.js` + backend | ✅ مكتملة (ضمن P7-1) |
 | P7-3 | Auto-Label Suggestion | backend `automation.js` | ✅ مكتملة |
 | P7-4 | Sentiment Analysis | backend `analytics.js` | ✅ مكتملة |
-| P7-5 | Voice Note Transcript (Whisper) | `components/media-player.js` + backend | ⬜ |
+| P7-5 | Voice Note Transcript (Whisper) | `components/media-player.js` + backend | ✅ مكتملة |
 
 ---
 
@@ -108,13 +108,12 @@
 | # | المهمة | الملفات | الحالة |
 |---|--------|---------|--------|
 | P8-1 | Email Channel | backend `settings.js` + frontend | ⬜ |
-| P8-2 | WA Interactive Messages (Buttons/Lists) | backend `messages.js` | ⬜ |
-| P8-3 | WA Catalog Products | backend `messages.js` | ⬜ |
-| P8-4 | Broadcast V2 (multi-platform) | backend `broadcast.js` | ⬜ |
-| P8-5 | Webhook Triggers | backend `automation.js` | ⬜ |
+| P8-2 | WA Interactive Messages (Buttons/Lists) | backend `messages.js` | ✅ مكتملة |
+| P8-3 | WA Catalog Products | backend `messages.js` | ✅ مكتملة |
+| P8-4 | Broadcast V2 (multi-platform) | backend `broadcast.js` | ✅ مكتملة |
+| P8-5 | Webhook Triggers | backend `automation.js` | ✅ مكتملة |
 
 ---
 
 ## 🔴 المهمة القادمة
-**P7-5: Voice Note Transcript (Whisper)** — `components/media-player.js` + backend
-أو — **P8-2: WA Interactive Messages (Buttons/Lists)** — backend `messages.js`
+**P8-1: Email Channel** — backend `settings.js` + frontend + SMTP integration

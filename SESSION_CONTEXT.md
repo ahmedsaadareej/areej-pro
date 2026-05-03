@@ -1,3 +1,75 @@
+## Session 2026-05-03 (16:01 → 16:36 UTC) — جلسة تحليل + تخطيط Inbox v4
+- الحالة: تم الإكمال (جلسة تحليل — لا commits)
+- ما تم إنجازه:
+  - قراءة كاملة لكل كود الـ Inbox (17,000+ سطر)
+  - تحليل عميق للمشاكل البنيوية الحالية
+  - رسم رؤية كاملة لـ Inbox v4 مع كل الـ Features
+  - اقتراح معمارية جديدة (SSE + modular routes + InboxStore)
+  - خطة بناء كاملة (8 Phases + task breakdown)
+  - كتابة بروتوكول جلسات الـ Inbox
+- قرارات تقنية:
+  - الإبقاء على Node.js + SQLite (WAL) — يكفي حتى 1000 عميل
+  - SSE بدل Polling للـ real-time
+  - Vanilla JS بدون framework + Module Pattern
+  - بناء inbox-v4 موازياً للـ v3 (v3 يكمل شغّال)
+  - ملفات routes/inbox/ منفصلة (مش ملف واحد 3500 سطر)
+- آخر Commit: a1a324a (لم يتغير)
+- الملفات المنشأة:
+  - `/home/areej/areej-pro/docs/INBOX_VISION.md` — الرؤية الكاملة
+  - `/home/areej/areej-pro/docs/INBOX_SESSION_PROTOCOL.md` — بروتوكول الجلسات
+- نقطة البداية القادمة: إنشاء `inbox-v4/` scaffold (TASKS + SESSIONS + DECISIONS + SCHEMA) ثم P0-1
+
+## Session 2026-05-03 (15:03 → 15:12 UTC) — مهمة 13 مكتملة
+- الحالة: تم الإكمال
+- ما تم إنجازه:
+  - iv3OnPageHide(): إضافة iv3StopAnalyticsAutoRefresh() + iv3StopLabelsRefresh()
+  - iv3OnPageShow(): إضافة iv3StartLabelsRefresh() عند العودة للصفحة
+  - iv3Init(): إضافة iv3StartLabelsRefresh() عند التهيئة
+  - Labels Panel يتحدث كل 60 ثانية (silent) ويتوقف عند مغادرة الصفحة
+  - cache-bust → v=1777820854
+- قرارات تقنية:
+  - _iv3LabelsRefreshTimer منفصل عن pollTimer
+  - كل الـ timers تتوقف في iv3OnPageHide() → لا CPU waste خارج الـ inbox
+- آخر Commit: a1a324a
+- نقطة البداية القادمة: اختبار Labels system أو Payment Gateways sandbox (يحتاج credentials)
+
+## Session 2026-05-03 (14:54 → 15:30 UTC) — Labels System مكتمل (مهام A+B+C)
+- الحالة: تم الإكمال
+- ما تم إنجازه:
+  - [A] backend: label_id filter في GET /conversations + conv_count في GET /labels + GET /inbox/counts
+  - [B] Labels Panel في col 1: الكل/ملكي/غير معيّن مع عدادات + Labels مخصصة بألوان
+  - [C] Label Picker dropdown في Chat Header (toggle labels على المحادثة)
+  - Label Chips صغيرة على كل بطاقة محادثة
+  - Label Manager Modal (إنشاء + حذف labels مع color picker)
+  - IV3.labelFilter في inbox-state.js
+  - cache-bust → v=1777820540
+- قرارات تقنية:
+  - joinParams منفصل عن qParams لضمان ترتيب SQL params الصحيح
+  - labelFilter: 'all'|'mine'|'unassigned'|number — يُحوَّل لـ API params مختلفة
+  - Labels تُحمَّل lazy بعد render المحادثة (لا blocking)
+  - Label Picker يُغلق عند click خارجه (event delegation)
+- آخر Commit: 6e27a12
+- نقطة البداية القادمة: Auto-refresh cleanup (مهمة 13) + اختبار Labels system
+
+## Session 2026-05-03 (14:33 → 14:55 UTC) — مهمة 5 مكتملة
+- الحالة: تم الإكمال (مهمة 5 — New Conversation Modal)
+- ما تم إنجازه:
+  - IV3_NEW_CONV_PLATFORMS: إضافة 'whatsapp' (API) + 'instagram' + 'messenger' بجانب QR + Telegram
+  - Smart Default: iv3GetDefaultPlatform() يختار المنصة الافتراضية تلقائياً حسب ما هو مفعّل في الإعدادات
+  - Platform Hint: نص توضيحي ديناميكي أسفل أزرار المنصات
+  - Template Message UI: حقل template_name + متغيرات — يظهر تلقائياً لـ WA/IG/Messenger
+  - Free-text Message: يظهر فقط لـ WA QR + Telegram
+  - Validation: تحقق من رقم الهاتف لـ WA
+  - Backend /new-conversation: دعم كامل لـ WhatsApp Business API (template) + Instagram DM + Messenger (PSID)
+  - cache-bust → v=1777819171
+- قرارات تقنية:
+  - WA Business API: يرسل template (لا free-text) لأن Meta تشترط template للرسالة الأولى
+  - Instagram/Messenger: الإرسال عبر Graph API v19.0 مع access_token من inbox_settings
+  - _iv3Settings تُجلب lazy عند أول فتح للـ modal (لا polling إضافي)
+  - Modal الجديد أوسع (460px) مع max-height + overflow-y للـ template section
+- آخر Commit: 5bd5aac
+- نقطة البداية القادمة: Auto-refresh cleanup (مهمة 13) — إيقاف polling عند مغادرة صفحة الـ Inbox
+
 ## Review Session 2026-05-03 (13:39 → 14:15 UTC) — مراجعة شاملة + إصلاح كامل
 - الحالة: مراجعة + إصلاحات critical
 - المشاكل المكتشفة والمحلولة:

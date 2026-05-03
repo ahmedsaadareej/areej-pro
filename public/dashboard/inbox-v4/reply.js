@@ -282,6 +282,14 @@ const InboxReply = (() => {
         });
         result = await res.json().catch(() => ({ error: 'فشل في قراءة الاستجابة' }));
 
+      } else if ((InboxStore.state.activeConv?.platform === 'email') && mode !== 'note') {
+        // P8-1: إرسال إيميل رد عبر SMTP
+        if (typeof InboxEmail !== 'undefined') {
+          const { data, error } = await InboxEmail.sendEmailReply(convId, { body_text: content });
+          result = error ? { error } : (data || {});
+        } else {
+          result = { error: 'InboxEmail module not loaded' };
+        }
       } else {
         // ── إرسال نص ─────────────────────────────────────────────────
         const { data, error } = await InboxAPI.messages.send(convId, {

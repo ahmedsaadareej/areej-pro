@@ -60,6 +60,9 @@ router.use('/', require('./ai'));
 // Phase 8-4 — Broadcast V2
 router.use('/', require('./broadcast'));
 
+// Phase 8-1 — Email Channel
+router.use('/', require('./email'));
+
 // [Phase 6] Settings
 // router.use('/', require('./settings'));
 

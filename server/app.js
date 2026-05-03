@@ -95,6 +95,8 @@ app.use('/api/auth',    require('./routes-auth'));
 app.use('/api/billing', require('./routes-billing'));
 app.use('/api/webhook', require('./routes-inbox-webhook'));
 app.use('/api/public',  require('./routes-public'));
+// Email inbound webhook — public (no auth, token في URL)
+app.use('/api/inbox', require('./routes/inbox/email'));
 app.use('/api/pay',     require('./routes/pay'));        // Payment links (public — no auth)
 app.use('/api/persons', require('./routes-persons'));
 app.use('/api/system',  require('./routes-system'));

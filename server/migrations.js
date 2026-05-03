@@ -475,6 +475,72 @@ const TENANT_MIGRATIONS = [
 
   // أضف migrations جديدة هنا دايماً — لا تعدّل القديمة أبداً
 
+  // v32: inbox_email_accounts_v4 + inbox_email_messages_v4 (P8-1 Email Channel)
+  { version: 32, sqls: [
+    // حسابات الإيميل (SMTP للإرسال + IMAP/Webhook للاستقبال)
+    `CREATE TABLE IF NOT EXISTS inbox_email_accounts_v4 (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id       INTEGER NOT NULL,
+      name            TEXT    NOT NULL,
+      email           TEXT    NOT NULL,
+      -- SMTP (إرسال)
+      smtp_host       TEXT,
+      smtp_port       INTEGER NOT NULL DEFAULT 587,
+      smtp_secure     INTEGER NOT NULL DEFAULT 0,
+      smtp_user       TEXT,
+      smtp_pass       TEXT,
+      -- IMAP (استقبال polling)
+      imap_enabled    INTEGER NOT NULL DEFAULT 0,
+      imap_host       TEXT,
+      imap_port       INTEGER NOT NULL DEFAULT 993,
+      imap_secure     INTEGER NOT NULL DEFAULT 1,
+      imap_user       TEXT,
+      imap_pass       TEXT,
+      imap_mailbox    TEXT    NOT NULL DEFAULT 'INBOX',
+      imap_last_uid   INTEGER NOT NULL DEFAULT 0,
+      -- Webhook inbound (Sendgrid/Mailgun/Postmark)
+      webhook_enabled INTEGER NOT NULL DEFAULT 0,
+      webhook_token   TEXT,
+      webhook_provider TEXT   NOT NULL DEFAULT 'sendgrid',
+      -- إعدادات عامة
+      is_active       INTEGER NOT NULL DEFAULT 1,
+      poll_interval   INTEGER NOT NULL DEFAULT 300,
+      created_at      INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at      INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_email_acc_tenant ON inbox_email_accounts_v4(tenant_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_email_acc_active ON inbox_email_accounts_v4(tenant_id, is_active) WHERE is_active = 1`,
+    // رسائل الإيميل — كل conversation عندها thread من رسائل
+    `CREATE TABLE IF NOT EXISTS inbox_email_messages_v4 (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id       INTEGER NOT NULL,
+      conversation_id INTEGER NOT NULL REFERENCES inbox_conversations_v4(id) ON DELETE CASCADE,
+      account_id      INTEGER NOT NULL REFERENCES inbox_email_accounts_v4(id) ON DELETE CASCADE,
+      message_id      TEXT,
+      in_reply_to     TEXT,
+      references_header TEXT,
+      direction       TEXT    NOT NULL DEFAULT 'inbound',
+      from_email      TEXT    NOT NULL,
+      from_name       TEXT,
+      to_email        TEXT    NOT NULL,
+      subject         TEXT,
+      body_text       TEXT,
+      body_html       TEXT,
+      attachments     TEXT    NOT NULL DEFAULT '[]',
+      headers         TEXT    NOT NULL DEFAULT '{}',
+      uid             INTEGER,
+      is_read         INTEGER NOT NULL DEFAULT 0,
+      created_at      INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_email_msg_conv   ON inbox_email_messages_v4(conversation_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_email_msg_tenant ON inbox_email_messages_v4(tenant_id, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_email_msg_msgid  ON inbox_email_messages_v4(message_id)`,
+    // إضافة email_account_id في conversations لربط الـ thread
+    `ALTER TABLE inbox_conversations_v4 ADD COLUMN email_account_id INTEGER REFERENCES inbox_email_accounts_v4(id)`,
+    `ALTER TABLE inbox_conversations_v4 ADD COLUMN email_subject TEXT`,
+    `ALTER TABLE inbox_conversations_v4 ADD COLUMN email_thread_id TEXT`,
+  ]},
+
   // v31: inbox_webhooks_v4 (P8-5 Webhook Triggers)
   { version: 31, sqls: [
     `CREATE TABLE IF NOT EXISTS inbox_webhooks_v4 (

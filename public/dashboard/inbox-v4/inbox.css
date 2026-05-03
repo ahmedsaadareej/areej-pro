@@ -5766,3 +5766,115 @@
   .iv4-wh-btn          { background: #263040; border-color: #374151; color: #e5e7eb; }
   .iv4-wh-btn:hover    { background: #313d50; }
 }
+
+/* ═══════════════════════════════════════════════════════
+   P8-1: Email Channel
+   ═══════════════════════════════════════════════════════ */
+
+/* Overlay */
+.iv4-email-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45);
+  z-index:1200; display:none; align-items:center; justify-content:center; }
+.iv4-email-overlay.iv4-overlay--open { display:flex; }
+.iv4-email-panel { background:var(--iv4-bg-main,#fff); border-radius:14px;
+  width:720px; max-width:96vw; max-height:88vh; overflow:hidden;
+  display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.18); }
+
+/* Header */
+.iv4-email-panel .iv4-panel-header { display:flex; align-items:center; gap:10px;
+  padding:16px 20px; border-bottom:1px solid var(--iv4-border,#e5e7eb); flex-shrink:0; }
+.iv4-email-panel .iv4-panel-title { flex:1; font-weight:700; font-size:1.05rem; }
+.iv4-email-panel .iv4-panel-close { background:none; border:none; font-size:18px;
+  cursor:pointer; color:var(--iv4-text-muted,#9ca3af); padding:4px 8px; }
+
+/* Body */
+.iv4-email-body { overflow-y:auto; flex:1; padding:16px 20px; }
+
+/* Accounts List */
+.iv4-email-accounts-list { display:flex; flex-direction:column; gap:12px; }
+.iv4-email-empty { text-align:center; padding:40px 20px; color:var(--iv4-text-muted,#9ca3af); }
+.iv4-email-empty-icon { font-size:3rem; margin-bottom:10px; }
+
+/* Account Card */
+.iv4-email-card { border:1px solid var(--iv4-border,#e5e7eb); border-radius:10px;
+  padding:14px 16px; background:var(--iv4-bg-sub,#f9fafb); }
+.iv4-email-card--off { opacity:.6; }
+.iv4-email-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.iv4-email-card-info   { display:flex; align-items:center; gap:10px; }
+.iv4-email-card-icon   { font-size:1.6rem; }
+.iv4-email-card-name   { font-weight:700; font-size:.95rem; }
+.iv4-email-card-addr   { font-size:.82rem; color:var(--iv4-text-muted,#6b7280); }
+.iv4-email-card-badges { display:flex; gap:5px; flex-wrap:wrap; }
+.iv4-email-card-actions { display:flex; gap:6px; flex-wrap:wrap; }
+
+/* Webhook info bar */
+.iv4-email-webhook-info { margin-top:10px; padding:8px 10px; background:#f0f9ff;
+  border-radius:7px; font-size:.8rem; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.iv4-code-small { font-family:monospace; font-size:.78rem; background:#e0f2fe;
+  padding:2px 6px; border-radius:4px; word-break:break-all; }
+
+/* Form */
+.iv4-email-form-wrap { margin-top:16px; }
+.iv4-email-form { border:1px solid var(--iv4-border,#e5e7eb); border-radius:10px;
+  padding:20px; background:var(--iv4-bg-main,#fff); }
+.iv4-form-header h3 { font-size:1.05rem; font-weight:700; margin:0 0 16px; }
+.iv4-form-section { margin-bottom:18px; }
+.iv4-form-section h4 { font-size:.9rem; font-weight:600; color:var(--iv4-primary,#6366f1);
+  margin:0 0 10px; padding-bottom:6px; border-bottom:1px solid var(--iv4-border,#e5e7eb); }
+.iv4-form-row  { display:flex; flex-direction:column; gap:5px; margin-bottom:10px; }
+.iv4-form-row2 { display:grid; grid-template-columns:1fr auto; gap:10px; margin-bottom:10px;
+  align-items:end; }
+.iv4-form-row label, .iv4-form-row2 label { font-size:.85rem; color:var(--iv4-text-muted,#6b7280); font-weight:500; }
+.iv4-form-row input, .iv4-form-row select,
+.iv4-form-row2 input, .iv4-form-row2 select {
+  padding:8px 10px; border:1px solid var(--iv4-border,#d1d5db);
+  border-radius:7px; font-size:.9rem; width:100%; box-sizing:border-box;
+  background:var(--iv4-bg-main,#fff); color:var(--iv4-text-main,#111); }
+.iv4-form-row input[type=checkbox] { width:auto; }
+.iv4-input-with-btn { display:flex; gap:6px; }
+.iv4-input-with-btn input { flex:1; }
+.iv4-hint { font-size:.8rem; color:var(--iv4-text-muted,#9ca3af); margin:4px 0; }
+.req { color:#ef4444; }
+.iv4-form-actions { display:flex; gap:8px; margin-top:16px; }
+.iv4-form-msg { padding:10px 14px; border-radius:7px; font-size:.88rem; margin-top:10px; }
+.iv4-form-msg--success { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+.iv4-form-msg--error   { background:#fff5f5; color:#dc2626; border:1px solid #fecaca; }
+
+/* Email Thread in Chat */
+.iv4-email-thread { display:flex; flex-direction:column; gap:12px; padding:12px 0; }
+.iv4-email-thread-empty { text-align:center; padding:20px; color:var(--iv4-text-muted,#9ca3af); font-size:.9rem; }
+.iv4-email-msg { border:1px solid var(--iv4-border,#e5e7eb); border-radius:10px;
+  padding:12px 14px; }
+.iv4-email-msg--out { background:#f0f9ff; border-color:#bae6fd; }
+.iv4-email-msg--in  { background:var(--iv4-bg-sub,#f9fafb); }
+.iv4-email-msg-header { display:flex; justify-content:space-between; align-items:flex-start;
+  margin-bottom:6px; gap:10px; flex-wrap:wrap; }
+.iv4-email-msg-from  { display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  font-size:.85rem; }
+.iv4-email-addr  { color:var(--iv4-text-muted,#6b7280); font-size:.8rem; }
+.iv4-arrow       { color:var(--iv4-text-muted,#9ca3af); }
+.iv4-email-msg-date   { font-size:.78rem; color:var(--iv4-text-muted,#9ca3af); white-space:nowrap; }
+.iv4-email-msg-subject { font-size:.83rem; font-weight:600; color:var(--iv4-primary,#6366f1);
+  margin-bottom:6px; }
+.iv4-email-msg-body   { font-size:.88rem; line-height:1.55; white-space:pre-wrap;
+  word-break:break-word; max-height:200px; overflow-y:auto; }
+.iv4-email-html-frame { margin-top:8px; border:1px solid var(--iv4-border,#e5e7eb);
+  border-radius:6px; overflow:hidden; }
+.iv4-email-html-toggle { margin-top:6px; }
+.iv4-email-attachments { margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; }
+.iv4-attachment-chip   { background:#f3f4f6; border:1px solid #d1d5db;
+  padding:3px 8px; border-radius:4px; font-size:.78rem; color:#374151; }
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  .iv4-email-panel        { background:#1a2130; }
+  .iv4-email-card         { background:#1e2840; border-color:#374151; }
+  .iv4-email-form         { background:#1a2130; border-color:#374151; }
+  .iv4-form-row input, .iv4-form-row select,
+  .iv4-form-row2 input, .iv4-form-row2 select
+                          { background:#263040; border-color:#374151; color:#e5e7eb; }
+  .iv4-email-webhook-info { background:#1e3040; }
+  .iv4-code-small         { background:#1a3050; }
+  .iv4-email-msg--out     { background:#1a2840; border-color:#1e4060; }
+  .iv4-email-msg--in      { background:#1e2330; }
+  .iv4-attachment-chip    { background:#263040; border-color:#374151; color:#d1d5db; }
+}

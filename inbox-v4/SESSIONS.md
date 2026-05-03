@@ -1,3 +1,154 @@
+## جلسة 2026-05-03 23:33 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P8-5: `server/migrations.js` — migration v31
+    - جدول `inbox_webhooks_v4`: id, name, url, secret, events, is_active, retry_count, last_triggered_at, last_status
+    - جدول `inbox_webhook_logs_v4`: per-delivery tracking (event, payload, status_code, attempt, success, error_msg)
+    - 4 indexes للأداء
+  - P8-5: `server/routes/inbox/automation.js` — إضافة Webhook section
+    - `GET /automation/webhook-events` — كشف الأحداث المدعومة (8 أحداث)
+    - `GET/POST /automation/webhooks` — قائمة + إنشاء
+    - `GET/PUT/DELETE /automation/webhooks/:id` — CRUD كامل
+    - `PUT /automation/webhooks/:id/toggle` — تفعيل/تعطيل
+    - `POST /automation/webhooks/:id/test` — إرسال ping تجريبي
+    - `GET /automation/webhooks/:id/logs` — سجل المحاولات
+    - `triggerWebhooks(db, tenantId, event, data)` — engine مع retry exponential backoff
+    - `_fireWithRetry()` — محاولات تلقائية (1s, 2s, 4s)
+    - `_fireWebhook()` — HTTP POST مع HMAC-SHA256 signature
+    - `_logWebhook()` — تسجيل كل محاولة
+  - P8-5: `public/dashboard/inbox-v4/automation.js` — إضافة InboxWebhooks
+    - Panel كامل (list + form + logs)
+    - List: بطاقات مع حالة + آخر تشغيل + last_status
+    - Form: اسم + URL + Secret + events grid (تحديد الكل/إلغاء) + retry_count
+    - Test مباشر مع عرض كود الاستجابة
+    - Logs: جدول آخر 30 محاولة
+  - P8-5: `public/dashboard/inbox-v4/api.js` — إضافة `InboxAPI.webhooks` (8 methods)
+  - P8-5: `public/dashboard/inbox-v4/app.js` — `InboxWebhooks.init()`
+  - P8-5: `public/dashboard/inbox-v4/index.html` — زر "⚡ Webhooks" في الـ sidebar
+  - `inbox.css`: ~170 سطر CSS (كل مكونات + dark mode)
+  - ربط `triggerWebhooks` في:
+    - `messages.js` — حدث `message.sent` لكل رسالة صادرة
+    - `conversations.js` — حدث `conversation.closed`
+    - `routes-inbox-webhook.js` — حدثي `message.received` + `conversation.created`
+- قرارات: لا جديد
+- آخر commit: 721e5e9
+- المهمة القادمة: **P8-1 Email Channel** أو بدء Phase 9 (QA + Integration Tests)
+
+---
+
+## جلسة 2026-05-03 23:17 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P8-4: `server/migrations.js` — migration v30
+    - جدول `inbox_broadcasts_v4`: id, name, message, media_url, content_type, platforms, audience_filter, status, total, sent, failed, timestamps
+    - جدول `inbox_broadcast_recipients_v4`: per-recipient tracking (status, sent_at, error_msg)
+    - 4 indexes للأداء
+  - P8-4: `server/routes/inbox/broadcast.js` — backend جديد بالكامل
+    - `GET /broadcasts` — قائمة مع فلتر status
+    - `POST /broadcasts` — إنشاء draft
+    - `GET/PUT/DELETE /broadcasts/:id`
+    - `POST /broadcasts/:id/send` — يبني recipients + يشغّل _runBroadcast في الخلفية (non-blocking)
+    - `POST /broadcasts/:id/cancel` — يوقف الإرسال فوراً
+    - `GET /broadcasts/:id/recipients` — pagination مع فلتر status
+    - _buildRecipients(): يجمع المحادثات المفتوحة حسب فلاتر (platform + label + search)
+    - _runBroadcast(): إرسال تسلسلي مع SEND_DELAY_MS=800ms بين كل رسالة
+    - دعم whatsapp_api + whatsapp_qr + telegram
+  - P8-4: `public/dashboard/inbox-v4/broadcast.js` — frontend جديد
+    - Panel جانبي (slide-in) مع 3 views: list / compose / detail
+    - List: بطاقات بحالة حية + progress bar للجاري
+    - Compose: اختيار منصة + نص + فلاتر audience (ليبل + بحث)
+    - Detail: KPI cards (total/sent/failed/متبقي) + progress + جدول مستلمين
+    - تصدير CSV بالنتائج (BOM لـ Excel)
+    - Polling تلقائي كل 4 ثوان لتحديث البرودكاست الجاري
+  - P8-4: `api.js` — استبدال broadcast V1 بـ 8 methods جديدة
+  - P8-4: `app.js` — `InboxBroadcast.init()`
+  - P8-4: `index.html` — زر "📢 جماعي" في الـ sidebar + broadcast.js script
+  - `inbox.css`: ~220 سطر CSS (كل مكونات + dark mode)
+- قرارات: لا جديد
+- آخر commit: 31b04c2
+- المهمة القادمة: **P8-5 Webhook Triggers** — backend `automation.js` + frontend
+
+---
+
+## جلسة 2026-05-03 23:11 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P8-3: `server/routes/inbox/messages.js` — endpoint جديد
+    - `POST /conversations/:id/messages/catalog`
+    - يدعم: `single_product` (منتج واحد) + `multi_product` (sections بمنتجات متعددة)
+    - Validation: catalog_id + product_retailer_id (single) أو sections + thumbnail (multi)
+    - يبني WA `interactive` payload من نوع `product` / `product_list`
+    - يحفظ الرسالة بـ content_type='catalog' + metadata كاملة
+    - تلخيص تلقائي في content: `[منتج: PROD-001]` أو `[كتالوج: 5 منتج]`
+  - P8-3: `public/dashboard/inbox-v4/catalog.js` — جديد بالكامل
+    - Modal بتاب مزدوج: "منتج واحد" / "قائمة منتجات"
+    - Single: Catalog ID + Product ID + نص + Footer
+    - Multi: Catalog ID + Header + Thumbnail + sections (إضافة/حذف/تعديل ديناميكي) + نص + Footer
+    - _syncSectionsFromDOM() لحفظ البيانات قبل إعادة البناء
+    - renderCatalogMessage(): يعرض بطاقة المنتج في الـ chat (single + multi)
+    - _updateButtonVisibility(): يُخفت الزر للمنصات غير whatsapp_api
+  - P8-3: `api.js` — `InboxAPI.messages.sendCatalog(convId, opts)`
+  - P8-3: `app.js` — `InboxCatalog.init()`
+  - P8-3: `index.html` — `catalog.js` script
+  - `inbox.css`: ~150 سطر CSS (modal + form + sections + chat bubble + dark mode)
+- قرارات: لا جديد
+- آخر commit: 67eac57
+- المهمة القادمة: **P8-4 Broadcast V2 (multi-platform)** أو **P8-5 Webhook Triggers**
+
+---
+
+## جلسة 2026-05-03 23:04 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P8-2: `server/routes/inbox/messages.js` — endpoint جديد
+    - `POST /conversations/:id/messages/interactive`
+    - يقبل: `type` (button|list) + header + body + footer + buttons[] + sections[]
+    - Validation كامل: 1–3 أزرار، 1–10 عناصر للقائمة، فقط whatsapp_api
+    - يبني WA `interactive` payload ويرسله عبر Graph API v19
+    - يحفظ الرسالة في DB بـ content_type='interactive' و metadata=interactive payload
+  - P8-2: `public/dashboard/inbox-v4/interactive.js` — جديد بالكامل
+    - Modal بناء الرسالة: tab "أزرار" / "قائمة"
+    - أزرار: إضافة/حذف ديناميكي، حد 3
+    - قائمة: عناصر بعنوان + وصف، حد 10، button_label مخصص
+    - Header/Footer اختياري + char count حيّ
+    - Loading state + error toast مؤقت
+    - يتحقق من منصة whatsapp_api قبل الفتح
+  - P8-2: `chat.js` — `_renderInteractive()` محسَّن
+    - يعرض header/footer، أزرار، sections+rows
+    - يعرض button_reply/list_reply الواردة كـ chip خضر
+  - P8-2: `api.js` — `InboxAPI.messages.sendInteractive()`
+  - P8-2: `app.js` — `InboxInteractive.init()`
+  - P8-2: `index.html` — زر "⚡ أزرار" في الـ toolbar + interactive.js script
+  - `inbox.css`: ~145 سطر CSS (بطاقة interactive + modal كامل + dark mode)
+- قرارات: لا جديد
+- آخر commit: be9133d
+- المهمة القادمة: **P8-3 WA Catalog Products** أو **P8-4 Broadcast V2** أو **P8-5 Webhook Triggers** — backend `automation.js`
+
+---
+
+## جلسة 2026-05-03 23:00 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P7-5: `server/routes/inbox/messages.js` — endpoint جديد
+    - `POST /conversations/:id/messages/:msgId/transcript`
+    - تحميل ملف الصوت مؤقتاً ← إرسال لـ Whisper API (multipart/form-data يدوي)
+    - Cache ذكي: يحفظ النتيجة في `metadata` الرسالة لتجنب إعادة الحساب
+    - يدعم redirect، timeout 60s، و language hint = "ar"
+    - fallback: WHISPER_API_KEY → OPENAI_API_KEY ← يُضاف في .env لو Genspark لا يدعم Whisper
+    - helpers جديدة: `_downloadFile()` + `_callWhisper()` + `_extToMime()`
+  - P7-5: `public/dashboard/inbox-v4/api.js` — `InboxAPI.messages.transcript(convId, msgId)`
+  - P7-5: `public/dashboard/inbox-v4/chat.js`
+    - `_renderAudio()`: زر 🎙 جديد + div transcript مخفي (يظهر عند الاستدعاء)
+    - يعرض transcript المحفوظ مباشرة لو موجود في metadata
+    - `_requestTranscript()`: handler async — loading state ⏳ → نص + toggle visibility
+    - `_bindMessageEvents()`: ربط زر `.iv4-audio-transcript-btn`
+  - `inbox.css`: ~65 سطر CSS (زر 🎙 + بطاقة transcript + animation + dark mode)
+- قرارات: لا جديد
+- آخر commit: cce0028
+- المهمة القادمة: **P8-2 WA Interactive Messages (Buttons/Lists)** — backend `messages.js`
+
+---
+
 ## جلسة 2026-05-03 22:52 UTC
 - الحالة: مكتملة
 - ما تم:

@@ -251,6 +251,9 @@
     // Phase 8-5 — Webhook Triggers
     if (typeof InboxWebhooks  !== 'undefined') InboxWebhooks.init();        // P8-5 ✅
 
+    // Phase 8-1 — Email Channel
+    if (typeof InboxEmail !== 'undefined') InboxEmail.init();               // P8-1 ✅
+
     // expose showInboxToast globally (for team.js + other modules)
     window.showInboxToast = toast;
 

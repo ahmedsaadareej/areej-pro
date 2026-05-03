@@ -668,6 +668,9 @@ ${transcriptHtml}`.trim();
   <button class="iv4-header-btn iv4-header-btn--secondary" id="iv4-btn-reopen" title="إعادة فتح" ${status !== 'closed' ? 'hidden' : ''}>
     🔄 إعادة فتح
   </button>
+  ${platform === 'email' ? `<button class="iv4-header-btn iv4-header-btn--secondary" id="iv4-btn-email-thread" title="عرض Thread الإيميل">
+    📧 Thread
+  </button>` : ''}
 </div>
 <div id="iv4-label-picker-mount" class="iv4-label-picker-mount"></div>`.trim();
 
@@ -722,6 +725,40 @@ ${transcriptHtml}`.trim();
         }
       });
     }
+
+    // P8-1: زر email thread viewer
+    const emailThreadBtn = header.querySelector('#iv4-btn-email-thread');
+    if (emailThreadBtn && typeof InboxEmail !== 'undefined') {
+      emailThreadBtn.addEventListener('click', () => {
+        _showEmailThreadOverlay(conv.id);
+      });
+    }
+  }
+
+  /**
+   * عرض email thread في overlay خفيف
+   */
+  function _showEmailThreadOverlay(convId) {
+    let overlay = document.getElementById('iv4-email-thread-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'iv4-email-thread-overlay';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1300;display:flex;align-items:center;justify-content:center';
+      overlay.innerHTML = `<div style="background:#fff;border-radius:14px;width:680px;max-width:95vw;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+        <div style="display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid #e5e7eb">
+          <span style="flex:1;font-weight:700">📧 Email Thread</span>
+          <button onclick="document.getElementById('iv4-email-thread-overlay').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#9ca3af">✕</button>
+        </div>
+        <div id="iv4-email-thread-body" style="overflow-y:auto;flex:1;padding:16px" class="iv4-email-thread"></div>
+      </div>`;
+      overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+      document.body.appendChild(overlay);
+    }
+    const body = overlay.querySelector('#iv4-email-thread-body');
+    body.innerHTML = '<div style="text-align:center;padding:20px;color:#9ca3af">جارٍ التحميل...</div>';
+    InboxEmail.renderEmailThread(convId, body).catch(e => {
+      body.innerHTML = `<div style="color:red">${e.message}</div>`;
+    });
   }
 
   /**

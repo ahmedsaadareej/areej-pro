@@ -619,6 +619,21 @@ const InboxAPI = (() => {
     suggestLabels: (convId)                              => _post(`/inbox/conversations/${convId}/ai/labels`,    {}),
   };
 
+  // P8-1: Email Channel
+  const email = {
+    listAccounts   : ()              => _get('/inbox/email/accounts'),
+    createAccount  : (data)          => _post('/inbox/email/accounts', data),
+    getAccount     : (id)            => _get(`/inbox/email/accounts/${id}`),
+    updateAccount  : (id, data)      => _put(`/inbox/email/accounts/${id}`, data),
+    deleteAccount  : (id)            => _delete(`/inbox/email/accounts/${id}`),
+    toggleAccount  : (id)            => _put(`/inbox/email/accounts/${id}/toggle`, {}),
+    testSmtp       : (id)            => _post(`/inbox/email/accounts/${id}/test-smtp`, {}),
+    testImap       : (id)            => _post(`/inbox/email/accounts/${id}/test-imap`, {}),
+    pollNow        : (id)            => _post(`/inbox/email/accounts/${id}/poll`, {}),
+    getMessages    : (convId)        => _get(`/inbox/email/messages/${convId}`),
+    sendMessage    : (convId, data)  => _post(`/inbox/email/messages/${convId}/send`, data),
+  };
+
   // ─── Public API ───────────────────────────────────────────────────────
   return {
     conversations,
@@ -645,6 +660,7 @@ const InboxAPI = (() => {
     autoClose,
     scheduled,
     webhooks,
+    email,
     // expose للـ debugging
     _fetch,
     _get,
