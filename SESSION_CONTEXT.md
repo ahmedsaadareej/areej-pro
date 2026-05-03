@@ -1,3 +1,20 @@
+## Session 2026-05-03 (13:10 → 13:30 UTC) — مهمة 1 مكتملة
+- الحالة: تم الإكمال (مهمة 1 من 5)
+- ما تم إنجازه:
+  - Platform Tabs → Dropdown (iv3PickPlatform + iv3TogglePlatDropdown)
+  - Reply Toolbar: من عمودي (.iv3-reply-side) لأفقي (.iv3-toolbar) تحت الـ textarea
+  - Channel Selector: زر في الـ toolbar يختار منصة الإرسال + يتذكر الاختيار (IV3._replyChannel)
+  - Avatar: إصلاح iv3Initials لدعم Unicode/عربي + أرقام الهاتف
+  - Backend: channel_override في POST /inbox/send → effectivePlatform
+  - cache-bust → v=1777814198
+- قرارات تقنية:
+  - Dropdown يغلق عند click خارجه (document.addEventListener once)
+  - IV3._replyChannel = null = استخدم منصة المحادثة الأصلية
+  - iv3ResetReplyChannel() تُستدعى عند فتح محادثة جديدة
+  - effectivePlatform في backend يؤثر على الإرسال الفعلي والحفظ
+- آخر Commit: 3e83d41
+- نقطة البداية القادمة: مهمة 2 — تعديل بيانات العميل inline + إصلاح إضافة للـ CRM
+
 ## Session 2026-05-03 (13:09 UTC) — جارية
 - الحالة: في التنفيذ
 - ما تم الاتفاق عليه (14 مهمة):

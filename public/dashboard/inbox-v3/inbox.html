@@ -345,18 +345,57 @@
 
       <!-- Contact details -->
       <div class="iv3-ctx-section" id="iv3-ctx-details" style="display:none">
-        <div class="iv3-ctx-section-title">بيانات العميل</div>
-        <div class="iv3-ctx-info-row">
-          <span class="iv3-ctx-label">📞 تليفون</span>
-          <span class="iv3-ctx-val" id="iv3-ctx-phone">—</span>
+        <div class="iv3-ctx-section-title">
+          بيانات العميل
+          <button class="iv3-ctx-edit-btn" id="iv3-ctx-edit-btn" onclick="iv3ToggleContactEdit()" title="تعديل البيانات">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            تعديل
+          </button>
         </div>
-        <div class="iv3-ctx-info-row">
-          <span class="iv3-ctx-label">✉️ إيميل</span>
-          <span class="iv3-ctx-val" id="iv3-ctx-email">—</span>
+
+        <!-- View mode -->
+        <div id="iv3-ctx-view-mode">
+          <div class="iv3-ctx-info-row">
+            <span class="iv3-ctx-label">📞 تليفون</span>
+            <span class="iv3-ctx-val" id="iv3-ctx-phone">—</span>
+          </div>
+          <div class="iv3-ctx-info-row">
+            <span class="iv3-ctx-label">✉️ إيميل</span>
+            <span class="iv3-ctx-val" id="iv3-ctx-email">—</span>
+          </div>
+          <div class="iv3-ctx-info-row">
+            <span class="iv3-ctx-label">📍 مدينة</span>
+            <span class="iv3-ctx-val" id="iv3-ctx-city">—</span>
+          </div>
+          <div class="iv3-ctx-info-row" id="iv3-ctx-tags-row" style="display:none">
+            <span class="iv3-ctx-label">🏷️ تاجز</span>
+            <span class="iv3-ctx-val" id="iv3-ctx-tags">—</span>
+          </div>
         </div>
-        <div class="iv3-ctx-info-row">
-          <span class="iv3-ctx-label">📍 مدينة</span>
-          <span class="iv3-ctx-val" id="iv3-ctx-city">—</span>
+
+        <!-- Edit mode (inline) -->
+        <div id="iv3-ctx-edit-mode" style="display:none">
+          <div class="iv3-ctx-edit-form">
+            <label class="iv3-ctx-field-lbl">🏢 اسم الشركة / العميل</label>
+            <input id="iv3-edit-name" class="iv3-ctx-input" type="text" placeholder="اسم الشركة أو العميل">
+
+            <label class="iv3-ctx-field-lbl">📞 تليفون</label>
+            <input id="iv3-edit-phone" class="iv3-ctx-input" type="tel" placeholder="+201xxxxxxxxx">
+
+            <label class="iv3-ctx-field-lbl">✉️ إيميل</label>
+            <input id="iv3-edit-email" class="iv3-ctx-input" type="email" placeholder="email@example.com">
+
+            <label class="iv3-ctx-field-lbl">📍 مدينة</label>
+            <input id="iv3-edit-city" class="iv3-ctx-input" type="text" placeholder="القاهرة">
+
+            <label class="iv3-ctx-field-lbl">📝 ملاحظات</label>
+            <textarea id="iv3-edit-notes" class="iv3-ctx-input iv3-ctx-textarea" rows="2" placeholder="أي معلومات عن العميل..."></textarea>
+
+            <div class="iv3-ctx-edit-actions">
+              <button class="iv3-ctx-save-btn" onclick="iv3SaveContactEdit()">✓ حفظ</button>
+              <button class="iv3-ctx-cancel-btn" onclick="iv3CancelContactEdit()">× إلغاء</button>
+            </div>
+          </div>
         </div>
       </div>
 

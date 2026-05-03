@@ -225,6 +225,19 @@ async function loadCRM() {
   const d = await r.json().catch(() => ({}));
   crmData = d.data || [];
   renderCRM(crmData);
+
+  // لو جاي open=ID في الـ hash — افتح بروفايل العميل مباشرةً
+  const _hp = new URLSearchParams(window.location.hash.slice(1));
+  const _openId = _hp.get('open');
+  if (_openId) {
+    const contact = crmData.find(c => String(c.id) === String(_openId));
+    if (contact) {
+      setTimeout(() => openClientProfile(contact.id, contact.company_name || contact.name), 200);
+    }
+    // أزل المعامل بعد استخدامه
+    _hp.delete('open');
+    history.replaceState({}, '', window.location.pathname + '#' + _hp.toString());
+  }
 }
 
 function filterCRM() {

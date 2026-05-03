@@ -8,6 +8,10 @@
 
 async function iv3UpdateContextPanel(conv) {
   if (!conv) return;
+  // reset edit state عند تغيير المحادثة
+  IV3._ctxCrmContact = null;
+  IV3._ctxContactId  = null;
+  iv3CancelContactEdit();
 
   // إظهار الـ header وإخفاء empty state
   const emptyEl  = document.getElementById('iv3-ctx-empty');
@@ -105,8 +109,9 @@ async function iv3LoadCustomerContext(conv) {
       }));
     } catch (_) {}
 
-    // حفظ contact id في IV3 لاستخدامه في Catalog → إضافة للفاتورة
+    // حفظ contact id + بيانات كاملة في IV3
     IV3._ctxContactId = contact.id || null;
+    IV3._ctxCrmContact = contact;
     IV3._ctxRecentInvoices = recentInvoices;
 
     iv3RenderCustomerERP({ ...contact, invoice_count: contact.invoice_count || 0, recent_invoices: recentInvoices, recent_orders: recentOrders });
@@ -307,10 +312,14 @@ async function iv3ConfirmSendInvoice(invoiceId) {
 // ── Quick Action Buttons ─────────────────────────────────────
 
 function iv3CtxOpenProfile(customerId) {
-  if (customerId) {
-    window.open(`/dashboard#p=crm&id=${customerId}`, '_blank');
+  const id = customerId || IV3._ctxContactId;
+  if (id) {
+    // فتح صفحة CRM وافتح بروفايل العميل مباشرةً
+    window.open(`/dashboard#p=crm&open=${id}`, '_blank');
   } else {
-    iv3Toast('العميل غير مرتبط بـ CRM', 'info');
+    // عميل مش موجود — افتح edit mode للإضافة
+    iv3CtxToggleTab('contact');
+    setTimeout(() => iv3OpenContactEdit(), 150);
   }
 }
 
@@ -556,11 +565,175 @@ ${result.link}`;
   }
 }
 
+// ── Inline Contact Edit ──────────────────────────────────────────────
+
+function iv3ToggleContactEdit() {
+  const editMode = document.getElementById('iv3-ctx-edit-mode');
+  const viewMode = document.getElementById('iv3-ctx-view-mode');
+  const editBtn  = document.getElementById('iv3-ctx-edit-btn');
+  if (!editMode || !viewMode) return;
+
+  const isEditing = editMode.style.display !== 'none';
+
+  if (isEditing) {
+    // إغلاق بدون حفظ
+    iv3CancelContactEdit();
+  } else {
+    // فتح mode التعديل مع prefill
+    iv3OpenContactEdit();
+  }
+}
+
+function iv3OpenContactEdit() {
+  const editMode = document.getElementById('iv3-ctx-edit-mode');
+  const viewMode = document.getElementById('iv3-ctx-view-mode');
+  const editBtn  = document.getElementById('iv3-ctx-edit-btn');
+  if (!editMode) return;
+
+  // Prefill من بيانات المحادثة + CRM لو موجود
+  const conv = IV3.activeConv;
+  if (!conv) return;
+
+  // محاولة جلب بيانات CRM لو متوفرة
+  const crmContact = IV3._ctxCrmContact || null;
+
+  const nameVal  = crmContact?.name || crmContact?.company_name || iv3CleanSenderName(conv.sender_name, conv.sender_id) || '';
+  const phoneVal = crmContact?.phone || iv3ExtractPhone(conv.sender_id) || '';
+  const emailVal = crmContact?.email || '';
+  const cityVal  = crmContact?.city  || '';
+  const notesVal = crmContact?.notes || '';
+
+  const nameEl  = document.getElementById('iv3-edit-name');  if (nameEl)  nameEl.value  = nameVal;
+  const phoneEl = document.getElementById('iv3-edit-phone'); if (phoneEl) phoneEl.value = phoneVal;
+  const emailEl = document.getElementById('iv3-edit-email'); if (emailEl) emailEl.value = emailVal;
+  const cityEl  = document.getElementById('iv3-edit-city');  if (cityEl)  cityEl.value  = cityVal;
+  const notesEl = document.getElementById('iv3-edit-notes'); if (notesEl) notesEl.value = notesVal;
+
+  editMode.style.display = '';
+  viewMode.style.display = 'none';
+  if (editBtn) { editBtn.classList.add('editing'); editBtn.innerHTML = `× إلغاء`; }
+
+  // Focus on name
+  setTimeout(() => nameEl?.focus(), 80);
+}
+
+function iv3CancelContactEdit() {
+  const editMode = document.getElementById('iv3-ctx-edit-mode');
+  const viewMode = document.getElementById('iv3-ctx-view-mode');
+  const editBtn  = document.getElementById('iv3-ctx-edit-btn');
+  if (editMode) editMode.style.display = 'none';
+  if (viewMode) viewMode.style.display = '';
+  if (editBtn) {
+    editBtn.classList.remove('editing');
+    editBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> تعديل`;
+  }
+}
+
+async function iv3SaveContactEdit() {
+  const conv = IV3.activeConv;
+  if (!conv) return;
+
+  const nameVal  = document.getElementById('iv3-edit-name')?.value.trim()  || '';
+  const phoneVal = document.getElementById('iv3-edit-phone')?.value.trim() || '';
+  const emailVal = document.getElementById('iv3-edit-email')?.value.trim() || '';
+  const cityVal  = document.getElementById('iv3-edit-city')?.value.trim()  || '';
+  const notesVal = document.getElementById('iv3-edit-notes')?.value.trim() || '';
+
+  if (!nameVal && !phoneVal) {
+    iv3Toast('الاسم أو التليفون مطلوب', 'error');
+    return;
+  }
+
+  const saveBtn = document.querySelector('.iv3-ctx-save-btn');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'جاري...'; }
+
+  try {
+    const contactId = IV3._ctxContactId;
+
+    if (contactId) {
+      // تحديث عميل موجود
+      const res = await apiFetch(`/api/crm/contacts/${contactId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: nameVal, company_name: nameVal,
+          phone: phoneVal || undefined,
+          email: emailVal || undefined,
+          city:  cityVal  || undefined,
+          notes: notesVal || undefined,
+        })
+      });
+      if (!res?.ok) throw new Error(res?.error || 'فشل التحديث');
+      iv3Toast('تم تحديث بيانات العميل ✓', 'success');
+    } else {
+      // إضافة عميل جديد للـ CRM
+      if (!phoneVal) { iv3Toast('رقم التليفون مطلوب للإضافة', 'error'); return; }
+      const res = await apiFetch('/api/crm/contacts', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: nameVal, company_name: nameVal,
+          phone: phoneVal,
+          email: emailVal || undefined,
+          city:  cityVal  || undefined,
+          notes: notesVal || undefined,
+          source: 'inbox',
+          status: 'lead',
+        })
+      });
+      if (!res?.ok) {
+        // لو الرقم موجود مسبقاً
+        if (res?.existing_id) {
+          IV3._ctxContactId = res.existing_id;
+          iv3Toast(`الرقم مسجّل مسبقاً لـ ${res.existing_name || ''} — تم الربط`, 'info');
+        } else {
+          throw new Error(res?.error || 'فشل الإضافة');
+        }
+      } else {
+        IV3._ctxContactId = res.id;
+        iv3Toast('تم إضافة العميل للـ CRM ✓', 'success');
+      }
+    }
+
+    // إغلاق وتحديث view
+    iv3CancelContactEdit();
+
+    // تحديث البيانات المعروضة
+    const phoneEl = document.getElementById('iv3-ctx-phone');
+    const emailEl = document.getElementById('iv3-ctx-email');
+    const cityEl  = document.getElementById('iv3-ctx-city');
+    if (phoneEl) phoneEl.textContent = phoneVal || '—';
+    if (emailEl) emailEl.textContent = emailVal || '—';
+    if (cityEl)  cityEl.textContent  = cityVal  || '—';
+    // تحديث الاسم
+    const nameEl2 = document.getElementById('iv3-ctx-name');
+    if (nameEl2 && nameVal) nameEl2.textContent = nameVal;
+
+    // إخفاء زر إضافة لانه بقى موجود الآن
+    const addBtn = document.getElementById('iv3-ctx-add-btn');
+    if (addBtn) addBtn.style.display = 'none';
+
+  } catch(e) {
+    iv3Toast(e.message, 'error');
+  } finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✓ حفظ'; }
+  }
+}
+
+// مساعد — استخراج الاسم النظيف بدون @ و JID
+function iv3CleanSenderName(name, id) {
+  if (name && !name.includes('@')) return name;
+  if (id) {
+    const num = String(id).split('@')[0];
+    if (/^\d+$/.test(num) && num.length >= 7) return '+' + num;
+  }
+  return name || '';
+}
+
+// ── إضافة لل CRM (modal في نفس الصفحة) ───────────────────────────
+
 function iv3CtxAddContact() {
-  if (!IV3.activeConv) return;
-  const name  = IV3.activeConv.sender_name || '';
-  const phone = iv3ExtractPhone(IV3.activeConv.sender_id) || '';
-  window.open(`/dashboard#p=crm&new=1&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}`, '_blank');
+  // افتح edit mode مباشرةً مع prefill تلقائي
+  iv3CtxToggleTab('contact');
+  setTimeout(() => iv3OpenContactEdit(), 150);
 }
 
 // ── Toggle Context Panel ─────────────────────────────────────
