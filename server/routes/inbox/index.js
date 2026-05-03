@@ -33,9 +33,8 @@ router.use((req, res, next) => {
 const { router: streamRouter } = require('./stream');
 router.use('/', streamRouter);
 
-// [Phase 1] Conversations & Messages — يُضاف عند البناء
-// router.use('/', require('./conversations'));
-// router.use('/', require('./messages'));
+// Phase 1 — Conversations, Messages, Labels, Counts
+router.use('/', require('./conversations'));
 
 // [Phase 2] Team
 // router.use('/', require('./team'));
