@@ -342,6 +342,12 @@ const InboxAPI = (() => {
     agentDetail(agentId, { from, to } = {}) {
       return _get(`/inbox/analytics/agents/${agentId}`, { from, to });
     },
+    platformDetail(platform, { from, to } = {}) {
+      return _get(`/inbox/analytics/platforms/${platform}`, { from, to });
+    },
+    slaDetail({ from, to } = {}) {
+      return _get('/inbox/analytics/sla/detail', { from, to });
+    },
     csatStats() {
       return _get('/inbox/csat-stats');
     },

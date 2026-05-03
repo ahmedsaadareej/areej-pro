@@ -151,7 +151,10 @@ const InboxAnalytics = (() => {
 
           <!-- ── Section 5: SLA Overview ── -->
           <section class="iv4-an-section">
-            <h3 class="iv4-an-section-title">⏱ الالتزام بـ SLA</h3>
+            <div class="iv4-an-section-header-row">
+              <h3 class="iv4-an-section-title">⏱ الالتزام بـ SLA</h3>
+              <button id="iv4-an-sla-detail-btn" class="iv4-an-export-btn" title="تقرير SLA التفصيلي">🔍 تفصيل</button>
+            </div>
             <div id="iv4-an-sla" class="iv4-an-sla-grid">
               <!-- تُحمَّل ديناميكياً -->
             </div>
@@ -356,7 +359,8 @@ const InboxAnalytics = (() => {
       const pct  = Math.round((p.total_convs / total) * 100);
       const icon = PLATFORM_ICON[p.platform] || '📱';
       return `
-        <div class="iv4-an-platform-row">
+        <div class="iv4-an-platform-row iv4-an-platform-clickable"
+             data-platform="${p.platform}" style="cursor:pointer">
           <span class="iv4-an-platform-icon">${icon}</span>
           <span class="iv4-an-platform-name">${p.platform || 'غير محدد'}</span>
           <div class="iv4-an-platform-bar-wrap">
@@ -365,9 +369,17 @@ const InboxAnalytics = (() => {
           <span class="iv4-an-platform-pct">${pct}%</span>
           <span class="iv4-an-platform-count">${_fmt(p.total_convs)}</span>
           <span class="iv4-an-platform-close">${_fmt(p.closed_convs)} ✅</span>
+          <span class="iv4-an-platform-detail-hint">»</span>
         </div>
       `;
     }).join('');
+
+    // النقر على منصة → drill-down
+    el.querySelectorAll('.iv4-an-platform-clickable').forEach(row => {
+      row.addEventListener('click', () => {
+        if (row.dataset.platform) _openPlatformDetail(row.dataset.platform);
+      });
+    });
   }
 
   // ─── SLA Section ──────────────────────────────────────────────────────────
@@ -607,6 +619,232 @@ const InboxAnalytics = (() => {
   }
 
 
+  // ─── Platform Detail Modal ────────────────────────────────────────────────
+
+  async function _openPlatformDetail(platform) {
+    const existing = document.getElementById('iv4-an-plat-detail');
+    if (existing) existing.remove();
+
+    const PLATFORM_ICON2 = { whatsapp: '🟢', telegram: '🔵', instagram: '🟣', messenger: '🔷' };
+    const icon = PLATFORM_ICON2[platform] || '📱';
+
+    const modal = document.createElement('div');
+    modal.id = 'iv4-an-plat-detail';
+    modal.className = 'iv4-an-agent-detail-wrap';
+    modal.innerHTML = `
+      <div class="iv4-an-agent-detail-modal">
+        <div class="iv4-an-ad-header">
+          <span class="iv4-an-ad-title">${icon} ${platform}</span>
+          <button class="iv4-an-ad-close" id="iv4-an-pd-close">✕</button>
+        </div>
+        <div class="iv4-an-ad-loading" id="iv4-an-pd-body">جارٍ تحميل بيانات المنصة...</div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#iv4-an-pd-close').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+    const { data, error } = await InboxAPI.analytics.platformDetail(platform, { from: _from, to: _to });
+    const body = document.getElementById('iv4-an-pd-body');
+    if (!body) return;
+
+    if (error || !data) {
+      body.innerHTML = `<p class="iv4-an-empty">خطأ: ${error || 'فشل التحميل'}</p>`;
+      return;
+    }
+
+    const s = data.summary;
+    const PRIO_LABELS = { urgent: '🔴 عاجل', high: '🟠 عالي', normal: '🟡 عادي', low: '🔵 منخفض' };
+
+    // mini bar chart
+    const maxDaily  = Math.max(...(data.daily.map(d => d.total)), 1);
+    const dailyBars = data.daily.map(d => {
+      const h = Math.max(4, Math.round((d.total / maxDaily) * 60));
+      return `<div class="iv4-an-ad-bar" style="height:${h}px"
+                   title="${d.day}: ${d.total} محادثة"></div>`;
+    }).join('');
+
+    // جدول أداء الموظفين على هذه المنصة
+    const agentRows = (data.agents || []).map(a => `
+      <tr>
+        <td>👤 ${a.agent_name || 'غير معيّن'}</td>
+        <td>${a.total}</td>
+        <td>${a.closed}</td>
+        <td>${a.total > 0 ? Math.round((a.closed / a.total) * 100) : 0}%</td>
+      </tr>
+    `).join('');
+
+    body.className = 'iv4-an-ad-body-loaded';
+    body.innerHTML = `
+      <!-- KPI -->
+      <div class="iv4-an-ad-kpi-row">
+        <div class="iv4-an-ad-kpi">
+          <div class="iv4-an-ad-kpi-val">${_fmt(s.total)}</div>
+          <div class="iv4-an-ad-kpi-lbl">إجمالي</div>
+        </div>
+        <div class="iv4-an-ad-kpi">
+          <div class="iv4-an-ad-kpi-val">${_fmt(s.open_now)}</div>
+          <div class="iv4-an-ad-kpi-lbl">مفتوحة الآن</div>
+        </div>
+        <div class="iv4-an-ad-kpi">
+          <div class="iv4-an-ad-kpi-val"
+               style="color:${s.resolution_rate >= 70 ? '#10b981' : '#f59e0b'}">${s.resolution_rate}%</div>
+          <div class="iv4-an-ad-kpi-lbl">معدل الإغلاق</div>
+        </div>
+        <div class="iv4-an-ad-kpi">
+          <div class="iv4-an-ad-kpi-val" style="color:#8b5cf6">${s.avg_first_response_fmt || '—'}</div>
+          <div class="iv4-an-ad-kpi-lbl">أول رد</div>
+        </div>
+        <div class="iv4-an-ad-kpi">
+          <div class="iv4-an-ad-kpi-val" style="color:#06b6d4">${s.avg_resolution_fmt || '—'}</div>
+          <div class="iv4-an-ad-kpi-lbl">وقت الإغلاق</div>
+        </div>
+      </div>
+
+      <!-- Daily Trend -->
+      <div class="iv4-an-ad-section">
+        <div class="iv4-an-ad-section-title">📈 تطور يومي</div>
+        ${data.daily.length ? `
+          <div class="iv4-an-ad-bars">${dailyBars}</div>
+          <div class="iv4-an-ad-bars-labels">
+            <span>${data.daily[0]?.day?.slice(5) || ''}</span>
+            <span>${data.daily[Math.floor(data.daily.length/2)]?.day?.slice(5) || ''}</span>
+            <span>${data.daily[data.daily.length-1]?.day?.slice(5) || ''}</span>
+          </div>` : '<p class="iv4-an-empty">لا توجد بيانات</p>'}
+      </div>
+
+      <!-- Priority + Agents -->
+      <div class="iv4-an-ad-two-col">
+        <div class="iv4-an-ad-section">
+          <div class="iv4-an-ad-section-title">⚡ توزيع الأولوية</div>
+          ${data.priorities.map(p => `
+            <div class="iv4-an-ad-plat-row">
+              <span>${PRIO_LABELS[p.priority] || p.priority || 'غير محدد'}</span>
+              <span style="margin-right:auto;font-weight:700">${p.n}</span>
+            </div>`).join('') || '<p class="iv4-an-empty">—</p>'}
+        </div>
+        <div class="iv4-an-ad-section">
+          <div class="iv4-an-ad-section-title">👥 أداء الموظفين</div>
+          ${agentRows ? `
+            <div class="iv4-an-table-wrap">
+              <table class="iv4-an-table">
+                <thead><tr><th>الموظف</th><th>كل</th><th>مغلق</th><th>%</th></tr></thead>
+                <tbody>${agentRows}</tbody>
+              </table>
+            </div>` : '<p class="iv4-an-empty">—</p>'}
+        </div>
+      </div>
+    `;
+  }
+
+  // ─── SLA Detail Modal ─────────────────────────────────────────────────────
+
+  async function _openSLADetail() {
+    const existing = document.getElementById('iv4-an-sla-detail');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'iv4-an-sla-detail';
+    modal.className = 'iv4-an-agent-detail-wrap';
+    modal.innerHTML = `
+      <div class="iv4-an-agent-detail-modal" style="max-width:740px">
+        <div class="iv4-an-ad-header">
+          <span class="iv4-an-ad-title">⏱ تقرير SLA التفصيلي</span>
+          <button class="iv4-an-ad-close" id="iv4-an-sd-close">✕</button>
+        </div>
+        <div class="iv4-an-ad-loading" id="iv4-an-sd-body">جارٍ تحميل بيانات SLA...</div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#iv4-an-sd-close').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+    const { data, error } = await InboxAPI.analytics.slaDetail({ from: _from, to: _to });
+    const body = document.getElementById('iv4-an-sd-body');
+    if (!body) return;
+
+    if (error || !data) {
+      body.innerHTML = `<p class="iv4-an-empty">خطأ: ${error || 'فشل التحميل'}</p>`;
+      return;
+    }
+
+    // Daily compliance chart
+    const maxTotal  = Math.max(...(data.daily.map(d => d.total)), 1);
+    const dailyBars = data.daily.map(d => {
+      const h     = Math.max(4, Math.round((d.total / maxTotal) * 60));
+      const color = d.compliance_pct == null ? '#94a3b8'
+                  : d.compliance_pct >= 80 ? '#10b981'
+                  : d.compliance_pct >= 60 ? '#f59e0b' : '#ef4444';
+      return `<div class="iv4-an-ad-bar" style="height:${h}px;background:${color}"
+                   title="${d.day}: ${d.compliance_pct != null ? d.compliance_pct + '% التزام' : 'بلا بيانات'} — ${d.total} محادثة"></div>`;
+    }).join('');
+
+    // جدول SLA بالمنصة
+    const PLATFORM_ICON2 = { whatsapp: '🟢', telegram: '🔵', instagram: '🟣', messenger: '🔷' };
+    const platRows = (data.by_platform || []).map(p => {
+      const color = p.compliance_pct == null ? '#64748b'
+                  : p.compliance_pct >= 80 ? '#10b981'
+                  : p.compliance_pct >= 60 ? '#f59e0b' : '#ef4444';
+      return `
+        <tr>
+          <td>${PLATFORM_ICON2[p.platform] || '📱'} ${p.platform}</td>
+          <td>${p.total}</td>
+          <td style="color:#10b981">${p.met}</td>
+          <td style="color:#ef4444">${p.breached}</td>
+          <td style="font-weight:700;color:${color}">${p.compliance_pct != null ? p.compliance_pct + '%' : '—'}</td>
+        </tr>`;
+    }).join('');
+
+    // أسوأ محادثات (أطول وقت استجابة)
+    const worstRows = (data.worst_response || []).map(w => `
+      <tr>
+        <td>${w.contact_name || '—'}</td>
+        <td>${PLATFORM_ICON2[w.platform] || '📱'} ${w.platform || ''}</td>
+        <td style="color:#ef4444;font-weight:700">${w.response_fmt}</td>
+        <td>${w.priority || '—'}</td>
+      </tr>`).join('');
+
+    body.className = 'iv4-an-ad-body-loaded';
+    body.innerHTML = `
+      <!-- Daily SLA Trend -->
+      <div class="iv4-an-ad-section">
+        <div class="iv4-an-ad-section-title">📅 الالتزام اليومي (أخضر≥80% / أصفر≥60% / أحمر&lt;60%)</div>
+        ${data.daily.length ? `
+          <div class="iv4-an-ad-bars">${dailyBars}</div>
+          <div class="iv4-an-ad-bars-labels">
+            <span>${data.daily[0]?.day?.slice(5) || ''}</span>
+            <span>${data.daily[Math.floor(data.daily.length/2)]?.day?.slice(5) || ''}</span>
+            <span>${data.daily[data.daily.length-1]?.day?.slice(5) || ''}</span>
+          </div>` : '<p class="iv4-an-empty">لا توجد بيانات</p>'}
+      </div>
+
+      <!-- SLA by Platform -->
+      <div class="iv4-an-ad-section">
+        <div class="iv4-an-ad-section-title">📡 SLA بالمنصة</div>
+        ${platRows ? `
+          <div class="iv4-an-table-wrap">
+            <table class="iv4-an-table">
+              <thead><tr><th>المنصة</th><th>إجمالي</th><th>✅ ملتزم</th><th>❌ متجاوز</th><th>النسبة</th></tr></thead>
+              <tbody>${platRows}</tbody>
+            </table>
+          </div>` : '<p class="iv4-an-empty">لا توجد بيانات</p>'}
+      </div>
+
+      <!-- Worst Response Times -->
+      <div class="iv4-an-ad-section">
+        <div class="iv4-an-ad-section-title">🐢 أطول أوقات استجابة (أسوأ 10)</div>
+        ${worstRows ? `
+          <div class="iv4-an-table-wrap">
+            <table class="iv4-an-table">
+              <thead><tr><th>العميل</th><th>المنصة</th><th>وقت الاستجابة</th><th>الأولوية</th></tr></thead>
+              <tbody>${worstRows}</tbody>
+            </table>
+          </div>` : '<p class="iv4-an-empty">لا توجد بيانات</p>'}
+      </div>
+    `;
+  }
+
+
   let _lastAgentsData = [];
 
   function _exportAgentsCSV() {
@@ -739,6 +977,12 @@ const InboxAnalytics = (() => {
     const exportBtn = document.getElementById('iv4-an-export-agents');
     if (exportBtn) {
       exportBtn.addEventListener('click', _exportAgentsCSV);
+    }
+
+    // زر SLA Detail
+    const slaDetailBtn = document.getElementById('iv4-an-sla-detail-btn');
+    if (slaDetailBtn) {
+      slaDetailBtn.addEventListener('click', _openSLADetail);
     }
 
     // إغلاق بالنقر على الـ overlay خارج الـ modal

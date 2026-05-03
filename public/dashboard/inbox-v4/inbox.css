@@ -3709,3 +3709,23 @@
   .iv4-an-ad-status--waiting { background: #451a03; color: #fcd34d; }
   .iv4-an-ad-status--snoozed { background: #2e1065; color: #c4b5fd; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   P6-3 / P6-5 — Platform Drill-down + SLA Detail
+   آخر تحديث: 2026-05-03
+════════════════════════════════════════════════════════════════════ */
+
+.iv4-an-platform-clickable:hover {
+  background: var(--iv4-hover, #f1f5f9) !important;
+  border-color: #3b82f6 !important;
+  transition: all .15s;
+}
+.iv4-an-platform-detail-hint {
+  font-size: .75rem; color: #3b82f6; margin-right: auto; font-weight: 700;
+  opacity: 0; transition: opacity .15s;
+}
+.iv4-an-platform-clickable:hover .iv4-an-platform-detail-hint { opacity: 1; }
+
+@media (prefers-color-scheme: dark) {
+  .iv4-an-platform-clickable:hover { background: #1e293b !important; }
+}

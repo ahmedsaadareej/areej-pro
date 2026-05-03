@@ -543,4 +543,177 @@ router.get('/agents/:id', (req, res) => {
   }
 });
 
+// ─── GET /api/inbox/analytics/platforms/:platform ──────────────────────────────
+// تفصيل منصة واحدة: تطور يومي + أداء الموظفين على هذه المنصة + توزيع الأولوية
+
+router.get('/platforms/:platform', (req, res) => {
+  try {
+    const db       = req.db;
+    const platform = req.params.platform;
+    const { fromTs, toTs, fromIso, toIso } = _parseRange(req.query);
+
+    // ملخص عام
+    const summary = db.prepare(`
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN status = 'closed'                      THEN 1 ELSE 0 END) AS closed,
+        SUM(CASE WHEN status IN ('open','waiting','snoozed') THEN 1 ELSE 0 END) AS open_now,
+        AVG(
+          CASE WHEN first_response_at IS NOT NULL
+                AND first_message_at  IS NOT NULL
+                AND first_response_at > first_message_at
+               THEN first_response_at - first_message_at END
+        ) AS avg_first_response_sec,
+        AVG(
+          CASE WHEN resolved_at IS NOT NULL
+                AND first_message_at IS NOT NULL
+                AND resolved_at > first_message_at
+               THEN resolved_at - first_message_at END
+        ) AS avg_resolution_sec
+      FROM inbox_conversations_v4
+      WHERE platform = ? AND created_at BETWEEN ? AND ?
+    `).get(platform, fromTs, toTs);
+
+    // تطور يومي
+    const daily = db.prepare(`
+      SELECT
+        date(created_at, 'unixepoch') AS day,
+        COUNT(*) AS total,
+        SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) AS closed
+      FROM inbox_conversations_v4
+      WHERE platform = ? AND created_at BETWEEN ? AND ?
+      GROUP BY day ORDER BY day ASC
+    `).all(platform, fromTs, toTs);
+
+    // توزيع الأولوية
+    const priorities = db.prepare(`
+      SELECT priority, COUNT(*) AS n
+      FROM inbox_conversations_v4
+      WHERE platform = ? AND created_at BETWEEN ? AND ?
+      GROUP BY priority ORDER BY n DESC
+    `).all(platform, fromTs, toTs);
+
+    // أداء الموظفين على هذه المنصة
+    const agents = db.prepare(`
+      SELECT
+        c.assigned_to_id AS agent_id,
+        tu.name          AS agent_name,
+        COUNT(*)         AS total,
+        SUM(CASE WHEN c.status = 'closed' THEN 1 ELSE 0 END) AS closed
+      FROM inbox_conversations_v4 c
+      LEFT JOIN tenant_users tu ON tu.id = c.assigned_to_id
+      WHERE c.platform = ? AND c.created_at BETWEEN ? AND ?
+        AND c.assigned_to_id IS NOT NULL
+      GROUP BY c.assigned_to_id
+      ORDER BY total DESC
+      LIMIT 10
+    `).all(platform, fromTs, toTs);
+
+    res.json({
+      ok: true,
+      period:   { from: fromIso, to: toIso },
+      platform,
+      summary: {
+        total:                  summary.total || 0,
+        closed:                 summary.closed || 0,
+        open_now:               summary.open_now || 0,
+        resolution_rate:        summary.total > 0
+          ? Math.round((summary.closed / summary.total) * 100) : 0,
+        avg_first_response_sec: summary.avg_first_response_sec
+          ? Math.round(summary.avg_first_response_sec) : null,
+        avg_first_response_fmt: _fmtSec(summary.avg_first_response_sec
+          ? Math.round(summary.avg_first_response_sec) : null),
+        avg_resolution_sec:     summary.avg_resolution_sec
+          ? Math.round(summary.avg_resolution_sec) : null,
+        avg_resolution_fmt:     _fmtSec(summary.avg_resolution_sec
+          ? Math.round(summary.avg_resolution_sec) : null),
+      },
+      daily,
+      priorities,
+      agents,
+    });
+  } catch (e) {
+    console.error('[inbox/analytics/platforms/:platform]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ─── GET /api/inbox/analytics/sla/detail ────────────────────────────────────
+// تقرير SLA تفصيلي: breakdown كامل + اتجاه يومي + أسوأ/أفضل محادثات
+
+router.get('/sla/detail', (req, res) => {
+  try {
+    const db = req.db;
+    const { fromTs, toTs, fromIso, toIso } = _parseRange(req.query);
+
+    // جلب كل المحادثات مع بيانات SLA
+    const convs = db.prepare(`
+      SELECT id, priority, status, platform,
+             first_message_at, first_response_at, resolved_at, created_at
+      FROM inbox_conversations_v4
+      WHERE created_at BETWEEN ? AND ?
+    `).all(fromTs, toTs);
+
+    // ── تجميع يومي ──────────────────────────────────────────────────────────
+    const dailyMap = {};
+    for (const conv of convs) {
+      const day = new Date(conv.created_at * 1000).toISOString().slice(0, 10);
+      if (!dailyMap[day]) dailyMap[day] = { day, total: 0, met: 0, breached: 0 };
+      dailyMap[day].total++;
+      const sla = computeSLA(conv);
+      if (sla.first_response_status === 'met')      dailyMap[day].met++;
+      else if (sla.first_response_status === 'breached') dailyMap[day].breached++;
+    }
+    const daily = Object.values(dailyMap).sort((a, b) => a.day.localeCompare(b.day))
+      .map(d => ({
+        ...d,
+        compliance_pct: (d.met + d.breached) > 0
+          ? Math.round((d.met / (d.met + d.breached)) * 100) : null,
+      }));
+
+    // ── أسوأ 10 محادثات (أطول وقت استجابة) ──────────────────────────────────
+    const worst = db.prepare(`
+      SELECT id, contact_name, platform, priority,
+             (first_response_at - first_message_at) AS response_sec
+      FROM inbox_conversations_v4
+      WHERE created_at BETWEEN ? AND ?
+        AND first_response_at IS NOT NULL
+        AND first_message_at  IS NOT NULL
+        AND first_response_at > first_message_at
+      ORDER BY response_sec DESC
+      LIMIT 10
+    `).all(fromTs, toTs).map(r => ({
+      ...r,
+      response_fmt: _fmtSec(r.response_sec),
+    }));
+
+    // ── SLA بالمنصة ──────────────────────────────────────────────────────────
+    const byPlatform = {};
+    for (const conv of convs) {
+      const p = conv.platform || 'unknown';
+      if (!byPlatform[p]) byPlatform[p] = { platform: p, total: 0, met: 0, breached: 0 };
+      byPlatform[p].total++;
+      const sla = computeSLA(conv);
+      if (sla.first_response_status === 'met')      byPlatform[p].met++;
+      else if (sla.first_response_status === 'breached') byPlatform[p].breached++;
+    }
+    const platformSLA = Object.values(byPlatform).map(p => ({
+      ...p,
+      compliance_pct: (p.met + p.breached) > 0
+        ? Math.round((p.met / (p.met + p.breached)) * 100) : null,
+    })).sort((a, b) => b.total - a.total);
+
+    res.json({
+      ok: true,
+      period: { from: fromIso, to: toIso },
+      daily,
+      worst_response: worst,
+      by_platform: platformSLA,
+    });
+  } catch (e) {
+    console.error('[inbox/analytics/sla/detail]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 module.exports = router;
