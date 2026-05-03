@@ -1,3 +1,18 @@
+## Session 2026-05-03 (07:11 → 07:18 UTC) — مكتملة
+- الحالة: تم الإكمال (2 مهام)
+- ما تم إنجازه:
+  - fix: BUG-1 — تصحيح localStorage key من 'token' إلى 'pro_token' في CSV export (inbox-conv.js)
+  - fix: BUG-2 — إضافة from/to/search في IV3_API.getConversations + تمريرها في iv3PollUpdate (inbox-api.js + inbox-init.js)
+  - fix: BUG-4 — visibility-aware polling: 8s نشط / 30s مخفي (inbox-init.js)
+  - feat: BUG-3 — messages pagination: ?before=<id> + زر "تحميل رسائل أقدم" + scroll position restore (inbox-chat.js + inbox-api.js + inbox-state.js + inbox.css + server/routes/inbox.js)
+- قرارات تقنية:
+  - Backend يجلب 50 رسالة DESC ثم يعكسها ASC → عرض صحيح
+  - has_more يُحسب بـ COUNT قبل أقدم رسالة محملة
+  - scroll position تُحفظ قبل الإضافة وتُستعاد بعد الـ render
+  - visibilitychange listener يُضاف مرة واحدة فقط (_visibilityListenerAdded guard)
+- آخر Commit: eb2bf5f
+- نقطة البداية القادمة: FEAT-1 — Browser Push Notifications في inbox-init.js
+
 ## Session 2026-05-03 (06:34 → 07:08 UTC) — مكتملة
 - الحالة: تم الإكمال (4 مهام من 5 — المهمة 5 كانت تقييم + إغلاق)
 - ما تم إنجازه:
