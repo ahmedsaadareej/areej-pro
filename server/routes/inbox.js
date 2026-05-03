@@ -66,6 +66,7 @@ router.get('/inbox/conversations', requireAuth, (req, res) => {
     const search      = (req.query.search || '').trim();
     const from        = req.query.from  || '';
     const to          = req.query.to    || '';
+    const labelId     = req.query.label_id || '';   // فلتر بالـ label
     const page        = Math.max(1, parseInt(req.query.page) || 1);
     const limit       = Math.min(parseInt(req.query.limit) || 50, 200);
     const offset      = (page - 1) * limit;
@@ -73,7 +74,15 @@ router.get('/inbox/conversations', requireAuth, (req, res) => {
     const { whereClause, params, isOwner } = getConversationScope(req);
 
     let conditions = [];
-    let qParams = [];
+    let qParams    = [];
+    let joinParams = [];  // params خاصة بالـ JOIN (قبل WHERE)
+
+    // فلتر label → JOIN مع inbox_conversation_labels
+    let labelJoin = '';
+    if (labelId && labelId !== 'all') {
+      labelJoin = 'JOIN inbox_conversation_labels cl ON cl.conversation_id = c.id AND cl.label_id = ?';
+      joinParams.push(parseInt(labelId));
+    }
 
     if (platform)   { conditions.push('c.platform=?');         qParams.push(platform); }
     if (status && status !== 'all') { conditions.push('c.status=?'); qParams.push(status); }
@@ -102,11 +111,13 @@ router.get('/inbox/conversations', requireAuth, (req, res) => {
       (SELECT COUNT(*) FROM inbox_messages m WHERE m.conversation_id=c.id AND m.is_read=0 AND m.direction='in') as unread,
       tu.name as agent_name
       FROM inbox_conversations c
+      ${labelJoin}
       LEFT JOIN tenant_users tu ON tu.id = c.assigned_to_id
       ${scopeConditions}
       ORDER BY c.last_message_at DESC LIMIT ? OFFSET ?`;
 
-    const rows = db.prepare(q).all(...qParams, ...params, limit, offset);
+    // الترتيب: joinParams (للـ JOIN) ثم qParams (للـ WHERE) ثم params (scope) ثم limit+offset
+    const rows = db.prepare(q).all(...joinParams, ...qParams, ...params, limit, offset);
     res.json({ ok: true, conversations: rows, isOwner });
   } catch(e) { console.error('[inbox/conversations]', e.message); res.json({ ok: true, conversations: [], isOwner: false }); }
 });
@@ -1407,9 +1418,30 @@ router.post('/inbox/auto-messages', requireAuth, (req, res) => {
 router.get('/inbox/labels', requireAuth, (req, res) => {
   const db = req.db;
   try {
-    const rows = db.prepare('SELECT * FROM inbox_labels ORDER BY name').all();
+    // أرجع كل label مع عدد المحادثات المرتبطة به (open فقط)
+    const rows = db.prepare(`
+      SELECT l.*,
+        COUNT(cl.conversation_id) as conv_count
+      FROM inbox_labels l
+      LEFT JOIN inbox_conversation_labels cl ON cl.label_id = l.id
+      LEFT JOIN inbox_conversations c ON c.id = cl.conversation_id AND (c.status IS NULL OR c.status != 'closed')
+      GROUP BY l.id
+      ORDER BY l.name
+    `).all();
     res.json({ ok: true, labels: rows });
   } catch(e) { res.json({ ok: true, labels: [] }); }
+});
+
+// GET /api/system/inbox/counts — عدادات الـ inbox folders (الكل / ملكي / غير معيّن)
+router.get('/inbox/counts', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const userId = req.user.id;
+    const all        = db.prepare("SELECT COUNT(*) as c FROM inbox_conversations WHERE status != 'closed'").get().c;
+    const mine       = db.prepare("SELECT COUNT(*) as c FROM inbox_conversations WHERE assigned_to_id=? AND status != 'closed'").get(userId).c;
+    const unassigned = db.prepare("SELECT COUNT(*) as c FROM inbox_conversations WHERE (assigned_to_id IS NULL OR assigned_to_id=0) AND status != 'closed'").get().c;
+    res.json({ ok: true, counts: { all, mine, unassigned } });
+  } catch(e) { res.json({ ok: true, counts: { all: 0, mine: 0, unassigned: 0 } }); }
 });
 router.post('/inbox/labels', requireAuth, (req, res) => {
   const db = req.db;

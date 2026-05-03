@@ -50,27 +50,28 @@
 
 ## 📋 المهام القادمة (متفق عليها — 2026-05-03)
 
-### 🔴 أولوية عالية — UX / مساحة
-1. Platform Tabs → Dropdown موفّر للمساحة
-2. Reply Toolbar → أفقي تحت الـ textarea
-3. إصلاح Avatar (دايرة ملونة صحيحة)
-4. Channel Selector في Reply Box (يتذكر آخر منصة)
+### ✅ مكتملة
+1. ~~Platform Tabs → Dropdown موفّر للمساحة~~ ✅
+2. ~~Reply Toolbar → أفقي تحت الـ textarea~~ ✅
+3. ~~إصلاح Avatar (دايرة ملونة صحيحة)~~ ✅
+4. ~~Channel Selector في Reply Box (يتذكر آخر منصة)~~ ✅
+5. ~~تعديل بيانات العميل inline~~ ✅
+6. ~~إصلاح "إضافة للـ CRM" — modal في نفس الصفحة مع prefill~~ ✅
+7. ~~إصلاح "بروفايل العميل" من Context Panel~~ ✅
+8. ~~أوردرات العميل في Context Panel~~ ✅
+9. ~~CLV Badge — total_paid/total_invoiced~~ ✅
+10. ~~فاتورة جديدة من Inbox بـ prefill~~ ✅
+11. ~~تنسيق النص في Reply Box (Bold/Italic/Strike/Mono)~~ ✅
+12. ~~New Conversation Modal — Instagram/Meta/WA API + Smart Default~~ ✅
 
-### 🟠 أولوية عالية — Context Panel
-5. تعديل بيانات العميل inline
-6. إصلاح "إضافة للـ CRM" — modal في نفس الصفحة مع prefill
-7. إصلاح "بروفايل العميل" من Context Panel
-
-### 🟡 أولوية متوسطة
-8. أوردرات العميل في Context Panel (API call ناقص)
-9. CLV Badge — total_paid/total_invoiced من الـ API
-10. فاتورة جديدة من Inbox بـ prefill
-11. تنسيق النص في Reply Box (Bold/Italic)
-12. New Conversation Modal — Instagram/Meta
+### 🔴 أولوية عالية — Respond.io Style (Labels System)
+15. **[A] Backend:** إضافة `label_id` filter في `GET /conversations`
+16. **[B] Frontend:** Labels Panel في col 1 + Label Chips على المحادثات
+17. **[C] UX:** Label Manager من داخل المحادثة (dropdown + إنشاء label)
 
 ### 🟢 أولوية منخفضة
 13. Auto-refresh cleanup عند الخروج من صفحة الـ Inbox
-14. New Conversation Modal — Smart Default للمنصة
+14. New Conversation Modal — Smart Default للمنصة (جزئياً مكتمل)
 
 ---
 
