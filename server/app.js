@@ -98,6 +98,7 @@ app.use('/api/public',  require('./routes-public'));
 app.use('/api/pay',     require('./routes/pay'));        // Payment links (public — no auth)
 app.use('/api/persons', require('./routes-persons'));
 app.use('/api/system',  require('./routes-system'));
+app.use('/api/inbox',   require('./routes/inbox/index'));  // Inbox v4 (موازي لـ v3 على /api/system)
 app.use('/api/crm',     require('./routes-crm'));
 app.use('/api/users',   require('./routes-users'));
 app.use('/api/hr',      require('./routes-hr'));
