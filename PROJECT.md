@@ -1,7 +1,7 @@
 # 📋 PROJECT.md — مرجع مشروع Areej Pro
 > **قاعدة ذهبية:** هذا الملف يُحدَّث بعد كل خطوة بدون استثناء.
 > أي جلسة جديدة تبدأ بقراءة هذا الملف أولاً قبل أي شيء.
-> آخر تحديث: 2026-05-02 20:20 UTC
+> آخر تحديث: 2026-05-03 07:08 UTC
 
 ---
 
@@ -249,68 +249,114 @@ payment_gateways (
 
 ## 🔴 المهام القادمة — مرتبة بالأولوية
 
-### 🔴 المرحلة الأولى — WhatsApp API Channel Management
-
-#### WA-1 — صفحة إعدادات WhatsApp API (الربط) ✅
-**الوصف:** صفحة إعدادات كاملة تشرح خطوتين:
-- لو عندك رقم API موجود: حقول Phone Number ID + Access Token + Webhook Token
-- لو معندكش رقم: خطوات إنشاء حساب Meta Business + ربط رقم
-- زر "اختبار الاتصال" يتحقق إن الـ token صح
-- عرض حالة الاتصال ✅ / ❌
-**الملفات:** `index.html` + `inbox-settings.js` + `server/routes/inbox.js`
-**التقدير:** 2 ساعة
-**الحالة:** ✅ commit 8c11f0a
-
-#### WA-2 — Template Manager ✅
-**الوصف:** تبويب كامل لإدارة WhatsApp Templates من جوا المنظومة:
-- قايمة كل templates مع حالتها (✅ معتمد / ⏳ قيد المراجعة / ❌ مرفوض)
-- إنشاء template جديد (form: اسم + لغة + نوع + محتوى + متغيرات)
-- تعديل / حذف
-- معاينة شكل الرسالة قبل الإرسال
-- في Inbox: Reply box → زر Templates → يعرض المعتمدة فقط
-**الملفات:** `index.html` + `inbox-settings.js` + `inbox-reply.js` + `server/routes/inbox.js`
-**التقدير:** 3-4 ساعات
-**الحالة:** ✅ commit da75f1d
-
-#### WA-3 — Analytics Dashboard للواتساب ✅
-**الوصف:** تبويب تحليلات داخل إعدادات WhatsApp API:
-- حد الرسائل الشهري + tier حالي (1K / 10K / 100K / Unlimited)
-- رسائل اليوم / الأسبوع / الشهر
-- عدد العملاء اللي اتكلمنا معاهم
-- متوسط وقت الرد (First Response Time)
-- تقسيم حسب نوع المحادثة (Marketing / Utility / Service)
-- تكلفة تقديرية للشهر الحالي
-- **ميزة فريدة:** محادثة → فاتورة → دفع (WA Conversion Rate من ERP)
-**الملفات:** `index.html` + `inbox-settings.js` + `server/routes/inbox.js`
-**التقدير:** 2-3 ساعات
-**الحالة:** ✅ commit e2d28a1
+> آخر تحديث: 2026-05-03 07:08 UTC — بعد مراجعة شاملة للـ Inbox
 
 ---
 
-### 🟡 مهام أخرى (أولوية متوسطة)
+### ✅ WhatsApp API Channel Management — مكتمل
+- WA-1: صفحة إعدادات WhatsApp API ✅ commit 8c11f0a
+- WA-2: Template Manager ✅ commit da75f1d
+- WA-3: Analytics Dashboard ✅ commit e2d28a1
 
-#### Catalog العرض السريع
-**الوصف:** زر في Reply box → يعرض المنتجات من المخزون → موظف يختار ويبعت
-**الملفات:** `inbox-reply.js` + ربط بـ inventory API
-**التقدير:** 4-5 ساعات
+---
 
-#### اختبار بوابات الدفع (Sandbox)
-**الوصف:** smoke test + اختبار دورة الدفع الكاملة بـ test credentials
-**الملفات:** `server/routes/pay.js` + `server/modules/payment/`
-**التقدير:** 1-2 ساعة (يحتاج test API keys من أحمد)
+### 🔴 الأولوية القصوى — Bugs حقيقية (بدون تدخل أحمد)
+
+#### BUG-1 — Token key خاطئ في CSV Export
+**المشكلة:** `iv3ExportConvs` تبحث عن `'token'` في localStorage لكن النظام يحفظه كـ `'pro_token'` → التصدير يرسل طلب بدون auth → 401
+**الملفات:** `public/dashboard/inbox-v3/inbox-conv.js` سطر 783
+**الإصلاح:** تغيير `localStorage.getItem('token')` إلى `localStorage.getItem('pro_token')`
+**التقدير:** 5 دقائق
+
+#### BUG-2 — Polling يتجاهل فلتر التاريخ
+**المشكلة:** `iv3PollUpdate` يستدعي `getConversations` بدون `dateFrom/dateTo` + الـ `IV3_API.getConversations` لا يمرر `from/to` أصلاً → فلتر التاريخ يُعاد كسره كل 8 ثواني
+**الملفات:** `inbox-init.js` + `inbox-api.js`
+**الإصلاح:** إضافة `from/to` في الـ API call داخل `iv3PollUpdate` + في `IV3_API.getConversations`
+**التقدير:** 15 دقيقة
+
+#### BUG-3 — Messages pagination غير موجود
+**المشكلة:** `getMessages` يحمّل آخر 100 رسالة فقط. لا يوجد زر "تحميل رسائل أقدم" → المحادثات الطويلة تفقد تاريخها
+**الملفات:** `server/routes/inbox.js` + `inbox-chat.js` + `inbox-api.js`
+**الإصلاح:** إضافة `?before=<msg_id>` parameter + زر "تحميل المزيد" في أعلى chat window
+**التقدير:** 45 دقيقة
+
+#### BUG-4 — Polling لا يتوقف لما الـ Tab مخفي
+**المشكلة:** الـ polling يستمر بنفس الـ 8 ثواني حتى لو المستخدم غاب عن الـ tab → استهلاك غير ضروري للسيرفر (900-1800 request/ساعة)
+**الملفات:** `inbox-init.js`
+**الإصلاح:** استخدام `document.addEventListener('visibilitychange')` — 15s لما مخفي، 8s لما نشط
+**التقدير:** 10 دقيقة
+
+---
+
+### 🟡 أولوية متوسطة — Features مفيدة (بدون تدخل أحمد)
+
+#### FEAT-1 — Browser Push Notifications
+**الوصف:** إشعار حقيقي للمتصفح حتى لو التبويب في الخلفية (Notification API)
+**الملفات:** `inbox-init.js`
+**التقدير:** 30 دقيقة
+
+#### FEAT-2 — "Mark All as Read"
+**الوصف:** زر واحد يصفّر كل الـ unread دفعة واحدة
+**الملفات:** `inbox-conv.js` + `server/routes/inbox.js` (endpoint جديد)
+**التقدير:** 20 دقيقة
+
+#### FEAT-3 — Relative Time في الرسائل
+**الوصف:** "منذ 3 دقائق" بدل `14:32` — أوضح للمستخدم، يُحدَّث كل دقيقة
+**الملفات:** `inbox-chat.js`
+**التقدير:** 15 دقيقة
+
+#### FEAT-4 — نسخ رسالة بـ Right-click أو Double-click
+**الوصف:** عند الضغط على الرسالة → نسخ المحتوى للـ clipboard مع toast تأكيد
+**الملفات:** `inbox-chat.js`
+**التقدير:** 10 دقيقة
+
+#### FEAT-5 — New Conversation Modal — إضافة Instagram/Meta
+**الوصف:** إرسال أول رسالة عبر Meta API (يحتاج template message معتمد)
+**الملفات:** `inbox-conv.js` + `server/routes/inbox.js`
+**التقدير:** 2 ساعة
+
+#### FEAT-6 — AI Suggestions — استبدال execSync بـ OpenAI API
+**المشكلة الحالية:** يستخدم `gsk ai` CLI بـ `execSync` — هش وغير موثوق
+**الإصلاح:** استدعاء OpenAI API مباشرة من الـ backend
+**الملفات:** `server/routes/inbox.js`
+**التقدير:** 30 دقيقة (يحتاج OpenAI key في SECRETS.md)
+
+---
+
+### 🟢 أولوية منخفضة — تحسينات جودة (بدون تدخل أحمد)
+
+#### QUAL-1 — Snooze Dashboard
+**الوصف:** صفحة/panel يعرض كل المحادثات المؤجلة وموعد إيقاظها
+**الملفات:** `inbox-conv.js` + `server/routes/inbox.js`
+**التقدير:** 30 دقيقة
+
+#### QUAL-2 — CSAT تقييم العملاء
+**الوصف:** إرسال رابط تقييم بعد إغلاق المحادثة + عرض النتائج في الإحصائيات
+**الملفات:** `inbox-chat.js` + `server/routes/inbox.js`
+**التقدير:** 2 ساعة
+
+#### QUAL-3 — تصدير تقرير Inbox PDF
+**الوصف:** تقرير الإحصائيات الكاملة كـ PDF قابل للطباعة
+**الملفات:** `inbox-settings.js` + backend
+**التقدير:** 1 ساعة
+
+#### QUAL-4 — Auto-refresh للإحصائيات
+**الوصف:** تحديث analytics كل 5 دقائق تلقائياً بدون ضغط "عرض"
+**الملفات:** `js/inbox.js`
+**التقدير:** 10 دقائق
 
 ---
 
 ### ⚪ يحتاج تدخّل أحمد
 
-#### ربط WhatsApp API
-**المطلوب:** Phone Number ID + Access Token من Meta Business Suite
+#### ربط WhatsApp API الرسمي
+**المطلوب:** Phone Number ID + WABA ID + System User Token من Meta Business Suite
 
-#### ربط WhatsApp QR
-**المطلوب:** فتح إعدادات → قنوات التواصل → واتساب QR → مسح الـ QR
+#### اختبار بوابات الدفع Sandbox
+**المطلوب:** Paymob test API Key + Integration ID أو Fawaterk test key
 
 #### ربط Telegram Bot
-**المطلوب:** 5 دقائق — Token في إعدادات قنوات التواصل
+**المطلوب:** Bot Token في إعدادات → قنوات التواصل
 
 ---
 

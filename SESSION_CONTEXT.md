@@ -1,3 +1,19 @@
+## Session 2026-05-03 (06:34 → 07:08 UTC) — مكتملة
+- الحالة: تم الإكمال (4 مهام من 5 — المهمة 5 كانت تقييم + إغلاق)
+- ما تم إنجازه:
+  - feat: صوت التنبيه — double-ping + AudioContext resume fix + mute icon toggle (f5f8bb5)
+  - feat: تصدير المحادثات CSV — endpoint + toolbar button + client fetch (5d3b61f)
+  - feat: فلتر التاريخ في الـ Inbox — UI + state + backend (from/to + search + page/offset) (b7b66cc)
+  - feat: تقرير الـ Inbox Analytics — 6 KPIs + platform bars + daily chart + top customers + keywords cloud + status breakdown (3121ef3)
+  - مراجعة شاملة للـ Inbox وتحديد 14 مشكلة/تحسين
+- قرارات تقنية:
+  - AudioContext يُفعَّل عند أول click/keydown (Chrome/Safari policy)
+  - CSV export يستخدم BOM \uFEFF لدعم Excel العربي
+  - فلتر التاريخ يُطبَّق على getConversations + export معاً
+  - Analytics تستخدم /advanced endpoint (أقوى من /analytics العادي)
+- آخر Commit: 3121ef3
+- نقطة البداية القادمة: إصلاح 3 bugs حمراء في الـ Inbox (token + polling + messages pagination)
+
 ## Session 2026-05-03 (06:20 → 06:31 UTC) — مكتملة
 - الحالة: تم الإكمال
 - ما تم إنجازه:
@@ -200,4 +216,3 @@ req.db = getTenantDb(req.user.id);
 
 ## 📌 آخر commit
 `127d48d` — fix: حذف keepalive + reconnect آمن
-
