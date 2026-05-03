@@ -261,6 +261,22 @@
               style="display:none" onchange="iv3FileSelected(this)">
           </label>
 
+          <!-- Formatting -->
+          <button class="iv3-toolbar-btn iv3-fmt-btn" onclick="iv3FmtWrap('bold')" title="عريض (*نص*)" id="iv3-fmt-bold">
+            <strong style="font-size:13px">B</strong>
+          </button>
+          <button class="iv3-toolbar-btn iv3-fmt-btn" onclick="iv3FmtWrap('italic')" title="مائل (_نص_)" id="iv3-fmt-italic">
+            <em style="font-size:13px">I</em>
+          </button>
+          <button class="iv3-toolbar-btn iv3-fmt-btn" onclick="iv3FmtWrap('strike')" title="يتوسطه خط (~نص~)" id="iv3-fmt-strike">
+            <span style="font-size:13px;text-decoration:line-through">S</span>
+          </button>
+          <button class="iv3-toolbar-btn iv3-fmt-btn" onclick="iv3FmtWrap('mono')" title="كود (```نص```)" id="iv3-fmt-mono">
+            <span style="font-size:12px;font-family:monospace">&lt;/&gt;</span>
+          </button>
+
+          <div class="iv3-toolbar-sep"></div>
+
           <!-- Templates -->
           <div style="position:relative">
             <button class="iv3-toolbar-btn" onclick="iv3ToggleTemplates()" title="ردود جاهزة (/)">

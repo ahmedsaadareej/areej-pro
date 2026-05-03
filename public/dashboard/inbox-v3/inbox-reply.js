@@ -1030,3 +1030,56 @@ function iv3UpdateCharCount(el) {
   const count = document.getElementById('iv3-char-count');
   if (count) count.textContent = el.value.length;
 }
+
+// ── Text Formatting (Bold / Italic / Strike / Mono) ─────────────────
+
+/**
+ * iv3FmtWrap(type)
+ * يلف النص المحدد بعلامات واتساب/تيليغرام
+ * bold   → *text*
+ * italic → _text_
+ * strike → ~text~
+ * mono   → ```text```
+ */
+function iv3FmtWrap(type) {
+  const ta = document.getElementById('iv3-reply-input');
+  if (!ta) return;
+
+  const start = ta.selectionStart;
+  const end   = ta.selectionEnd;
+  const val   = ta.value;
+  const sel   = val.slice(start, end);
+
+  const markers = {
+    bold:   { o: '*',   c: '*'   },
+    italic: { o: '_',   c: '_'   },
+    strike: { o: '~',   c: '~'   },
+    mono:   { o: '```', c: '```' },
+  };
+  const m = markers[type];
+  if (!m) return;
+
+  // لو الـ selection مغلف بالفعل → اشيله (toggle)
+  if (
+    val.slice(start - m.o.length, start) === m.o &&
+    val.slice(end, end + m.c.length)     === m.c
+  ) {
+    const before = val.slice(0, start - m.o.length);
+    const after  = val.slice(end + m.c.length);
+    ta.value = before + sel + after;
+    ta.setSelectionRange(start - m.o.length, end - m.o.length);
+  } else {
+    // إضافة الـ markers
+    const before  = val.slice(0, start);
+    const after   = val.slice(end);
+    const wrapped = m.o + (sel || 'نص') + m.c;
+    ta.value = before + wrapped + after;
+    // تحديد النص الداخلي بعد الإضافة
+    const newStart = start + m.o.length;
+    const newEnd   = newStart + (sel || 'نص').length;
+    ta.setSelectionRange(newStart, newEnd);
+  }
+
+  ta.focus();
+  iv3UpdateCharCount(ta);
+}

@@ -348,10 +348,55 @@ function iv3CtxOpenProfile(customerId) {
   }
 }
 
-function iv3CtxNewInvoice() {
-  if (IV3.activeConv) {
-    window.open(`/dashboard#p=invoices&new=1&customer=${encodeURIComponent(IV3.activeConv.sender_name || '')}`, '_blank');
+async function iv3CtxNewInvoice() {
+  const conv = IV3.activeConv;
+  if (!conv) return;
+
+  // 1. تحديد اللوحة الصحيحة
+  if (typeof switchPanel === 'function') switchPanel('invoices');
+  else if (typeof loadPage === 'function') loadPage('invoices');
+
+  // 2. انتظر تحميل invoices panel
+  await new Promise(r => setTimeout(r, 350));
+
+  // 3. افتح نموذج فاتورة جديدة
+  if (typeof openNewInvoice === 'function') {
+    await openNewInvoice();
+  } else {
+    iv3Toast('صفحة الفواتير غير محملة', 'error');
+    return;
   }
+
+  // 4. prefill بيانات العميل
+  await new Promise(r => setTimeout(r, 80));
+  const crmC    = IV3._ctxCrmContact || {};
+  const nameVal = crmC.name || crmC.company_name
+    || iv3CleanSenderName(conv.sender_name, conv.sender_id) || '';
+  const phoneVal = crmC.phone || iv3ExtractPhone(conv.sender_id) || '';
+  const emailVal = crmC.email || '';
+  const cityVal  = crmC.city  || '';
+
+  const setV = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+  setV('inv-name',    nameVal);
+  setV('inv-phone',   phoneVal);
+  setV('inv-email',   emailVal);
+  setV('inv-address', cityVal);
+
+  // 5. لو موجود في CRM — حدد العميل من الـ dropdown
+  if (IV3._ctxContactId) {
+    const sel = document.getElementById('inv-contact');
+    if (sel) {
+      sel.value = String(IV3._ctxContactId);
+      // trigger fillClientFromCRM لو التحديد نجح
+      if (sel.value === String(IV3._ctxContactId) && typeof fillClientFromCRM === 'function') {
+        fillClientFromCRM();
+      }
+    }
+  }
+
+  // focus على حقل الاسم
+  document.getElementById('inv-name')?.focus();
+  iv3Toast('تم تحميل بيانات العميل ✓', 'success');
 }
 
 function iv3CtxNewOrder() {

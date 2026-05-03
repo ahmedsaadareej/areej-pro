@@ -1,3 +1,19 @@
+## Session 2026-05-03 (13:31 → 13:48 UTC) — مهمة 3 مكتملة
+- الحالة: تم الإكمال (مهمة 3 من 5)
+- ما تم إنجازه:
+  - /api/crm/contacts/by-phone: يرجع total_paid + total_invoiced + balance + recent_invoices + recent_orders في call واحد
+  - iv3RenderCustomerERP: CLV grid بـ 4 خانات (فواتير عدد / مدفوع / ذمم)
+  - أوردرات حقيقية في Context Panel من sys_orders by contact_id
+  - IV3_ORDER_STATUS + IV3_INV_STATUS: ترجمة عربية وألوان لكل حالة
+  - صفوف قابلة للنقر (تفتح صفحة invoices/orders)
+  - cache-bust → v=1777815224
+- قرارات تقنية:
+  - كل البيانات في API call واحد (لا extra round-trips)
+  - recent_invoices/recent_orders: آخر 4 من كل نوع DESC
+  - balance = total_invoiced - total_paid (محسوب في backend)
+- آخر Commit: 6f0e4f7
+- نقطة البداية القادمة: مهمة 4 — فاتورة جديدة من Inbox بـ prefill + تنسيق النص في Reply Box
+
 ## Session 2026-05-03 (13:20 → 13:40 UTC) — مهمة 2 مكتملة
 - الحالة: تم الإكمال (مهمة 2 من 5)
 - ما تم إنجازه:
