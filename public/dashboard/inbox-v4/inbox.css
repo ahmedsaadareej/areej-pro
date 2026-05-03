@@ -3779,3 +3779,260 @@
 @media (prefers-color-scheme: dark) {
   .iv4-an-csat-bar-wrap { background: #334155; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   P4-2 Chatbot Flows Builder
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Overlay ────────────────────────────────────────────────── */
+#iv4-chatbot-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(0,0,0,.5);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+
+.iv4-cb-panel {
+  background: var(--iv4-bg, #fff);
+  border-radius: 12px;
+  width: 100%; max-width: 860px;
+  max-height: 90vh;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.25);
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+.iv4-cb-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .85rem 1.25rem;
+  border-bottom: 1px solid var(--iv4-border, #e5e7eb);
+  flex-shrink: 0;
+}
+.iv4-cb-header h2 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+.iv4-cb-header-actions { display: flex; gap: .5rem; align-items: center; }
+
+.iv4-cb-close {
+  background: none; border: none; font-size: 1.2rem; cursor: pointer;
+  color: var(--iv4-text-muted, #6b7280); padding: .2rem .5rem;
+  border-radius: 6px; transition: background .15s;
+}
+.iv4-cb-close:hover { background: var(--iv4-hover, #f3f4f6); }
+
+/* ── Body ───────────────────────────────────────────────────── */
+.iv4-cb-body {
+  flex: 1; overflow-y: auto; padding: 1.25rem;
+}
+
+/* ── Buttons ────────────────────────────────────────────────── */
+.iv4-cb-btn {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .45rem .9rem; border-radius: 7px;
+  font-size: .85rem; font-weight: 600; cursor: pointer;
+  border: none; transition: all .15s;
+}
+.iv4-cb-btn--primary  { background: #3b82f6; color: #fff; }
+.iv4-cb-btn--primary:hover { background: #2563eb; }
+.iv4-cb-btn--ghost { background: transparent; border: 1px solid var(--iv4-border,#e5e7eb); color: var(--iv4-text,#111); }
+.iv4-cb-btn--ghost:hover { background: var(--iv4-hover,#f3f4f6); }
+.iv4-cb-btn--sm { padding: .3rem .65rem; font-size: .8rem; }
+
+/* ── Flow List ──────────────────────────────────────────────── */
+.iv4-cb-flow-list { display: flex; flex-direction: column; gap: .75rem; }
+
+.iv4-cb-flow-card {
+  border: 1px solid var(--iv4-border,#e5e7eb);
+  border-radius: 10px; padding: .9rem 1rem;
+  background: var(--iv4-bg-alt,#f9fafb);
+  transition: border-color .15s;
+}
+.iv4-cb-flow-card:hover { border-color: #3b82f6; }
+
+.iv4-cb-flow-card-top { display: flex; align-items: flex-start; gap: .75rem; }
+.iv4-cb-flow-info { flex: 1; }
+.iv4-cb-flow-name { font-weight: 700; font-size: .95rem; margin-bottom: .25rem; }
+.iv4-cb-flow-meta { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-bottom: .25rem; }
+.iv4-cb-flow-desc { font-size: .8rem; color: var(--iv4-text-muted,#6b7280); margin-top: .2rem; }
+
+.iv4-cb-trigger-badge {
+  background: #eff6ff; color: #1d4ed8; border-radius: 99px;
+  padding: .15rem .55rem; font-size: .75rem; font-weight: 600;
+}
+.iv4-cb-keywords {
+  font-size: .75rem; color: #6b7280;
+  background: #f3f4f6; border-radius: 99px; padding: .15rem .5rem;
+  max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.iv4-cb-steps-count { font-size: .75rem; color: #6b7280; }
+
+.iv4-cb-flow-actions { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+
+/* Toggle Switch */
+.iv4-cb-toggle-wrap { position: relative; display: inline-block; width: 40px; height: 22px; cursor: pointer; }
+.iv4-cb-toggle-wrap input { opacity: 0; width: 0; height: 0; }
+.iv4-cb-toggle-slider {
+  position: absolute; inset: 0;
+  background: #d1d5db; border-radius: 99px; transition: .2s;
+}
+.iv4-cb-toggle-slider::before {
+  content: ''; position: absolute;
+  width: 16px; height: 16px; left: 3px; bottom: 3px;
+  background: #fff; border-radius: 50%; transition: .2s;
+}
+.iv4-cb-toggle-wrap input:checked + .iv4-cb-toggle-slider { background: #10b981; }
+.iv4-cb-toggle-wrap input:checked + .iv4-cb-toggle-slider::before { transform: translateX(18px); }
+
+.iv4-cb-edit-btn, .iv4-cb-del-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 1rem; padding: .3rem .4rem; border-radius: 6px;
+  transition: background .15s;
+}
+.iv4-cb-edit-btn:hover { background: #eff6ff; }
+.iv4-cb-del-btn:hover  { background: #fef2f2; }
+
+/* ── Editor ─────────────────────────────────────────────────── */
+.iv4-cb-editor { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.iv4-cb-back-row {
+  display: flex; align-items: center; gap: .75rem; margin-bottom: .5rem;
+}
+.iv4-cb-back-row h3 { margin: 0; font-size: 1rem; font-weight: 700; }
+
+.iv4-cb-editor-meta {
+  background: var(--iv4-bg-alt,#f9fafb);
+  border: 1px solid var(--iv4-border,#e5e7eb);
+  border-radius: 10px; padding: 1rem;
+}
+
+.iv4-cb-form-row { display: flex; flex-direction: column; gap: .35rem; margin-bottom: .75rem; }
+.iv4-cb-form-row label { font-size: .82rem; font-weight: 600; color: var(--iv4-text-muted,#374151); }
+
+.iv4-cb-input, .iv4-cb-select, .iv4-cb-textarea {
+  padding: .5rem .75rem; border: 1px solid var(--iv4-border,#d1d5db);
+  border-radius: 7px; font-size: .88rem;
+  background: var(--iv4-bg,#fff); color: var(--iv4-text,#111);
+  transition: border-color .15s;
+  width: 100%; box-sizing: border-box;
+}
+.iv4-cb-input:focus, .iv4-cb-select:focus, .iv4-cb-textarea:focus {
+  outline: none; border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+}
+.iv4-cb-textarea { resize: vertical; min-height: 80px; }
+
+/* ── Steps Section ──────────────────────────────────────────── */
+.iv4-cb-steps-section {
+  border: 1px solid var(--iv4-border,#e5e7eb);
+  border-radius: 10px; overflow: hidden;
+}
+.iv4-cb-steps-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .65rem 1rem;
+  background: var(--iv4-bg-alt,#f9fafb);
+  border-bottom: 1px solid var(--iv4-border,#e5e7eb);
+  font-weight: 600; font-size: .88rem;
+}
+.iv4-cb-steps-tree { padding: .75rem; min-height: 80px; }
+.iv4-cb-tree-empty { color: var(--iv4-text-muted,#9ca3af); font-size: .85rem; text-align: center; padding: 1.5rem 0; }
+
+/* Tree Nodes */
+.iv4-cb-tree-node { margin-bottom: .5rem; }
+.iv4-cb-tree-children { margin-right: 1.5rem; padding-right: 1rem; border-right: 2px dashed #e5e7eb; margin-top: .5rem; }
+
+.iv4-cb-step-card {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .6rem .85rem;
+  border: 1px solid var(--iv4-border,#e5e7eb);
+  border-left: 3px solid #3b82f6;
+  border-radius: 8px;
+  background: var(--iv4-bg,#fff);
+  gap: .75rem;
+}
+.iv4-cb-step-card-left { display: flex; align-items: center; gap: .6rem; flex: 1; min-width: 0; }
+.iv4-cb-step-icon { font-size: 1.1rem; flex-shrink: 0; }
+.iv4-cb-step-info { display: flex; flex-direction: column; min-width: 0; }
+.iv4-cb-step-type { font-size: .78rem; font-weight: 700; color: var(--iv4-text-muted,#374151); }
+.iv4-cb-step-preview { font-size: .82rem; color: var(--iv4-text,#6b7280); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
+.iv4-cb-step-btns { display: flex; gap: .3rem; flex-shrink: 0; }
+
+.iv4-cb-step-btn {
+  background: none; border: 1px solid transparent; cursor: pointer;
+  font-size: .85rem; padding: .2rem .45rem; border-radius: 5px;
+  transition: all .15s; color: #6b7280;
+}
+.iv4-cb-step-btn:hover { background: var(--iv4-hover,#f3f4f6); border-color: #d1d5db; }
+.iv4-cb-step-btn--del:hover { background: #fef2f2; color: #ef4444; border-color: #fca5a5; }
+
+/* ── Editor Footer ──────────────────────────────────────────── */
+.iv4-cb-editor-footer {
+  display: flex; justify-content: flex-end; gap: .75rem;
+  padding-top: .5rem; border-top: 1px solid var(--iv4-border,#e5e7eb);
+}
+
+/* ── Step Modal ─────────────────────────────────────────────── */
+.iv4-cb-step-modal {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,.4);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10; border-radius: 12px;
+}
+.iv4-cb-step-modal-box {
+  background: var(--iv4-bg,#fff);
+  border-radius: 10px; width: 100%; max-width: 480px;
+  display: flex; flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0,0,0,.2);
+  max-height: 80vh; overflow: hidden;
+}
+.iv4-cb-step-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .75rem 1rem; border-bottom: 1px solid var(--iv4-border,#e5e7eb);
+  font-weight: 700;
+}
+.iv4-cb-step-modal-header button {
+  background: none; border: none; font-size: 1.1rem; cursor: pointer;
+  color: #6b7280; padding: .2rem .4rem; border-radius: 5px;
+}
+.iv4-cb-step-modal-body { padding: 1rem; overflow-y: auto; flex: 1; }
+.iv4-cb-step-modal-footer {
+  display: flex; justify-content: flex-end; gap: .5rem;
+  padding: .75rem 1rem; border-top: 1px solid var(--iv4-border,#e5e7eb);
+}
+
+/* Options Rows */
+.iv4-cb-opt-row { display: flex; gap: .5rem; align-items: center; margin-bottom: .4rem; }
+.iv4-cb-opt-row .iv4-cb-input { flex: 1; }
+
+/* ── States ─────────────────────────────────────────────────── */
+.iv4-cb-loading, .iv4-cb-empty, .iv4-cb-error {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: .5rem;
+  min-height: 120px; color: var(--iv4-text-muted,#6b7280);
+  font-size: .9rem; text-align: center;
+}
+.iv4-cb-error { color: #ef4444; }
+
+/* ── Toast ──────────────────────────────────────────────────── */
+.iv4-cb-toast {
+  position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(2rem);
+  background: #1f2937; color: #fff; border-radius: 8px;
+  padding: .6rem 1.2rem; font-size: .88rem; font-weight: 500;
+  opacity: 0; transition: all .3s; z-index: 9999; white-space: nowrap;
+  pointer-events: none;
+}
+.iv4-cb-toast--show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Dark Mode ──────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .iv4-cb-panel, .iv4-cb-step-modal-box {
+    background: #1e293b; border-color: #334155;
+  }
+  .iv4-cb-flow-card, .iv4-cb-editor-meta, .iv4-cb-step-card {
+    background: #0f172a; border-color: #334155;
+  }
+  .iv4-cb-steps-header { background: #1e293b; border-color: #334155; }
+  .iv4-cb-input, .iv4-cb-select, .iv4-cb-textarea {
+    background: #1e293b; border-color: #334155; color: #e2e8f0;
+  }
+  .iv4-cb-trigger-badge { background: #1e3a5f; color: #93c5fd; }
+  .iv4-cb-tree-children { border-color: #334155; }
+}

@@ -403,6 +403,20 @@ router.post('/whatsapp/:userId', express.json(), async (req, res) => {
             db.prepare("INSERT INTO inbox_messages (conversation_id, platform, direction, content, media_type, is_read, platform_msg_id, sent_at, media_id) VALUES (?, 'whatsapp', 'in', ?, ?, 0, ?, datetime(?, 'unixepoch'), ?)").run(conv.id, content, mediaType, msgId, ts, mediaId || null);
           }
           console.log('[WA Webhook POST] saved msg convId=' + (conv && conv.id) + ' from=' + senderId + ' content=' + content);
+
+          // P4-2 Chatbot Engine — تشغيل محرك الـ chatbot على الرسالة الواردة (v4)
+          try {
+            const { processChatbot } = require('./routes/inbox/chatbot');
+            // حاول البحث عن محادثة v4 مقابلة (نفس sender_id + platform)
+            const convV4 = db.prepare(
+              "SELECT * FROM inbox_conversations_v4 WHERE platform = 'whatsapp' AND sender_phone = ? LIMIT 1"
+            ).get(senderId);
+            if (convV4 && content) {
+              processChatbot(db, convV4, content, userId).catch(e =>
+                console.error('[chatbot hook WA]', e.message)
+              );
+            }
+          } catch (_cbErr) { /* chatbot table غير موجودة بعد — تجاهل */ }
         }
       }
     }

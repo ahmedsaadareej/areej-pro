@@ -396,6 +396,48 @@ const TENANT_MIGRATIONS = [
     `CREATE INDEX IF NOT EXISTS idx_conv_notes_v4_conv ON inbox_conv_notes_v4(conversation_id)`,
   ]},
 
+  // v26: inbox_chatbot_flows_v4 + inbox_chatbot_steps_v4 (P4-2 Chatbot Flows)
+  { version: 26, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_chatbot_flows_v4 (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id    INTEGER NOT NULL,
+      name         TEXT    NOT NULL,
+      description  TEXT,
+      trigger_type TEXT    NOT NULL DEFAULT 'keyword',
+      trigger_data TEXT,
+      is_active    INTEGER NOT NULL DEFAULT 0,
+      platforms    TEXT    DEFAULT '[]',
+      created_at   INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at   INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_chatbot_flows_v4_tenant ON inbox_chatbot_flows_v4(tenant_id)`,
+    `CREATE TABLE IF NOT EXISTS inbox_chatbot_steps_v4 (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      flow_id      INTEGER NOT NULL REFERENCES inbox_chatbot_flows_v4(id) ON DELETE CASCADE,
+      parent_id    INTEGER REFERENCES inbox_chatbot_steps_v4(id) ON DELETE SET NULL,
+      step_order   INTEGER NOT NULL DEFAULT 0,
+      step_type    TEXT    NOT NULL DEFAULT 'message',
+      content      TEXT,
+      options      TEXT    DEFAULT '[]',
+      condition    TEXT,
+      action_data  TEXT,
+      created_at   INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_chatbot_steps_v4_flow ON inbox_chatbot_steps_v4(flow_id)`,
+    `CREATE TABLE IF NOT EXISTS inbox_chatbot_sessions_v4 (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id       INTEGER NOT NULL,
+      conversation_id INTEGER NOT NULL,
+      flow_id         INTEGER NOT NULL,
+      current_step_id INTEGER,
+      state           TEXT    DEFAULT '{}',
+      status          TEXT    NOT NULL DEFAULT 'active',
+      started_at      INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at      INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_chatbot_sessions_v4_conv ON inbox_chatbot_sessions_v4(conversation_id)`,
+  ]},
+
   // أضف migrations جديدة هنا دايماً — لا تعدّل القديمة أبداً
 ];
 

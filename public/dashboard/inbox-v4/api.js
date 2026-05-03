@@ -502,6 +502,19 @@ const InboxAPI = (() => {
     },
   };
 
+
+  // ─── Chatbot Flows (P4-2) ──────────────────────────────────────────────
+  const chatbot = {
+    list       : ()          => _get('/inbox/chatbot/flows'),
+    get        : (id)        => _get(`/inbox/chatbot/flows/${id}`),
+    create     : (data)      => _post('/inbox/chatbot/flows', data),
+    update     : (id, data)  => _put(`/inbox/chatbot/flows/${id}`, data),
+    delete     : (id)        => _delete(`/inbox/chatbot/flows/${id}`),
+    toggle     : (id)        => _put(`/inbox/chatbot/flows/${id}/toggle`, {}),
+    saveSteps  : (id, steps) => _put(`/inbox/chatbot/flows/${id}/steps`, { steps }),
+    test       : (id, text)  => _post(`/inbox/chatbot/flows/${id}/test`, { input_text: text }),
+  };
+
   // ─── Public API ───────────────────────────────────────────────────────
   return {
     conversations,
@@ -522,6 +535,7 @@ const InboxAPI = (() => {
     search,
     newConversation,
     context,
+    chatbot,
     // expose للـ debugging
     _fetch,
     _get,

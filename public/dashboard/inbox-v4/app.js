@@ -227,6 +227,9 @@
       }
     }
 
+    // Phase 4-2 — Chatbot Flows
+    if (typeof InboxChatbot !== 'undefined') InboxChatbot.init(); // P4-2 ✅
+
     // expose showInboxToast globally (for team.js + other modules)
     window.showInboxToast = toast;
 

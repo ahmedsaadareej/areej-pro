@@ -44,8 +44,9 @@ router.use('/', require('./team'));
 router.use('/', require('./labels'));
 router.use('/', require('./search'));
 
-// Phase 4 — Automation (P4-1 Keywords Auto-Reply)
+// Phase 4 — Automation (P4-1 Keywords Auto-Reply) + (P4-2 Chatbot Flows)
 router.use('/', require('./automation'));
+router.use('/', require('./chatbot'));
 
 // Phase 5 — Context Panel (P5-1 Customer Info + CRM Link)
 router.use('/', require('./context'));
