@@ -61,6 +61,61 @@ const upload = multer({
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+
+/**
+ * إرسال SSE notification لكل موظف مذكور في النوتس (P2-4)
+ * @param {object} db - tenant DB
+ * @param {number} tenantId - tenant ID
+ * @param {Array<number>} mentionIds - مصفوفة IDs الموظفين المذكورين
+ * @param {object} noteMsg - بيانات النوتس
+ * @param {object} mentionerUser - الموظف الذي كتب النوتس
+ */
+async function _notifyMentions(db, tenantId, mentionIds, noteMsg, mentionerUser) {
+  if (!mentionIds || mentionIds.length === 0) return;
+
+  let sseToUser;
+  try {
+    const streamMod = require('./stream');
+    sseToUser = streamMod.sendToUser;
+  } catch (_) { return; }
+
+  const payload = {
+    type:            'note:mention',
+    conversation_id: noteMsg.conversation_id,
+    message_id:      noteMsg.id,
+    content:         noteMsg.content,
+    mentioned_by: {
+      id:   mentionerUser.id,
+      name: mentionerUser.name || mentionerUser.username || 'موظف',
+    },
+  };
+
+  // أرسل لكل موظف مذكور بشكل فردي (لا ترسل لنفسه)
+  mentionIds.forEach(uid => {
+    if (uid !== mentionerUser.id) {
+      sseToUser(uid, 'note:mention', payload);
+    }
+  });
+
+  // سجّل mention في timeline لكل موظف مذكور
+  const now = Math.floor(Date.now() / 1000);
+  mentionIds.forEach(uid => {
+    db.run(
+      `INSERT OR IGNORE INTO inbox_timeline_v4
+         (conversation_id, event_type, actor_id, actor_name, meta, created_at)
+       VALUES (?, 'note_mention', ?, ?, json(?), ?)`,
+      [
+        noteMsg.conversation_id,
+        mentionerUser.id,
+        mentionerUser.name || mentionerUser.username || 'موظف',
+        JSON.stringify({ mentioned_user_id: uid, message_id: noteMsg.id }),
+        now,
+      ],
+      err => { if (err) console.error('[messages] mention timeline error:', err); }
+    );
+  });
+}
+
 /**
  * تحديد content_type من mimetype
  */
@@ -338,6 +393,7 @@ router.post('/conversations/:id/messages', async (req, res) => {
     media_filename,
     quoted_msg_id,
     channel_override,
+    mention_ids,               // P2-4: موظفين مذكورين في النوتس
   } = req.body;
 
   // ── Validation ─────────────────────────────────────────────────────────
@@ -443,6 +499,20 @@ router.post('/conversations/:id/messages', async (req, res) => {
       }
     }
 
+    // ── @Mentions notification (P2-4) ─────────────────────────────────
+    if (isNote && Array.isArray(mention_ids) && mention_ids.length > 0) {
+      const mentionIdsInt = mention_ids
+        .map(id => parseInt(id, 10))
+        .filter(id => !isNaN(id));
+      await _notifyMentions(
+        db,
+        req.user.tenant_id,
+        mentionIdsInt,
+        { ...savedMsg, conversation_id: convId },
+        req.user
+      );
+    }
+
     // ── SSE: تحديث المحادثة في القائمة ─────────────────────────────────
     try {
       const { broadcast: sseBroadcast } = require('./stream');
@@ -452,7 +522,11 @@ router.post('/conversations/:id/messages', async (req, res) => {
       });
     } catch (_) {}
 
-    return res.json({ success: true, message: savedMsg });
+    return res.json({
+      success:       true,
+      message:       savedMsg,
+      mention_count: Array.isArray(mention_ids) ? mention_ids.length : 0,
+    });
 
   } catch (e) {
     console.error('[messages.js] send error:', e);

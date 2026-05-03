@@ -166,15 +166,17 @@ const InboxAPI = (() => {
     /**
      * إرسال رسالة
      */
-    send(convId, { content, contentType = 'text', mediaUrl, quotedMsgId, channelOverride, templateName, templateVars } = {}) {
+    send(convId, { content, contentType = 'text', mediaUrl, quotedMsgId, channelOverride, templateName, templateVars, direction, mentionIds } = {}) {
       return _post(`/inbox/conversations/${convId}/messages`, {
         content,
-        content_type: contentType,
-        media_url: mediaUrl,
-        quoted_msg_id: quotedMsgId,
+        content_type:     contentType,
+        media_url:        mediaUrl,
+        quoted_msg_id:    quotedMsgId,
         channel_override: channelOverride,
-        template_name: templateName,
-        template_vars: templateVars,
+        template_name:    templateName,
+        template_vars:    templateVars,
+        ...(direction   ? { direction }               : {}),
+        ...(mentionIds  ? { mention_ids: mentionIds } : {}),  // P2-4
       });
     },
 

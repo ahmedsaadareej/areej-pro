@@ -11,6 +11,7 @@
  *   - quoted message (الرد على رسالة محددة)
  *   - منع الإرسال المزدوج (lock أثناء الإرسال)
  *   - Ctrl+Enter أو Enter للإرسال (Shift+Enter = سطر جديد)
+ *   - @Mentions في النوتس: autocomplete + تمييز بصري (P2-4)
  */
 
 const InboxReply = (() => {
@@ -24,6 +25,13 @@ const InboxReply = (() => {
   let _sending     = false;   // lock: يمنع الإرسال المزدوج
   let _pendingFile = null;    // { file, url (object URL), contentType }
   let _quotedMsg   = null;    // { id, content, sender } — الرسالة المقتبسة
+
+  // ─── @Mention State (P2-4) ────────────────────────────────────────────
+  let _mentionQuery      = null;   // النص بعد @ (null = مش في mention mode)
+  let _mentionStart      = -1;    // موقع @ في الـ textarea
+  let _mentionDropdown   = null;  // عنصر القائمة المنسدلة
+  let _mentionResults    = [];    // الموظفين المُفلترين
+  let _mentionCursor     = -1;    // العنصر المُحدد في القائمة
 
   // ─── Helpers UI ──────────────────────────────────────────────────────────
 
@@ -246,6 +254,13 @@ const InboxReply = (() => {
 
     if (!content && !_pendingFile) return;
 
+    // ── استخراج الـ mentions قبل الإرسال (P2-4) ─────────────────────────
+    const mentions = (mode === 'note' && content)
+      ? _extractMentions(content)
+      : [];
+
+    _hideMentionDropdown();
+
     _sending = true;
     _updateSendBtn();
 
@@ -269,20 +284,14 @@ const InboxReply = (() => {
 
       } else {
         // ── إرسال نص ─────────────────────────────────────────────────
-        const body = {
-          content,
-          content_type: 'text',
-          direction:    mode === 'note' ? 'note' : 'outbound',
-        };
-        if (_quotedMsg?.id)  body.quoted_msg_id    = _quotedMsg.id;
-        if (channel)         body.channel_override = channel;
-
         const { data, error } = await InboxAPI.messages.send(convId, {
           content,
           contentType:     'text',
           quotedMsgId:     _quotedMsg?.id || null,
           channelOverride: channel,
-          direction:       body.direction,
+          direction:       mode === 'note' ? 'note' : 'outbound',
+          // أرسل الـ mentions مع النوتس (P2-4)
+          mentionIds:      mentions.map(a => a.id),
         });
         result = error ? { error } : data;
       }
@@ -307,6 +316,208 @@ const InboxReply = (() => {
       _sending = false;
       _updateSendBtn();
     }
+  }
+
+  // ─── @Mention Autocomplete (P2-4) ─────────────────────────────────────────
+
+  /**
+   * تحليل موقع المؤشر في الـ textarea لكشف إن كنّا داخل @mention
+   * يُعيد { active: bool, query: string, start: number }
+   */
+  function _parseMentionContext(ta) {
+    const pos  = ta.selectionStart;
+    const text = ta.value.slice(0, pos);
+    // ابحث عن آخر @ في السطر الحالي (لا مسافة بعده حتى المؤشر)
+    const match = text.match(/@(\w*)$/);
+    if (!match) return { active: false };
+    return {
+      active: true,
+      query:  match[1],               // النص بعد @
+      start:  pos - match[0].length,  // موقع @ في النص الكامل
+    };
+  }
+
+  /**
+   * عرض قائمة الـ @mention
+   * @param {string} query - البحث الحالي
+   * @param {number} mentionStart - موقع @ في الـ textarea
+   */
+  function _showMentionDropdown(query, mentionStart) {
+    const agents = InboxStore.state.agents || [];
+    // فلتر بالاسم أو username
+    const filtered = agents.filter(a => {
+      const name = (a.name || a.username || '').toLowerCase();
+      return name.startsWith(query.toLowerCase());
+    }).slice(0, 6);  // حد أقصى 6 نتائج
+
+    _mentionResults = filtered;
+    _mentionCursor  = filtered.length > 0 ? 0 : -1;
+
+    if (filtered.length === 0) {
+      _hideMentionDropdown();
+      return;
+    }
+
+    // أنشئ الـ dropdown لو مش موجود
+    if (!_mentionDropdown) {
+      _mentionDropdown = document.createElement('div');
+      _mentionDropdown.id        = 'iv4-mention-dropdown';
+      _mentionDropdown.className = 'iv4-mention-dropdown';
+      _mentionDropdown.setAttribute('role', 'listbox');
+      document.body.appendChild(_mentionDropdown);
+    }
+
+    _renderMentionItems();
+    _positionMentionDropdown();
+    _mentionStart = mentionStart;
+  }
+
+  /**
+   * رسم عناصر القائمة
+   */
+  function _renderMentionItems() {
+    if (!_mentionDropdown) return;
+    _mentionDropdown.innerHTML = _mentionResults.map((a, i) => {
+      const name   = _esc(a.name || a.username || '?');
+      const status = a.status || 'offline';
+      const colors = { online: '#22c55e', busy: '#f59e0b', away: '#94a3b8', offline: '#64748b' };
+      const color  = colors[status] || colors.offline;
+      return `
+        <div class="iv4-mention-item ${i === _mentionCursor ? 'active' : ''}"
+             role="option"
+             data-idx="${i}"
+             data-name="${_esc(a.name || a.username || '')}"
+             data-id="${a.id}">
+          <span class="iv4-mention-dot" style="background:${color}"></span>
+          <span class="iv4-mention-name">${name}</span>
+        </div>
+      `;
+    }).join('');
+
+    // ربط أحداث النقر
+    _mentionDropdown.querySelectorAll('.iv4-mention-item').forEach(el => {
+      el.addEventListener('mousedown', e => {
+        e.preventDefault();  // لا نفقد focus على الـ textarea
+        const idx = parseInt(el.dataset.idx, 10);
+        _insertMention(idx);
+      });
+    });
+  }
+
+  /**
+   * تحديد موقع القائمة بالنسبة للـ textarea (فوق أو تحت)
+   */
+  function _positionMentionDropdown() {
+    if (!_mentionDropdown) return;
+    const ta   = $('iv4-reply-textarea');
+    if (!ta) return;
+    const rect = ta.getBoundingClientRect();
+    const ddH  = 220;  // الارتفاع التقريبي للـ dropdown
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const showAbove  = spaceBelow < ddH + 8;
+
+    _mentionDropdown.style.left   = `${rect.left}px`;
+    _mentionDropdown.style.width  = `${Math.min(rect.width, 280)}px`;
+
+    if (showAbove) {
+      _mentionDropdown.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+      _mentionDropdown.style.top    = 'auto';
+    } else {
+      _mentionDropdown.style.top    = `${rect.bottom + 4}px`;
+      _mentionDropdown.style.bottom = 'auto';
+    }
+
+    _mentionDropdown.classList.remove('hidden');
+  }
+
+  /**
+   * إخفاء القائمة + reset الـ state
+   */
+  function _hideMentionDropdown() {
+    if (_mentionDropdown) {
+      _mentionDropdown.innerHTML = '';
+      _mentionDropdown.classList.add('hidden');
+    }
+    _mentionQuery   = null;
+    _mentionStart   = -1;
+    _mentionResults = [];
+    _mentionCursor  = -1;
+  }
+
+  /**
+   * إدراج اسم الموظف في الـ textarea بدلاً من @query
+   * @param {number} idx - فهرس الموظف في _mentionResults
+   */
+  function _insertMention(idx) {
+    const agent = _mentionResults[idx];
+    if (!agent) return;
+
+    const ta   = $('iv4-reply-textarea');
+    if (!ta) return;
+
+    const name       = agent.name || agent.username || '';
+    const cursorPos  = ta.selectionStart;
+    const before     = ta.value.slice(0, _mentionStart);
+    const after      = ta.value.slice(cursorPos);
+    const mention    = `@${name} `;
+
+    ta.value = before + mention + after;
+    const newPos = _mentionStart + mention.length;
+    ta.setSelectionRange(newPos, newPos);
+    ta.focus();
+
+    _hideMentionDropdown();
+    _updateSendBtn();
+    _updateCharCount();
+  }
+
+  /**
+   * التحكم في القائمة بلوحة المفاتيح (↑ ↓ Enter Escape)
+   * يُعيد true إذا عالج الحدث (منع الإرسال)
+   */
+  function _handleMentionKeydown(e) {
+    if (!_mentionDropdown || _mentionDropdown.classList.contains('hidden')) return false;
+    if (_mentionResults.length === 0) return false;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      _mentionCursor = (_mentionCursor + 1) % _mentionResults.length;
+      _renderMentionItems();
+      return true;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      _mentionCursor = (_mentionCursor - 1 + _mentionResults.length) % _mentionResults.length;
+      _renderMentionItems();
+      return true;
+    }
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      if (_mentionCursor >= 0) _insertMention(_mentionCursor);
+      return true;
+    }
+    if (e.key === 'Escape') {
+      _hideMentionDropdown();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * استخراج @Mentions من نص الرسالة
+   * يُعيد مصفوفة أسماء الموظفين المذكورين (بدون @)
+   */
+  function _extractMentions(text) {
+    const matches = text.match(/@(\w+)/g) || [];
+    const names   = matches.map(m => m.slice(1).toLowerCase());
+    const agents  = InboxStore.state.agents || [];
+    // تقاطع مع الموظفين الفعليين + إزالة التكرار
+    const found   = new Map();
+    agents.forEach(a => {
+      const name = (a.name || a.username || '').toLowerCase();
+      if (names.includes(name)) found.set(a.id, a);
+    });
+    return [...found.values()];
   }
 
   // ─── Init ─────────────────────────────────────────────────────────────────
@@ -352,10 +563,35 @@ const InboxReply = (() => {
       // أوقف تلقائياً بعد 3.5 ث بلا كتابة
       clearTimeout(_typingTimeout);
       _typingTimeout = setTimeout(_sendTypingStop, 3500);
+
+      // ── @Mention detection (P2-4) ─────────────────────────────
+      // يعمل فقط في mode=note
+      const mode = InboxStore.state.replyMode || 'reply';
+      if (mode === 'note') {
+        const { active, query, start } = _parseMentionContext(textarea);
+        if (active) {
+          _mentionQuery = query;
+          _showMentionDropdown(query, start);
+        } else {
+          _hideMentionDropdown();
+        }
+      } else {
+        _hideMentionDropdown();
+      }
+    });
+
+    // ── Scroll/resize → إعادة تموضع القائمة ──────────────────────
+    textarea.addEventListener('scroll', () => {
+      if (_mentionDropdown && !_mentionDropdown.classList.contains('hidden')) {
+        _positionMentionDropdown();
+      }
     });
 
     // Ctrl+Enter أو Enter للإرسال (Shift+Enter = سطر جديد)
     textarea.addEventListener('keydown', e => {
+      // @Mention يأخذ الأولوية على ↑↓ Enter Escape
+      if (_handleMentionKeydown(e)) return;
+
       if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
         // Enter مباشر (بدون shift) = إرسال
         e.preventDefault();
@@ -365,6 +601,12 @@ const InboxReply = (() => {
         e.preventDefault();
         _send();
       }
+    });
+
+    // أخفِ القائمة لو الـ textarea فقد الـ focus
+    textarea.addEventListener('blur', () => {
+      // تأخير 150ms لإتاحة نقر على عنصر في القائمة قبل الإخفاء
+      setTimeout(_hideMentionDropdown, 150);
     });
 
     // ── Send Button ───────────────────────────────────────────────────────
@@ -417,9 +659,12 @@ const InboxReply = (() => {
     InboxStore.on('replyMode:change', ({ value }) => {
       _clearMedia();
       _clearQuote();
+      _hideMentionDropdown();
       if (textarea) {
         textarea.value = '';
-        textarea.placeholder = value === 'note' ? 'اكتب ملاحظة داخلية...' : 'اكتب رسالتك...';
+        textarea.placeholder = value === 'note'
+          ? 'اكتب ملاحظة داخلية... (اكتب @ لذكر موظف)'
+          : 'اكتب رسالتك...';
         textarea.style.background = value === 'note' ? '#fffbeb' : '';
       }
       _updateSendBtn();
@@ -431,6 +676,7 @@ const InboxReply = (() => {
       if (textarea) textarea.value = '';
       _clearMedia();
       _clearQuote();
+      _hideMentionDropdown();
       _updateSendBtn();
       _updateCharCount();
     });
@@ -497,8 +743,10 @@ const InboxReply = (() => {
   return {
     init,
     quoteMessage,
-    clearQuote: _clearQuote,
-    clearMedia: _clearMedia,
+    clearQuote:             _clearQuote,
+    clearMedia:             _clearMedia,
+    hideMentionDropdown:    _hideMentionDropdown,
+    extractMentions:        _extractMentions,   // للاختبار
   };
 
 })();

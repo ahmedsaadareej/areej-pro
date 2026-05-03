@@ -2,6 +2,11 @@
  * InboxStream — SSE manager لـ Inbox v4
  * آخر تحديث: 2026-05-03
  *
+ * الأحداث المدعومة:
+ *   conv:new | conv:update | conv:removed | message:new
+ *   counts:update | agent:status | conv:viewing | conv:viewing:stop
+ *   note:mention (P2-4) | ping
+ *
  * يتصل بـ /api/inbox/stream ويوزّع الأحداث على InboxStore
  *
  * الاستخدام:
@@ -130,6 +135,23 @@ const InboxStream = (() => {
       }
       InboxStore.emit('conv:viewing:stop', data);
     });
+
+    // ─── note:mention (تم ذكرك في نوتس — P2-4) ───
+    _es.addEventListener('note:mention', (e) => {
+      const data = _parse(e.data);
+      if (!data) return;
+
+      // أبلغ InboxStore ليرفع الـ toast + يفتح المحادثة
+      InboxStore.emit('note:mention', data);
+
+      // تنبيه toast مباشر إن كان InboxApp متاح
+      if (typeof InboxApp !== 'undefined' && InboxApp.showMentionToast) {
+        InboxApp.showMentionToast(data);
+      } else {
+        // fallback: toast بسيط
+        _showMentionToast(data);
+      }
+    });
   }
 
   // ─── Disconnect ───────────────────────────────────────────────────────
@@ -172,6 +194,52 @@ const InboxStream = (() => {
     try { return JSON.parse(str); }
     catch (e) { return null; }
   }
+
+  // ─── Mention Toast (P2-4) ───────────────────────────────────────────
+
+  /**
+   * عرض toast تنبيه بسيط عند ذكر الموظف في نوتس
+   * @param {{ mentioned_by: {name}, conversation_id, content }} data
+   */
+  function _showMentionToast(data) {
+    const container = document.getElementById('iv4-toasts');
+    if (!container) return;
+
+    const mentioner = data.mentioned_by?.name || 'موظف';
+    const preview   = (data.content || '').slice(0, 60);
+    const convId    = data.conversation_id;
+
+    const el = document.createElement('div');
+    el.className = 'iv4-toast iv4-toast--mention';
+    el.innerHTML = `
+      <div class="iv4-toast-mention-header">
+        <span class="iv4-toast-mention-icon">🔔</span>
+        <span class="iv4-toast-mention-title">ذكرك <strong>${_escHtml(mentioner)}</strong></span>
+      </div>
+      <div class="iv4-toast-mention-body">${_escHtml(preview)}</div>
+    `;
+
+    // انتقل للمحادثة عند النقر
+    if (convId) {
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', () => {
+        InboxStore.set('activeConvId', convId);
+        el.remove();
+      });
+    }
+
+    container.appendChild(el);
+    // أزل بعد 5 ثوانٍ
+    setTimeout(() => el.remove(), 5000);
+  }
+
+  function _escHtml(str = '') {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
 
   // ─── Visibility API — pause/resume SSE عند إخفاء الـ tab ─────────────
 

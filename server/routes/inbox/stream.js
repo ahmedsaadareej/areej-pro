@@ -16,6 +16,7 @@
  *   event: agent:status      — تغيير حالة موظف
  *   event: conv:viewing      — موظف آخر فتح هذه المحادثة (Collision)
  *   event: conv:viewing:stop — موظف آخر أغلق المحادثة (نهاية Collision)
+ *   event: note:mention      — موظف ذكرته في نوتس (P2-4) — يصل للمذكور فقط عبر sendToUser
  *   event: ping              — keepalive كل 25 ثانية
  */
 
