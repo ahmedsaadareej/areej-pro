@@ -1,3 +1,34 @@
+## Session 2026-05-03 (07:34 → 07:52 UTC) — مكتملة
+- الحالة: تم الإكمال (4 مهام — الحد الأقصى للجلسة)
+- ما تم إنجازه:
+  - feat: FEAT-2 — Mark All as Read: endpoint POST /inbox/mark-all-read + زر ✓ في شريط المحادثات + تحديث state فوري (be2796f)
+  - feat: FEAT-3 — Relative Time: iv3RelativeTime() عربي كامل + ticker كل دقيقة + data-ts + tooltips (cb1e79e)
+  - feat: FEAT-4 — نسخ رسالة بـ Double-click: Clipboard API + execCommand fallback + toast تأكيد (bfce41e)
+- قرارات تقنية:
+  - iv3RelativeTime() و iv3RelativeTimeFull() في inbox-state.js (مشتركة بين conv + chat)
+  - ticker يُحدّث [data-ts] elements كل 60s بدون re-render كامل
+  - Copy: يعمل على نص الرسالة فقط، يتجاهل الوسائط
+  - Mark All Read: يُحدّث inbox_messages.is_read + inbox_conversations.unread_count في DB
+- آخر Commit: bfce41e
+- نقطة البداية القادمة: FEAT-6 — استبدال AI Suggestions من execSync بـ OpenAI API مباشر (server/routes/inbox.js)
+
+## Session 2026-05-03 (07:31 → 07:45 UTC) — مكتملة
+- الحالة: تم الإكمال (1 مهمة)
+- ما تم إنجازه:
+  - feat: FEAT-1 — Browser Push Notifications كاملة
+  - sw-inbox.js: Service Worker جديد (push events + notification click + postMessage routing)
+  - inbox-init.js: iv3InitPushNotifications() + iv3ShowPushPrompt() + iv3SendBrowserNotification() + iv3BindServiceWorkerMessages()
+  - index.html: تسجيل SW في <head> عند load
+  - assets: logo-192.png + logo-72.png للـ notification icons
+- قرارات تقنية:
+  - إذن الإشعارات يُطلب بشريط أسفل الـ inbox (لا popup مباشر) — تجربة أفضل للمستخدم
+  - لا VAPID/Push Server (تعقيد غير ضروري) — Notification API مباشر من SW
+  - الإشعار يظهر فقط لما document.hidden = true (التبويب في الخلفية)
+  - الضغط على الإشعار يُركّز التبويب المفتوح ويفتح المحادثة مباشرة
+  - يُخزَّن iv3_push_dismissed في localStorage لمنع تكرار الشريط
+- آخر Commit: eab6336
+- نقطة البداية القادمة: FEAT-2 — "Mark All as Read" (inbox-conv.js + server/routes/inbox.js)
+
 ## Session 2026-05-03 (07:11 → 07:18 UTC) — مكتملة
 - الحالة: تم الإكمال (2 مهام)
 - ما تم إنجازه:
