@@ -214,6 +214,15 @@ const InboxAPI = (() => {
     sendInteractive(convId, opts) {
       return _post(`/inbox/conversations/${convId}/messages/interactive`, opts);
     },
+
+    /**
+     * إرسال WA Catalog Product Message (P8-3)
+     * @param {string|number} convId
+     * @param {object} opts - { type, catalog_id, product_retailer_id?, sections?, body_text?, footer_text?, header_text?, thumbnail_product_retailer_id? }
+     */
+    sendCatalog(convId, opts) {
+      return _post(`/inbox/conversations/${convId}/messages/catalog`, opts);
+    },
   };
 
   // ─── Labels ───────────────────────────────────────────────────────────

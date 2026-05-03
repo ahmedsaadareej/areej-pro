@@ -1,10 +1,11 @@
 /**
  * inbox/messages.js — Messages Routes لـ Inbox v4
- * آخر تحديث: 2026-05-03
+ * آخر تحديث: 2026-05-03 (P8-3 WA Catalog Products)
  *
  * Endpoints:
  *   POST /api/inbox/conversations/:id/messages/:msgId/transcript — تحويل voice note إلى نص (Whisper)
  *   POST /api/inbox/conversations/:id/messages/interactive — WA Interactive Messages (Buttons/List) (P8-2)
+ *   POST /api/inbox/conversations/:id/messages/catalog — WA Catalog Product Message (P8-3)
  *   POST /api/inbox/conversations/:id/messages  — إرسال رسالة أو ملاحظة
  *   POST /api/inbox/conversations/:id/messages/media — رفع ميديا + إرسال
  *
@@ -973,6 +974,193 @@ router.post('/conversations/:id/messages/interactive', async (req, res) => {
 
   } catch (e) {
     console.error('[messages.js] interactive error:', e.message);
+    return res.status(500).json({ error: e.message || 'خطأ داخلي' });
+  }
+});
+
+// ─── POST /conversations/:id/messages/catalog ───────────────────────────────
+// إرسال WA Catalog Product Message (منتج واحد أو متعدد)
+// Body: {
+//   body_text   : string (نص مصاحب للرسالة — اختياري)
+//   footer_text : string (اختياري)
+//   thumbnail_product_retailer_id : string (id المنتج الرئيسي للـ thumbnail — لـ multi_product)
+//   catalog_id  : string (WA Catalog ID من إعدادات القناة)
+//   sections    : [ { title, product_items: [{ product_retailer_id }] } ] (multi_product)
+//   product_retailer_id : string (id المنتج — لـ single_product)
+//   type        : 'single_product' | 'multi_product' (افتراضي single)
+// }
+router.post('/conversations/:id/messages/catalog', async (req, res) => {
+  const { id: convId } = req.params;
+
+  try {
+    const db   = req.db;
+    const conv = await _getConv(db, convId);
+    if (!conv) return res.status(404).json({ error: 'المحادثة غير موجودة' });
+    if (conv.status === 'closed') return res.status(400).json({ error: 'المحادثة مغلقة' });
+
+    // Catalog يعمل فقط مع WA API
+    if (conv.platform !== 'whatsapp_api') {
+      return res.status(400).json({ error: 'Catalog يعمل فقط مع WhatsApp API' });
+    }
+
+    const cfg = await _getChannelConfig(db, 'whatsapp_api');
+    if (!cfg || !cfg.access_token || !cfg.phone_number_id) {
+      return res.status(503).json({ error: 'WhatsApp API غير مُفعَّل' });
+    }
+
+    const {
+      type                             = 'single_product',
+      catalog_id                       = cfg.catalog_id || '',
+      product_retailer_id              = '',
+      thumbnail_product_retailer_id    = '',
+      body_text                        = '',
+      footer_text                      = '',
+      sections                         = [],   // للـ multi_product
+    } = req.body;
+
+    // ── Validation ────────────────────────────────────────────────────────
+    if (!catalog_id.trim()) {
+      return res.status(400).json({ error: 'catalog_id مطلوب — أضفه في إعدادات القناة أو أرسله في الطلب' });
+    }
+
+    if (type === 'single_product') {
+      if (!product_retailer_id.trim())
+        return res.status(400).json({ error: 'product_retailer_id مطلوب لـ single_product' });
+    } else if (type === 'multi_product') {
+      if (!sections.length)
+        return res.status(400).json({ error: 'sections مطلوبة لـ multi_product' });
+      if (!thumbnail_product_retailer_id.trim())
+        return res.status(400).json({ error: 'thumbnail_product_retailer_id مطلوب لـ multi_product' });
+      // تحقق من أن كل section عنده على الأقل منتج
+      for (const sec of sections) {
+        if (!Array.isArray(sec.product_items) || !sec.product_items.length)
+          return res.status(400).json({ error: `section "${sec.title || '؟'}" لا يحتوي على منتجات` });
+      }
+    } else {
+      return res.status(400).json({ error: `نوع غير مدعوم: ${type}` });
+    }
+
+    // ── بناء WA Payload ───────────────────────────────────────────────────
+    let waMessage;
+    if (type === 'single_product') {
+      // single_product: إظهار بطاقة منتج واحد مع صورته وسعره مباشرة من الكتالوج
+      waMessage = {
+        messaging_product: 'whatsapp',
+        to:   conv.contact_phone,
+        type: 'interactive',
+        interactive: {
+          type: 'product',
+          body:   body_text   ? { text: body_text.slice(0, 1024) }  : undefined,
+          footer: footer_text ? { text: footer_text.slice(0, 60) }  : undefined,
+          action: {
+            catalog_id,
+            product_retailer_id,
+          },
+        },
+      };
+    } else {
+      // multi_product: عدة sections كل section فيها قائمة منتجات
+      waMessage = {
+        messaging_product: 'whatsapp',
+        to:   conv.contact_phone,
+        type: 'interactive',
+        interactive: {
+          type: 'product_list',
+          header: {
+            type: 'text',
+            text: (req.body.header_text || 'منتجاتنا').slice(0, 60),
+          },
+          body:   body_text   ? { text: body_text.slice(0, 1024) }  : { text: 'اختر من منتجاتنا' },
+          footer: footer_text ? { text: footer_text.slice(0, 60) }  : undefined,
+          action: {
+            catalog_id,
+            sections: sections.map(sec => ({
+              title:         String(sec.title || '').slice(0, 24),
+              product_items: (sec.product_items || []).map(p => ({
+                product_retailer_id: String(p.product_retailer_id || ''),
+              })),
+            })),
+          },
+        },
+      };
+    }
+
+    // إزالة undefined من الـ payload
+    const cleanPayload = JSON.parse(JSON.stringify(waMessage));
+
+    // ── إرسال عبر WA Graph API ────────────────────────────────────────────
+    const apiUrl = `https://graph.facebook.com/v19.0/${cfg.phone_number_id}/messages`;
+    const waResp = await fetch(apiUrl, {
+      method:  'POST',
+      headers: { 'Authorization': `Bearer ${cfg.access_token}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify(cleanPayload),
+    });
+
+    const waJson = await waResp.json().catch(() => ({}));
+    if (!waResp.ok) {
+      const errMsg = waJson?.error?.message || `HTTP ${waResp.status}`;
+      return res.status(502).json({ error: `WA API: ${errMsg}` });
+    }
+
+    const externalId = waJson?.messages?.[0]?.id || null;
+
+    // ── تلخيص المنتجات للعرض في الشاشة ──────────────────────────────────
+    let contentSummary;
+    if (type === 'single_product') {
+      contentSummary = `[منتج: ${product_retailer_id}]`;
+    } else {
+      const total = sections.reduce((s, sec) => s + (sec.product_items?.length || 0), 0);
+      contentSummary = `[كتالوج: ${total} منتج]`;
+    }
+
+    // ── حفظ الرسالة في الداتابيز ──────────────────────────────────────────
+    const savedMsg = await _saveMessage(db, {
+      convId,
+      direction:   'outbound',
+      contentType: 'catalog',
+      content:     contentSummary,
+      agentId:     req.user.id,
+      agentName:   req.user.name || req.user.username || 'موظف',
+      platform:    'whatsapp_api',
+      status:      externalId ? 'sent' : 'pending',
+    });
+
+    // حفظ تفاصيل الكتالوج في metadata
+    const metaPayload = {
+      catalog: {
+        type,
+        catalog_id,
+        ...(type === 'single_product'
+          ? { product_retailer_id }
+          : { thumbnail_product_retailer_id, sections }),
+        body_text,
+        footer_text,
+        header_text: req.body.header_text || '',
+      },
+    };
+
+    await new Promise((resolve, reject) => {
+      db.run(
+        `UPDATE inbox_messages_v4 SET metadata = ?, external_id = ? WHERE id = ?`,
+        [JSON.stringify(metaPayload), externalId, savedMsg.id],
+        (err) => { if (err) return reject(err); resolve(); }
+      );
+    });
+
+    savedMsg.metadata = JSON.stringify(metaPayload);
+
+    // SSE broadcast
+    try {
+      const { broadcast: sseBroadcast } = require('./stream');
+      sseBroadcast(req.user.id, { type: 'message_new', data: { ...savedMsg, conversation_id: convId } });
+    } catch (_) {}
+
+    await _touchConv(db, convId, contentSummary, 'catalog', conv.status);
+
+    return res.json({ success: true, message: savedMsg });
+
+  } catch (e) {
+    console.error('[messages.js] catalog error:', e.message);
     return res.status(500).json({ error: e.message || 'خطأ داخلي' });
   }
 });
