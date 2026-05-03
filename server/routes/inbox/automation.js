@@ -831,7 +831,203 @@ async function runAutoClose(db, tenantId) {
   return { warned, closed };
 }
 
-module.exports                    = router;
-module.exports.processAutoReply   = processAutoReply;
-module.exports.processWelcomeAway = processWelcomeAway;
-module.exports.runAutoClose       = runAutoClose;
+
+// ══════════════════════════════════════════════════════════════════════════════
+// P4-5 Scheduled Messages
+// ══════════════════════════════════════════════════════════════════════════════
+
+function _fmtSched(r) {
+  if (!r) return null;
+  return { ...r, scheduled_at_iso: new Date(r.scheduled_at * 1000).toISOString() };
+}
+
+// GET /api/inbox/conversations/:id/scheduled
+router.get('/conversations/:id/scheduled', (req, res) => {
+  try {
+    const rows = req.db.prepare(`
+      SELECT * FROM inbox_scheduled_messages_v4
+      WHERE conversation_id = ? AND tenant_id = ?
+      ORDER BY scheduled_at ASC
+    `).all(req.params.id, req.user.id);
+    res.json({ ok: true, scheduled: rows.map(_fmtSched) });
+  } catch (err) {
+    console.error('[scheduled] list:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/inbox/scheduled  — كل الرسائل المجدولة للـ tenant
+router.get('/scheduled', (req, res) => {
+  try {
+    const { status = 'pending', limit = 50 } = req.query;
+    const rows = req.db.prepare(`
+      SELECT s.*, c.sender_name, c.platform, c.sender_phone
+      FROM inbox_scheduled_messages_v4 s
+      LEFT JOIN inbox_conversations_v4 c ON c.id = s.conversation_id
+      WHERE s.tenant_id = ? AND s.status = ?
+      ORDER BY s.scheduled_at ASC
+      LIMIT ?
+    `).all(req.user.id, status, Math.min(parseInt(limit)||50, 200));
+    res.json({ ok: true, scheduled: rows.map(_fmtSched) });
+  } catch (err) {
+    console.error('[scheduled] list all:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/inbox/conversations/:id/scheduled
+router.post('/conversations/:id/scheduled', (req, res) => {
+  try {
+    const conv = req.db.prepare(
+      'SELECT id FROM inbox_conversations_v4 WHERE id = ?'
+    ).get(req.params.id);
+    if (!conv) return res.status(404).json({ error: 'المحادثة غير موجودة' });
+
+    const { content, message_type = 'text', media_url, scheduled_at } = req.body;
+    if (!content?.trim())   return res.status(400).json({ error: 'content مطلوب' });
+    if (!scheduled_at)      return res.status(400).json({ error: 'scheduled_at مطلوب' });
+
+    const schedSec = Math.floor(new Date(scheduled_at).getTime() / 1000);
+    if (isNaN(schedSec))    return res.status(400).json({ error: 'scheduled_at غير صالح' });
+    if (schedSec <= Math.floor(Date.now()/1000)) {
+      return res.status(400).json({ error: 'scheduled_at يجب أن يكون في المستقبل' });
+    }
+
+    const result = req.db.prepare(`
+      INSERT INTO inbox_scheduled_messages_v4
+        (tenant_id, conversation_id, content, message_type, media_url, scheduled_at, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(req.user.id, conv.id, content.trim(), message_type, media_url||null, schedSec, req.user.id);
+
+    const row = req.db.prepare('SELECT * FROM inbox_scheduled_messages_v4 WHERE id = ?').get(result.lastInsertRowid);
+    res.json({ ok: true, scheduled: _fmtSched(row) });
+  } catch (err) {
+    console.error('[scheduled] create:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/inbox/scheduled/:id
+router.delete('/scheduled/:id', (req, res) => {
+  try {
+    const row = req.db.prepare(
+      'SELECT id FROM inbox_scheduled_messages_v4 WHERE id = ? AND tenant_id = ?'
+    ).get(req.params.id, req.user.id);
+    if (!row) return res.status(404).json({ error: 'الرسالة غير موجودة' });
+
+    req.db.prepare('DELETE FROM inbox_scheduled_messages_v4 WHERE id = ?').run(row.id);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[scheduled] delete:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/inbox/scheduled/:id  — تعديل (فقط إذا لم تُرسَل بعد)
+router.put('/scheduled/:id', (req, res) => {
+  try {
+    const row = req.db.prepare(
+      "SELECT * FROM inbox_scheduled_messages_v4 WHERE id = ? AND tenant_id = ? AND status = 'pending'"
+    ).get(req.params.id, req.user.id);
+    if (!row) return res.status(404).json({ error: 'الرسالة غير موجودة أو تم إرسالها' });
+
+    const { content, scheduled_at } = req.body;
+    const sets = [], params = [];
+
+    if (content)       { sets.push('content = ?');      params.push(content.trim()); }
+    if (scheduled_at)  {
+      const schedSec = Math.floor(new Date(scheduled_at).getTime() / 1000);
+      if (!isNaN(schedSec) && schedSec > Math.floor(Date.now()/1000)) {
+        sets.push('scheduled_at = ?'); params.push(schedSec);
+      }
+    }
+
+    if (sets.length) {
+      params.push(row.id);
+      req.db.prepare(`UPDATE inbox_scheduled_messages_v4 SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+    }
+
+    const updated = req.db.prepare('SELECT * FROM inbox_scheduled_messages_v4 WHERE id = ?').get(row.id);
+    res.json({ ok: true, scheduled: _fmtSched(updated) });
+  } catch (err) {
+    console.error('[scheduled] update:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * runScheduledMessages — يُشغَّل دورياً (كل دقيقة) لإرسال الرسائل المجدولة
+ * يُستدعى من:
+ *   1) Cron (لاحقاً)
+ *   2) POST /api/inbox/automation/scheduled/run (يدوي)
+ *
+ * @param {object} db
+ * @param {number} tenantId
+ * @returns {{ sent: number, failed: number }}
+ */
+async function runScheduledMessages(db, tenantId) {
+  const nowSec   = Math.floor(Date.now() / 1000);
+  const dispatch = _getDispatch();
+  if (!dispatch) return { sent: 0, failed: 0 };
+
+  const pending = db.prepare(`
+    SELECT s.*, c.platform, c.sender_id, c.sender_phone, c.channel_override
+    FROM inbox_scheduled_messages_v4 s
+    JOIN inbox_conversations_v4 c ON c.id = s.conversation_id
+    WHERE s.tenant_id = ? AND s.status = 'pending' AND s.scheduled_at <= ?
+    ORDER BY s.scheduled_at ASC
+    LIMIT 50
+  `).all(tenantId, nowSec);
+
+  let sent = 0, failed = 0;
+
+  for (const row of pending) {
+    try {
+      await dispatch(db, row, {
+        id           : require('crypto').randomUUID(),
+        direction    : 'outbound',
+        message_type : row.message_type || 'text',
+        content      : row.content,
+        media_url    : row.media_url || null,
+        sender_name  : 'Scheduled',
+        sent_at      : Date.now(),
+      });
+
+      db.prepare(`
+        UPDATE inbox_scheduled_messages_v4
+        SET status = 'sent', sent_at = ?
+        WHERE id = ?
+      `).run(nowSec, row.id);
+
+      const broadcast = _getBroadcast();
+      if (broadcast) broadcast(tenantId, 'scheduled_sent', { id: row.id, conv_id: row.conversation_id });
+      sent++;
+    } catch (err) {
+      db.prepare(`
+        UPDATE inbox_scheduled_messages_v4
+        SET status = 'failed', error_msg = ?
+        WHERE id = ?
+      `).run(err.message, row.id);
+      failed++;
+    }
+  }
+
+  return { sent, failed };
+}
+
+// POST /api/inbox/automation/scheduled/run — تشغيل يدوي
+router.post('/automation/scheduled/run', async (req, res) => {
+  try {
+    const result = await runScheduledMessages(req.db, req.user.id);
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('[scheduled] run:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports                        = router;
+module.exports.processAutoReply       = processAutoReply;
+module.exports.processWelcomeAway     = processWelcomeAway;
+module.exports.runAutoClose           = runAutoClose;
+module.exports.runScheduledMessages   = runScheduledMessages;

@@ -511,6 +511,17 @@ const InboxAPI = (() => {
   };
 
 
+
+  // ─── Scheduled Messages (P4-5) ────────────────────────────────────────────
+  const scheduled = {
+    listAll    : (status = 'pending') => _get(`/inbox/scheduled?status=${status}`),
+    listConv   : (convId)             => _get(`/inbox/conversations/${convId}/scheduled`),
+    create     : (convId, data)       => _post(`/inbox/conversations/${convId}/scheduled`, data),
+    update     : (id, data)           => _put(`/inbox/scheduled/${id}`, data),
+    delete     : (id)                 => _delete(`/inbox/scheduled/${id}`),
+    run        : ()                   => _post('/inbox/automation/scheduled/run', {}),
+  };
+
   // ─── Auto-Close (P4-4) ────────────────────────────────────────────────
   const autoClose = {
     get    : ()     => _get('/inbox/automation/auto-close'),
@@ -553,6 +564,7 @@ const InboxAPI = (() => {
     chatbot,
     welcomeAway,
     autoClose,
+    scheduled,
     // expose للـ debugging
     _fetch,
     _get,

@@ -4306,3 +4306,193 @@
   .iv4-ac-run-btn:hover:not(:disabled) { background: #334155; }
   .iv4-ac-hint-inline { background: #1e3a5f; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   P4-5 Scheduled Messages
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Modal (form) ───────────────────────────────────────────── */
+#iv4-sched-modal {
+  position: fixed; inset: 0; z-index: 3000;
+  background: rgba(0,0,0,.5);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.iv4-sched-modal-box {
+  background: var(--iv4-bg,#fff); border-radius: 10px;
+  width: 100%; max-width: 480px;
+  display: flex; flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0,0,0,.25);
+  max-height: 85vh; overflow: hidden;
+}
+.iv4-sched-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .75rem 1rem; border-bottom: 1px solid var(--iv4-border,#e5e7eb);
+  font-weight: 700;
+}
+.iv4-sched-modal-header button {
+  background: none; border: none; font-size: 1.1rem; cursor: pointer;
+  color: #6b7280; padding: .2rem .4rem; border-radius: 5px;
+}
+.iv4-sched-modal-body { padding: 1rem; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: .75rem; }
+.iv4-sched-modal-footer {
+  display: flex; justify-content: flex-end; gap: .5rem;
+  padding: .75rem 1rem; border-top: 1px solid var(--iv4-border,#e5e7eb);
+}
+
+/* ── Form elements ──────────────────────────────────────────── */
+.iv4-sched-form-row { display: flex; flex-direction: column; gap: .35rem; }
+.iv4-sched-form-row label { font-size: .82rem; font-weight: 600; color: var(--iv4-text,#374151); }
+.iv4-sched-input {
+  padding: .5rem .75rem; border: 1px solid var(--iv4-border,#d1d5db);
+  border-radius: 7px; font-size: .88rem; width: 100%; box-sizing: border-box;
+  background: var(--iv4-bg,#fff); color: var(--iv4-text,#111);
+  transition: border-color .15s;
+}
+.iv4-sched-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+.iv4-sched-textarea {
+  padding: .6rem .75rem; border: 1px solid var(--iv4-border,#d1d5db);
+  border-radius: 7px; font-size: .88rem; resize: vertical; min-height: 80px;
+  width: 100%; box-sizing: border-box;
+  background: var(--iv4-bg,#fff); color: var(--iv4-text,#111);
+  transition: border-color .15s; line-height: 1.55;
+}
+.iv4-sched-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+
+/* ── Buttons ────────────────────────────────────────────────── */
+.iv4-sched-btn {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .45rem .9rem; border-radius: 7px;
+  font-size: .85rem; font-weight: 600; cursor: pointer;
+  border: none; transition: all .15s;
+}
+.iv4-sched-btn--primary { background: #3b82f6; color: #fff; }
+.iv4-sched-btn--primary:hover { background: #2563eb; }
+.iv4-sched-btn--primary:disabled { opacity: .6; cursor: default; }
+.iv4-sched-btn--ghost {
+  background: transparent; border: 1px solid var(--iv4-border,#e5e7eb);
+  color: var(--iv4-text,#111);
+}
+.iv4-sched-btn--ghost:hover { background: var(--iv4-hover,#f3f4f6); }
+.iv4-sched-btn--sm { padding: .3rem .65rem; font-size: .8rem; }
+
+.iv4-sched-btn-sm {
+  background: none; border: 1px solid transparent; cursor: pointer;
+  font-size: .85rem; padding: .2rem .4rem; border-radius: 5px;
+  transition: all .15s; color: #6b7280;
+}
+.iv4-sched-btn-sm:hover { background: var(--iv4-hover,#f3f4f6); border-color: #d1d5db; }
+.iv4-sched-btn-del:hover { background: #fef2f2; color: #ef4444; }
+
+/* ── Dashboard Overlay ──────────────────────────────────────── */
+#iv4-sched-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(0,0,0,.5);
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+}
+.iv4-sched-panel {
+  background: var(--iv4-bg,#fff); border-radius: 12px;
+  width: 100%; max-width: 760px; max-height: 90vh;
+  display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.25);
+}
+.iv4-sched-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .85rem 1.25rem; border-bottom: 1px solid var(--iv4-border,#e5e7eb);
+  flex-shrink: 0;
+}
+.iv4-sched-panel-header h2 { margin: 0; font-size: 1.05rem; font-weight: 700; }
+.iv4-sched-panel-actions { display: flex; gap: .5rem; align-items: center; }
+.iv4-sched-panel-close {
+  background: none; border: none; font-size: 1.2rem; cursor: pointer;
+  color: #6b7280; padding: .2rem .5rem; border-radius: 6px;
+  transition: background .15s;
+}
+.iv4-sched-panel-close:hover { background: var(--iv4-hover,#f3f4f6); }
+
+/* ── Tabs ───────────────────────────────────────────────────── */
+.iv4-sched-tabs {
+  display: flex; gap: 0;
+  border-bottom: 1px solid var(--iv4-border,#e5e7eb);
+  flex-shrink: 0;
+}
+.iv4-sched-tab {
+  padding: .6rem 1rem; font-size: .85rem; font-weight: 600;
+  background: none; border: none; cursor: pointer;
+  color: var(--iv4-text-muted,#6b7280); border-bottom: 2px solid transparent;
+  transition: all .15s;
+}
+.iv4-sched-tab:hover { color: var(--iv4-text,#111); background: var(--iv4-hover,#f9fafb); }
+.iv4-sched-tab--active { color: #3b82f6; border-bottom-color: #3b82f6; }
+
+/* ── Panel Body ─────────────────────────────────────────────── */
+.iv4-sched-panel-body { flex: 1; overflow-y: auto; padding: 1rem; }
+
+/* ── Dashboard List ─────────────────────────────────────────── */
+.iv4-sched-dash-list { display: flex; flex-direction: column; gap: .6rem; }
+.iv4-sched-dash-item {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: .75rem 1rem; border: 1px solid var(--iv4-border,#e5e7eb);
+  border-radius: 9px; background: var(--iv4-bg-alt,#f9fafb);
+  gap: .75rem;
+}
+.iv4-sched-dash-left  { flex: 1; min-width: 0; }
+.iv4-sched-dash-right { display: flex; flex-direction: column; align-items: flex-end; gap: .3rem; flex-shrink: 0; }
+.iv4-sched-dash-conv  { display: flex; align-items: center; gap: .4rem; margin-bottom: .25rem; }
+.iv4-sched-platform-badge { font-size: 1rem; }
+.iv4-sched-sender { font-weight: 700; font-size: .85rem; }
+.iv4-sched-dash-content {
+  font-size: .83rem; color: var(--iv4-text-muted,#6b7280);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px;
+}
+.iv4-sched-time { font-size: .78rem; color: var(--iv4-text-muted,#6b7280); white-space: nowrap; }
+.iv4-sched-dash-btns { display: flex; gap: .25rem; }
+.iv4-sched-error-msg { font-size: .75rem; color: #ef4444; max-width: 150px; text-align: right; }
+
+/* ── Status Badges ──────────────────────────────────────────── */
+.iv4-sched-status-badge {
+  font-size: .75rem; font-weight: 600; border-radius: 99px; padding: .15rem .55rem;
+}
+.iv4-sched-status--pending { background: #fef3c7; color: #92400e; }
+.iv4-sched-status--sent    { background: #d1fae5; color: #065f46; }
+.iv4-sched-status--failed  { background: #fee2e2; color: #991b1b; }
+
+/* ── Conv Panel (mini list inside chat) ─────────────────────── */
+.iv4-sched-conv-list { padding: .4rem .6rem; }
+.iv4-sched-conv-header { font-size: .78rem; font-weight: 700; color: #6b7280; margin-bottom: .4rem; }
+.iv4-sched-conv-item {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .3rem .4rem; border-radius: 6px;
+  font-size: .82rem; border: 1px solid var(--iv4-border,#e5e7eb);
+  margin-bottom: .25rem; background: var(--iv4-bg,#fff);
+}
+.iv4-sched-conv-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.iv4-sched-conv-meta { font-size: .74rem; color: #6b7280; white-space: nowrap; flex-shrink: 0; }
+.iv4-sched-conv-actions { display: flex; gap: .2rem; flex-shrink: 0; }
+
+/* ── States ─────────────────────────────────────────────────── */
+.iv4-sched-loading, .iv4-sched-empty, .iv4-sched-error {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: .5rem; min-height: 100px; color: var(--iv4-text-muted,#6b7280);
+  font-size: .9rem; text-align: center;
+}
+.iv4-sched-error { color: #ef4444; }
+
+/* ── Toast ──────────────────────────────────────────────────── */
+.iv4-sched-toast {
+  position: fixed; bottom: 5.5rem; left: 50%;
+  transform: translateX(-50%) translateY(2rem);
+  background: #1f2937; color: #fff; border-radius: 8px;
+  padding: .6rem 1.2rem; font-size: .88rem; font-weight: 500;
+  opacity: 0; transition: all .3s; z-index: 9999;
+  white-space: nowrap; pointer-events: none;
+}
+.iv4-sched-toast--show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Dark Mode ──────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .iv4-sched-modal-box, .iv4-sched-panel { background: #1e293b; }
+  .iv4-sched-input, .iv4-sched-textarea  { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+  .iv4-sched-dash-item, .iv4-sched-conv-item { background: #0f172a; border-color: #334155; }
+  .iv4-sched-tab:hover { background: #1e293b; }
+}

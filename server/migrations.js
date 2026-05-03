@@ -474,6 +474,27 @@ const TENANT_MIGRATIONS = [
   ]},
 
   // أضف migrations جديدة هنا دايماً — لا تعدّل القديمة أبداً
+
+  // v29: inbox_scheduled_messages_v4 (P4-5 Scheduled Messages)
+  { version: 29, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_scheduled_messages_v4 (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id       INTEGER NOT NULL,
+      conversation_id INTEGER NOT NULL REFERENCES inbox_conversations_v4(id) ON DELETE CASCADE,
+      content         TEXT    NOT NULL,
+      message_type    TEXT    NOT NULL DEFAULT 'text',
+      media_url       TEXT,
+      scheduled_at    INTEGER NOT NULL,
+      status          TEXT    NOT NULL DEFAULT 'pending',
+      sent_at         INTEGER,
+      error_msg       TEXT,
+      created_by      INTEGER,
+      created_at      INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_sched_v4_tenant  ON inbox_scheduled_messages_v4(tenant_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_sched_v4_pending ON inbox_scheduled_messages_v4(status, scheduled_at) WHERE status = 'pending'`,
+  ]},
+
 ];
 
 // ══════════════════════════════════════════════════════════════
