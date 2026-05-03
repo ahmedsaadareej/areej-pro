@@ -199,8 +199,9 @@ function iv3BuildMsgBubble(msg) {
     </div>`;
   }
 
-  const isMedia = msg.media_url || msg.file_id ||
-    ['image','video','audio','file'].includes(msg.message_type);
+  const isMedia = msg.media_url || msg.file_id || msg.media_id ||
+    ['image','video','audio','file'].includes(msg.message_type) ||
+    ['image','video','audio','file'].includes(msg.media_type);
   if (isMedia) {
     content = iv3BuildMediaContent(msg);
   } else {
@@ -299,9 +300,28 @@ function iv3BuildMediaContent(msg) {
   const rawType  = (msg.media_type || msg.mime_type || '').toLowerCase();
   const text     = msg.content || msg.message || '';
 
-  // لو ما فيش URL حقيقي — عرض النص فقط
+  // لو ما فيش URL حقيقي — عرض placeholder ونحاول resolve تلقائياً
   if (!url) {
-    return `<div class="iv3-msg-text">${iv3EscHtml(text || '[مرفق]').replace(/\n/g, '<br>')}</div>`;
+    const msgId = msg.id;
+    // لو فيش id — عرض النص فقط
+    if (!msgId) {
+      return `<div class="iv3-msg-text">${iv3EscHtml(text || '[مرفق]').replace(/\n/g, '<br>')}</div>`;
+    }
+    // placeholder مع lazy resolve
+    const icon = rawType === 'image' ? '🖼️'
+      : rawType === 'video' ? '🎥'
+      : rawType === 'audio' ? '📹'
+      : '📎';
+    const label = rawType === 'image' ? 'صورة'
+      : rawType === 'video' ? 'فيديو'
+      : rawType === 'audio' ? 'رسالة صوتية'
+      : 'مرفق';
+    // lazy resolve — بنجلب الـ URL ونحدّث الـ bubble
+    setTimeout(() => iv3ResolveMsgMedia(msgId), 200);
+    return `<div class="iv3-media-loading" id="iv3-media-${msgId}">
+      <span style="font-size:22px">${icon}</span>
+      <span style="font-size:12px;color:#6b7280">جاري تحميل الـ ${label}...</span>
+    </div>`;
   }
 
   // نورمل الـ type: 'image' أو 'image/jpeg' → 'image'
@@ -576,6 +596,39 @@ function iv3ClearUnread(convId) {
 }
 
 // ── معاينة صورة ────────────────────────────────────────────
+
+// لازي resolve للـ media URL لو كان null (WhatsApp API / Telegram)
+async function iv3ResolveMsgMedia(msgId) {
+  const placeholder = document.getElementById('iv3-media-' + msgId);
+  if (!placeholder) return;
+  try {
+    const res = await apiFetch(`/api/system/inbox/resolve-media/${msgId}`);
+    if (!res?.ok || !res.media_url) {
+      placeholder.innerHTML = `<span style="font-size:11px;color:#EF4444">تعذر تحميل الملف</span>`;
+      return;
+    }
+    const url  = res.media_url;
+    const type = res.media_type || (url.match(/\.(jpg|jpeg|png|webp|gif)$/i) ? 'image' : url.match(/\.(mp4|mov|webm)$/i) ? 'video' : url.match(/\.(ogg|mp3|opus|m4a|webm)$/i) ? 'audio' : 'file');
+    let html = '';
+    if (type === 'image') {
+      html = `<img class="iv3-msg-img" src="${url}" onclick="iv3PreviewImg('${url}')" loading="lazy">`;
+    } else if (type === 'video') {
+      html = `<video class="iv3-msg-video" controls src="${url}"></video>`;
+    } else if (type === 'audio') {
+      html = `<audio class="iv3-msg-audio" controls src="${url}"></audio>`;
+    } else {
+      html = `<a class="iv3-msg-file" href="${url}" target="_blank" download>
+        <span style="font-size:20px;margin-left:8px">📎</span>
+        <span><div style="font-weight:700;font-size:13px">ملف</div>
+        <div style="font-size:11px;color:#6b7280">اضغط للتحميل</div></span>
+      </a>`;
+    }
+    placeholder.outerHTML = html;
+  } catch(e) {
+    console.error('[iv3ResolveMsgMedia]', e);
+    if (placeholder) placeholder.innerHTML = `<span style="font-size:11px;color:#EF4444">خطأ في التحميل</span>`;
+  }
+}
 
 function iv3PreviewImg(url) {
   const html = `

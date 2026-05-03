@@ -367,12 +367,14 @@ router.post('/whatsapp/:userId', express.json(), async (req, res) => {
 
           let content = '';
           let mediaType = null;
+          let mediaId   = null;
 
           if (msg.type === 'text') {
             content = msg.text?.body || '';
           } else if (['image','audio','video','document','sticker'].includes(msg.type)) {
             const mediaObj = msg[msg.type] || {};
-            mediaType = msg.type;
+            mediaType = msg.type === 'document' ? 'file' : msg.type;
+            mediaId   = mediaObj.id || null;  // Meta media_id — نحتاجه لجلب الـ URL
             content   = mediaObj.caption || ('[' + msg.type + ']');
           } else if (msg.type === 'location') {
             content = '📍 موقع: ' + msg.location?.latitude + ', ' + msg.location?.longitude;
@@ -389,10 +391,16 @@ router.post('/whatsapp/:userId', express.json(), async (req, res) => {
             db.prepare("UPDATE inbox_conversations SET unread_count=unread_count+1, last_message=?, last_message_at=datetime('now'), sender_name=? WHERE id=?").run(content, senderName, conv.id);
           }
 
+          // Ensure media_id column exists
+          try {
+            const mc = db.prepare('PRAGMA table_info(inbox_messages)').all().map(c => c.name);
+            if (!mc.includes('media_id')) db.prepare('ALTER TABLE inbox_messages ADD COLUMN media_id TEXT').run();
+          } catch(_) {}
+
           // Insert message — avoid duplicates by platform_msg_id
           const exists = db.prepare('SELECT id FROM inbox_messages WHERE platform_msg_id=?').get(msgId);
           if (!exists) {
-            db.prepare("INSERT INTO inbox_messages (conversation_id, platform, direction, content, media_type, is_read, platform_msg_id, sent_at) VALUES (?, 'whatsapp', 'in', ?, ?, 0, ?, datetime(?, 'unixepoch'))").run(conv.id, content, mediaType, msgId, ts);
+            db.prepare("INSERT INTO inbox_messages (conversation_id, platform, direction, content, media_type, is_read, platform_msg_id, sent_at, media_id) VALUES (?, 'whatsapp', 'in', ?, ?, 0, ?, datetime(?, 'unixepoch'), ?)").run(conv.id, content, mediaType, msgId, ts, mediaId || null);
           }
           console.log('[WA Webhook POST] saved msg convId=' + (conv && conv.id) + ' from=' + senderId + ' content=' + content);
         }

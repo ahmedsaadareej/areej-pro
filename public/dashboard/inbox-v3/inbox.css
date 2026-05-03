@@ -774,6 +774,23 @@
 .iv3-toolbar-ai { color: #7C3AED; }
 .iv3-toolbar-ai:hover { background: #EDE9FE; border-color: #DDD6FE; }
 .iv3-toolbar-voice.recording { color: #EF4444; background: #FEF2F2; border-color: #FECACA; }
+/* Media loading placeholder */
+.iv3-media-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #F8FAFC;
+  border: 1.5px dashed #CBD5E1;
+  border-radius: 10px;
+  padding: 10px 14px;
+  min-width: 140px;
+  animation: iv3-pulse 1.4s ease-in-out infinite;
+}
+@keyframes iv3-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
 /* Format buttons — مستقل عن .iv3-reply-btn */
 /* specificity أعلى لتجاوز .iv3-reply-btn { display: none } */
 .iv3-reply-row .iv3-fmt-btn,

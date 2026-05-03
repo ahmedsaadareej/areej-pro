@@ -1059,14 +1059,81 @@ router.get('/inbox/resolve-media/:msgId', requireAuth, async (req, res) => {
     const msg = db.prepare('SELECT * FROM inbox_messages WHERE id=?').get(req.params.msgId);
     if (!msg) return res.json({ ok: false, error: 'not found' });
     if (msg.media_url) return res.json({ ok: true, media_url: msg.media_url });
-    if (!msg.file_id) return res.json({ ok: false, error: 'no file_id' });
-    
-    // Get Telegram token
+
     const settings = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get();
-    if (!settings || !settings.telegram_token) return res.json({ ok: false, error: 'no token' });
-    
-    // Call Telegram getFile
     const https = require('https');
+
+    // ── Meta WhatsApp API — resolve via media_id ───────────────────────────────
+    if (msg.platform === 'whatsapp' && msg.media_id && settings?.wa_token) {
+      const mediaId = msg.media_id;
+      // Step 1: get media URL from Meta
+      const metaRes = await new Promise((resolve) => {
+        const reqH = https.request({
+          hostname: 'graph.facebook.com',
+          path: `/v18.0/${mediaId}`,
+          method: 'GET',
+          headers: { Authorization: 'Bearer ' + settings.wa_token }
+        }, (r) => {
+          let data = '';
+          r.on('data', c => data += c);
+          r.on('end', () => { try { resolve(JSON.parse(data)); } catch(e) { resolve({}); } });
+        });
+        reqH.on('error', () => resolve({}));
+        reqH.end();
+      });
+
+      if (metaRes.url) {
+        // Step 2: download the media and save locally
+        const dlUrl = metaRes.url;
+        const localUrl = await new Promise((resolve) => {
+          try {
+            const urlObj = new URL(dlUrl);
+            const reqH = https.request({
+              hostname: urlObj.hostname,
+              path: urlObj.pathname + urlObj.search,
+              method: 'GET',
+              headers: { Authorization: 'Bearer ' + settings.wa_token }
+            }, (r) => {
+              const chunks = [];
+              r.on('data', c => chunks.push(c));
+              r.on('end', () => {
+                try {
+                  const fs = require('fs');
+                  const path = require('path');
+                  const buf = Buffer.concat(chunks);
+                  const mime = r.headers['content-type'] || 'application/octet-stream';
+                  const ext = mime.includes('jpeg') ? 'jpg'
+                    : mime.includes('png') ? 'png'
+                    : mime.includes('mp4') ? 'mp4'
+                    : mime.includes('ogg') ? 'ogg'
+                    : mime.includes('webp') ? 'webp'
+                    : mime.includes('pdf') ? 'pdf'
+                    : 'bin';
+                  const uploadDir = path.join(__dirname, '../../public/uploads/inbox');
+                  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+                  const filename = `wa-api-${Date.now()}-${Math.random().toString(36).slice(2,7)}.${ext}`;
+                  fs.writeFileSync(path.join(uploadDir, filename), buf);
+                  resolve('/uploads/inbox/' + filename);
+                } catch(e) { console.error('[resolve-media WA-API]', e.message); resolve(null); }
+              });
+            });
+            reqH.on('error', () => resolve(null));
+            reqH.end();
+          } catch(e) { resolve(null); }
+        });
+
+        if (localUrl) {
+          db.prepare('UPDATE inbox_messages SET media_url=? WHERE id=?').run(localUrl, msg.id);
+          return res.json({ ok: true, media_url: localUrl });
+        }
+      }
+      return res.json({ ok: false, error: 'could not download Meta media' });
+    }
+
+    // ── Telegram — resolve via file_id ────────────────────────────────────────
+    if (!msg.file_id) return res.json({ ok: false, error: 'no file_id or media_id' });
+    if (!settings?.telegram_token) return res.json({ ok: false, error: 'no telegram token' });
+
     const fileData = await new Promise((resolve) => {
       const reqH = https.request({
         hostname: 'api.telegram.org',
@@ -1080,14 +1147,13 @@ router.get('/inbox/resolve-media/:msgId', requireAuth, async (req, res) => {
       reqH.on('error', () => resolve({}));
       reqH.end();
     });
-    
+
     if (fileData.ok && fileData.result && fileData.result.file_path) {
       const mediaUrl = `https://api.telegram.org/file/bot${settings.telegram_token}/${fileData.result.file_path}`;
-      // Update DB
       db.prepare('UPDATE inbox_messages SET media_url=? WHERE id=?').run(mediaUrl, msg.id);
       return res.json({ ok: true, media_url: mediaUrl });
     }
-    
+
     res.json({ ok: false, error: 'could not resolve file path' });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
