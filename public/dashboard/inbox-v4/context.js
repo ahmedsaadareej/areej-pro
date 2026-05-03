@@ -133,6 +133,7 @@ const InboxContext = (() => {
       { id: 'pay',      icon: '💳', label: 'الدفع'    },
       { id: 'clv',      icon: '📊', label: 'CLV'      },
       { id: 'notes',    icon: '📝', label: 'نوتس'     },
+      { id: 'timeline', icon: '⏱', label: 'التاريخ'  },
     ];
 
     const container = document.querySelector('.iv4-ctx-tabs');
@@ -197,6 +198,7 @@ const InboxContext = (() => {
       case 'pay':      _loadPayLinks();   break;
       case 'clv':      _loadCLV();        break;
       case 'notes':    _loadNotes();      break;
+      case 'timeline': _loadTimeline();   break;
     }
   }
 
@@ -1019,6 +1021,134 @@ const InboxContext = (() => {
     }
   }
 
+  // ─── Timeline: load + render ──────────────────────────────────────────────
+
+  // خريطة الأحداث: icon + label + لون dot
+  const TIMELINE_META = {
+    assigned:        { icon: '👤', label: 'تعيين',            color: '#3b82f6' },
+    unassigned:      { icon: '👤', label: 'إلغاء تعيين',       color: '#94a3b8' },
+    transferred:     { icon: '↪️',  label: 'تحويل',            color: '#8b5cf6' },
+    label_added:     { icon: '🏷',  label: 'تسمية',            color: '#10b981' },
+    label_removed:   { icon: '🏷',  label: 'إزالة تسمية',       color: '#f43f5e' },
+    note_mention:    { icon: '🔔',  label: 'ذكر في نوتس',     color: '#f59e0b' },
+    crm_linked:      { icon: '🔗',  label: 'ربط CRM',           color: '#0ea5e9' },
+    crm_unlinked:    { icon: '🔗',  label: 'فك ربط CRM',        color: '#64748b' },
+    invoice_created: { icon: '📄',  label: 'فاتورة جديدة',      color: '#10b981' },
+    paylink_created: { icon: '💳',  label: 'رابط دفع جديد',   color: '#10b981' },
+    status_changed:  { icon: '🔄',  label: 'تغيير حالة',        color: '#f97316' },
+    snoozed:         { icon: '🛠',  label: 'تأجيل',            color: '#a855f7' },
+    unsnoozed:       { icon: '⏰',  label: 'إلغاء تأجيل',       color: '#a855f7' },
+    priority_set:    { icon: '⚡',  label: 'تغيير أولوية',     color: '#ef4444' },
+    default:         { icon: '🟡',  label: 'حدث',              color: '#94a3b8' },
+  };
+
+  let _timeline  = null;
+  let _tlCursor  = 0;
+  let _tlHasMore = false;
+
+  async function _loadTimeline(append) {
+    if (!_convId) return;
+    append = !!append;
+    const content = _content();
+
+    if (!append) {
+      _timeline  = null;
+      _tlCursor  = 0;
+      _tlHasMore = false;
+      content.innerHTML =
+        '<div class="iv4-tl-wrap">' +
+          '<div class="iv4-tl-list" id="iv4-tl-list">' +
+            '<div class="iv4-ctx-loading"><div class="iv4-ctx-spinner"></div><span>جارٍ التحميل...</span></div>' +
+          '</div>' +
+        '</div>';
+    }
+
+    try {
+      const qs  = (_tlCursor && append) ? ('?before=' + _tlCursor + '&limit=30') : '?limit=30';
+      const res = await _req('GET', '/conversations/' + _convId + '/timeline' + qs);
+      const events = res.events || [];
+
+      _timeline  = append ? ((_timeline || []).concat(events)) : events;
+      _tlHasMore = res.hasMore || false;
+      if (events.length) _tlCursor = events[events.length - 1].id;
+
+      _renderTimelineList();
+    } catch (err) {
+      const list = document.getElementById('iv4-tl-list');
+      if (list) list.innerHTML = '<div class="iv4-ctx-error">' + _esc(err.message) + '</div>';
+    }
+  }
+
+  function _renderTimelineList() {
+    const list = document.getElementById('iv4-tl-list');
+    if (!list) return;
+
+    if (!_timeline || _timeline.length === 0) {
+      list.innerHTML = '<div class="iv4-tl-empty">لا توجد أحداث مسجلة بعد.</div>';
+      return;
+    }
+
+    let html = _timeline.map(_renderTimelineEvent).join('');
+    html += _tlHasMore
+      ? '<button class="iv4-tl-more" id="iv4-tl-more">تحميل أحداث أقدم...</button>'
+      : '<div class="iv4-tl-end">— بداية المحادثة —</div>';
+
+    list.innerHTML = html;
+
+    const btn = document.getElementById('iv4-tl-more');
+    if (btn) btn.addEventListener('click', function() { _loadTimeline(true); });
+  }
+
+  function _renderTimelineEvent(ev) {
+    const meta = TIMELINE_META[ev.type] || TIMELINE_META.default;
+    const dt   = new Date(ev.created_at * 1000);
+    const dateStr = isNaN(dt.getTime()) ? String(ev.created_at) : dt.toLocaleString('ar-EG', {
+      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+    });
+    const desc = _tlEventDesc(ev);
+    return (
+      '<div class="iv4-tl-event">' +
+        '<div class="iv4-tl-dot" style="background:' + meta.color + '">' + meta.icon + '</div>' +
+        '<div class="iv4-tl-body">' +
+          '<div class="iv4-tl-actor">' + _esc(ev.actor_name || 'النظام') + '</div>' +
+          '<div class="iv4-tl-desc">' + desc + '</div>' +
+          '<div class="iv4-tl-date">' + dateStr + '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  // بناء نص وصفي لكل حدث
+  function _tlEventDesc(ev) {
+    const p = ev.payload || {};
+    switch (ev.type) {
+      case 'assigned':
+        return p.to_name ? ('عيّن لـ <strong>' + _esc(p.to_name) + '</strong>') : 'تم التعيين';
+      case 'unassigned':
+        return 'إلغاء التعيين';
+      case 'transferred':
+        return p.to_name ? ('حوّل لـ <strong>' + _esc(p.to_name) + '</strong>') : 'تحويل محادثة';
+      case 'label_added':
+        return p.label_name
+          ? ('أضاف تسمية <span class="iv4-tl-tag" style="background:' + _esc(p.label_color || '#64748b') + '">' + _esc(p.label_name) + '</span>')
+          : 'إضافة تسمية';
+      case 'label_removed':
+        return p.label_name
+          ? ('أزال تسمية <span class="iv4-tl-tag" style="background:' + _esc(p.label_color || '#94a3b8') + '">' + _esc(p.label_name) + '</span>')
+          : 'حذف تسمية';
+      case 'note_mention':   return 'تم ذكرك في ملاحظة داخلية';
+      case 'crm_linked':     return p.contact_name ? ('ربط بـ <strong>' + _esc(p.contact_name) + '</strong>') : 'ربط CRM';
+      case 'crm_unlinked':   return 'فك الربط مع CRM';
+      case 'invoice_created': return (p.amount != null) ? ('فاتورة — ج.م ' + _fmt(p.amount)) : 'إنشاء فاتورة';
+      case 'paylink_created': return (p.amount != null) ? ('رابط دفع — ج.م ' + _fmt(p.amount)) : 'إنشاء رابط دفع';
+      case 'status_changed':  return p.to ? ('حالة ← <strong>' + _esc(p.to) + '</strong>') : 'تغيير حالة';
+      case 'snoozed':        return p.until ? ('تأجيل حتى ' + _esc(p.until)) : 'تم التأجيل';
+      case 'unsnoozed':      return 'إلغاء التأجيل';
+      case 'priority_set':   return p.to ? ('أولوية ← <strong>' + _esc(p.to) + '</strong>') : 'تغيير الأولوية';
+      default: return _esc(ev.type);
+    }
+  }
+
   // ─── Load ─────────────────────────────────────────────────────────────────
 
   async function load(convId) {
@@ -1030,6 +1160,9 @@ const InboxContext = (() => {
     _pager.orders   = { page: 1, total: 0, pages: 0, status: '' };
     _pager.pay      = { page: 1, total: 0, pages: 0 };
     _notes          = null; // إعادة تعيين — ستُحمَل عند فتح التب
+    _timeline        = null; // إعادة تعيين — ستُحمَل عند فتح التب
+    _tlCursor        = 0;
+    _tlHasMore       = false;
 
     _renderLoading();
     _renderTabBar();

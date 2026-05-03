@@ -626,6 +626,63 @@ router.post('/conversations/:id/context/paylink', (req, res) => {
   }
 });
 
+// ─── GET /conversations/:id/timeline ——————————————————————————————————
+// سجل أحداث المحادثة — مرتب زمنياً (الأحدث أولاً) — max 100 حدث
+router.get('/conversations/:id/timeline', (req, res) => {
+  const convId = parseInt(req.params.id, 10);
+  if (isNaN(convId)) return res.status(400).json({ error: 'id غير صالح' });
+
+  try {
+    const db   = req.db;
+    const conv = _getConv(db, convId, req.user);
+    if (!conv) return res.status(404).json({ error: 'المحادثة غير موجودة' });
+
+    const limit  = Math.min(parseInt(req.query.limit  || 50, 10), 100);
+    const before = parseInt(req.query.before || 0,  10); // cursor: id < before
+
+    // نجلب من كلا الجدولين: timeline + messages notes
+    let rows = db.prepare(`
+      SELECT
+        'timeline'       AS src,
+        id,
+        event_type       AS type,
+        actor_id,
+        actor_name,
+        COALESCE(data, meta, '{}') AS payload,
+        created_at
+      FROM inbox_timeline_v4
+      WHERE conversation_id = ?
+        ${before ? 'AND id < ?' : ''}
+      ORDER BY created_at DESC
+      LIMIT ?
+    `).all(...(before ? [convId, before, limit] : [convId, limit]));
+
+    // فك JSON payload لكل حدث
+    rows = rows.map(r => {
+      let p = {};
+      try { p = JSON.parse(r.payload || '{}'); } catch (_) {}
+      return {
+        id:         r.id,
+        src:        r.src,
+        type:       r.type,
+        actor_id:   r.actor_id,
+        actor_name: r.actor_name,
+        payload:    p,
+        created_at: r.created_at,
+      };
+    });
+
+    res.json({
+      ok:      true,
+      events:  rows,
+      hasMore: rows.length === limit,
+    });
+  } catch (err) {
+    console.error('[context] GET timeline:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── GET /conversations/:id/context/notes ——————————————————————————————————
 // جلب كل النوتس الداخلية لمحادثة — الأحدث أولاً
 router.get('/conversations/:id/context/notes', (req, res) => {
