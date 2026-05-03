@@ -97,7 +97,7 @@
 |---|--------|---------|--------|
 | P7-1 | AI Suggestions محسّنة | `reply.js` + backend | ✅ مكتملة |
 | P7-2 | Conversation Summary | `chat.js` + backend | ✅ مكتملة (ضمن P7-1) |
-| P7-3 | Auto-Label Suggestion | backend `automation.js` | ⬜ |
+| P7-3 | Auto-Label Suggestion | backend `automation.js` | ✅ مكتملة |
 | P7-4 | Sentiment Analysis | backend `analytics.js` | ⬜ |
 | P7-5 | Voice Note Transcript (Whisper) | `components/media-player.js` + backend | ⬜ |
 
@@ -116,5 +116,5 @@
 ---
 
 ## 🔴 المهمة القادمة
-**P7-3: Auto-Label Suggestion** — backend `automation.js`
+**P7-4: Sentiment Analysis** — backend `analytics.js`
 أو — **P8-2: WA Interactive Messages (Buttons/Lists)** — backend `messages.js`
