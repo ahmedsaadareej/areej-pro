@@ -46,6 +46,7 @@ function showInboxSettingsSection(section) {
   if (section === 'broadcast-send') { bc2LoadHistory(); }
   if (section === 'reports-analytics') { loadAdvancedAnalyticsIS && loadAdvancedAnalyticsIS(); }
   if (section === 'team-management') { typeof initInboxTeam === 'function' && initInboxTeam(); }
+  if (section === 'content-csat') { typeof loadCsatSection === 'function' && loadCsatSection(); }
 }
 
 function showChannelDetail(channel) {
@@ -877,5 +878,117 @@ async function loadAdvancedAnalyticsIS() {
     container.innerHTML = cardsHtml + platHtml;
   } catch (e) {
     container.innerHTML = `<div style="color:#ef4444;font-size:12px;text-align:center;padding:20px">⚠️ ${e.message}</div>`;
+  }
+}
+
+// ══════════════════════════════════════════════
+// CSAT — رضا العملاء (QUAL-2)
+// آخر تحديث: 2026-05-03
+// ══════════════════════════════════════════════
+
+async function loadCsatSection() {
+  try {
+    const d = await apiFetch('/api/system/inbox/csat-stats');
+    if (!d?.ok) return;
+
+    // تطبيق الإعدادات
+    const enabledEl = document.getElementById('csat-enabled');
+    const msgEl     = document.getElementById('csat-message');
+    const track     = document.getElementById('csat-toggle-track');
+    const thumb     = document.getElementById('csat-toggle-thumb');
+
+    if (enabledEl) {
+      enabledEl.checked = !!d.settings?.csat_enabled;
+      csatUpdateToggleUI(!!d.settings?.csat_enabled);
+    }
+    if (msgEl && d.settings?.csat_message) msgEl.value = d.settings.csat_message;
+
+    // رسم الإحصائيات
+    const container = document.getElementById('csat-stats-container');
+    if (!container) return;
+
+    const s = d.stats || {};
+    const rate = s.total_sent > 0 ? Math.round((s.total_rated / s.total_sent) * 100) : 0;
+    const avg  = s.avg_rating ? parseFloat(s.avg_rating).toFixed(1) : '—';
+    const stars = avg !== '—' ? '⭐'.repeat(Math.round(s.avg_rating)) : '';
+
+    const kpiHtml = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+        ${[
+          ['📨 أُرسل', s.total_sent || 0, '#3B82F6'],
+          ['📝 رُدَّ عليه', s.total_rated || 0, '#8B5CF6'],
+          ['⭐ متوسط', avg, '#F59E0B'],
+        ].map(([label, val, color]) => `
+          <div style="background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:20px;font-weight:800;color:${color}">${val}</div>
+            <div style="font-size:11px;color:#6B7280;margin-top:3px">${label}</div>
+          </div>`).join('')}
+      </div>`;
+
+    // توزيع التقييمات
+    const emojis = { 5:'😍', 4:'😊', 3:'😐', 2:'😕', 1:'😞' };
+    const distMap = {};
+    (d.distribution || []).forEach(r => { distMap[r.rating] = r.count; });
+    const maxCount = Math.max(...Object.values(distMap), 1);
+
+    const distHtml = `
+      <div style="background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:16px;margin-bottom:20px">
+        <div style="font-size:13px;font-weight:700;color:#111827;margin-bottom:12px">توزيع التقييمات</div>
+        ${[5,4,3,2,1].map(r => {
+          const count = distMap[r] || 0;
+          const pct   = Math.round((count / maxCount) * 100);
+          const color = r >= 4 ? '#10B981' : r === 3 ? '#F59E0B' : '#EF4444';
+          return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+            <span style="font-size:18px;width:24px">${emojis[r]}</span>
+            <div style="flex:1;background:#F3F4F6;border-radius:4px;height:8px">
+              <div style="background:${color};width:${pct}%;height:8px;border-radius:4px;transition:width .3s"></div>
+            </div>
+            <span style="font-size:12px;color:#6B7280;width:28px;text-align:left">${count}</span>
+          </div>`;
+        }).join('')}
+      </div>`;
+
+    // آخر التقييمات
+    const recentHtml = d.recent?.length ? `
+      <div style="background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:16px">
+        <div style="font-size:13px;font-weight:700;color:#111827;margin-bottom:12px">آخر التقييمات</div>
+        ${d.recent.map(r => `
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #F3F4F6">
+            <span style="font-size:20px">${emojis[r.csat_rating] || '⭐'}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:700;color:#111827">${r.sender_name || r.sender_id || 'عميل'}</div>
+              ${r.csat_comment ? `<div style="font-size:11px;color:#6B7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.csat_comment}</div>` : ''}
+            </div>
+            <div style="font-size:11px;color:#9CA3AF;white-space:nowrap">${(r.csat_at||'').split('T')[0]||''}</div>
+          </div>`).join('')}
+      </div>` : '';
+
+    container.innerHTML = kpiHtml + distHtml + recentHtml;
+  } catch(e) {
+    const c = document.getElementById('csat-stats-container');
+    if (c) c.innerHTML = `<div style="color:#EF4444;font-size:12px;text-align:center;padding:16px">⚠️ ${e.message}</div>`;
+  }
+}
+
+function csatUpdateToggleUI(enabled) {
+  const track = document.getElementById('csat-toggle-track');
+  const thumb = document.getElementById('csat-toggle-thumb');
+  if (track) track.style.background = enabled ? '#1B5E30' : '#D1D5DB';
+  if (thumb) thumb.style.left = enabled ? '21px' : '3px';
+}
+
+async function csatSaveSettings() {
+  const enabled = document.getElementById('csat-enabled')?.checked;
+  const message = document.getElementById('csat-message')?.value || '';
+  csatUpdateToggleUI(!!enabled);
+  try {
+    const d = await apiFetch('/api/system/inbox/csat-settings', {
+      method: 'POST',
+      body: JSON.stringify({ csat_enabled: enabled, csat_message: message })
+    });
+    if (d?.ok) showToast('✅ تم حفظ إعدادات CSAT', 'success');
+    else showToast('فشل الحفظ', 'error');
+  } catch(e) {
+    showToast('فشل الحفظ: ' + e.message, 'error');
   }
 }

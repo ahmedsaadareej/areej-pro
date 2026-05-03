@@ -4387,8 +4387,33 @@
 
     <!-- ═══ SECTION: content-csat ═══ -->
     <div class="is-section" id="is-section-content-csat" style="display:none">
-      <h2 style="font-size:16px;font-weight:800;color:#111827;margin:0 0 16px">⭐ CSAT (رضا العملاء)</h2>
-      <div style="color:#6b7280;font-size:13px">إعدادات استطلاع رضا العملاء بعد إغلاق المحادثة</div>
+      <h2 style="font-size:16px;font-weight:800;color:#111827;margin:0 0 4px">⭐ CSAT — رضا العملاء</h2>
+      <p style="font-size:12px;color:#9CA3AF;margin-bottom:20px">يُرسل رابط تقييم تلقائياً عند إغلاق كل محادثة</p>
+
+      <!-- إعدادات -->
+      <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:12px;padding:18px;margin-bottom:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#111827">تفعيل CSAT</div>
+            <div style="font-size:12px;color:#6B7280">إرسال رابط التقييم بعد كل إغلاق</div>
+          </div>
+          <label style="position:relative;display:inline-block;width:42px;height:24px">
+            <input type="checkbox" id="csat-enabled" style="opacity:0;width:0;height:0" onchange="csatSaveSettings()">
+            <span id="csat-toggle-track" onclick="document.getElementById('csat-enabled').click()" style="position:absolute;inset:0;background:#D1D5DB;border-radius:12px;cursor:pointer;transition:.2s"></span>
+            <span id="csat-toggle-thumb" style="position:absolute;left:3px;top:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)"></span>
+          </label>
+        </div>
+        <div style="margin-bottom:10px">
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px">رسالة التقييم</label>
+          <textarea id="csat-message" rows="2" placeholder="شكراً لتواصلك! هل يمكنك تقييم تجربتك معنا؟" style="width:100%;padding:8px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px;resize:none;outline:none"></textarea>
+        </div>
+        <button onclick="csatSaveSettings()" style="background:#1B5E30;color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">حفظ الإعدادات</button>
+      </div>
+
+      <!-- إحصائيات -->
+      <div id="csat-stats-container">
+        <div style="text-align:center;padding:20px;color:#9CA3AF;font-size:12px">جاري تحميل الإحصائيات...</div>
+      </div>
     </div>
 
     <!-- ═══ SECTION: reports-analytics ═══ -->

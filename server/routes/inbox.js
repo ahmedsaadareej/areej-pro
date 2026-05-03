@@ -2070,6 +2070,124 @@ router.post('/inbox/upload-voice', requireAuth, (req, res) => {
 // INBOX CONVERSATION STATUS + SEARCH
 // ============================================================
 
+// دالة مساعدة: إرسال CSAT بعد إغلاق المحادثة
+function sendCsatIfEnabled(db, convId, baseUrl) {
+  try {
+    // تحقق من تفعيل CSAT
+    const cols = db.prepare('PRAGMA table_info(inbox_settings)').all().map(c => c.name);
+    if (!cols.includes('csat_enabled')) {
+      db.prepare('ALTER TABLE inbox_settings ADD COLUMN csat_enabled INTEGER DEFAULT 0').run();
+    }
+    const settings = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get();
+    if (!settings?.csat_enabled) return; // CSAT معطّل
+
+    const conv = db.prepare('SELECT * FROM inbox_conversations WHERE id=?').get(convId);
+    if (!conv || !conv.sender_id) return;
+    if (conv.csat_sent_at) return; // تم الإرسال مسبقاً
+
+    // إنشاء token
+    const token = crypto.randomBytes(16).toString('hex');
+    const csatUrl = `${baseUrl || 'https://pro.areejegypt.com'}/csat/${token}`;
+
+    db.prepare('UPDATE inbox_conversations SET csat_token=?, csat_sent_at=datetime(\'now\') WHERE id=?')
+      .run(token, convId);
+
+    // إرسال رسالة CSAT عبر المنصة المناسبة
+    const csatMsg = (settings.csat_message || 'شكراً لتواصلك! هل يمكنك تقييم تجربتك معنا؟') + '\n' + csatUrl;
+
+    // إرسال بنفس طريقة المنصة (لا await — fire and forget)
+    if (conv.platform === 'telegram') {
+      const tgToken = settings.telegram_token;
+      if (tgToken) {
+        const chatId = conv.sender_id;
+        const tgPayload = JSON.stringify({ chat_id: chatId, text: csatMsg });
+        const tgReq = require('https').request({
+          hostname: 'api.telegram.org',
+          path: `/bot${tgToken}/sendMessage`,
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(tgPayload) }
+        });
+        tgReq.on('error', () => {});
+        tgReq.write(tgPayload);
+        tgReq.end();
+      }
+    }
+    // WhatsApp QR — يستخدم نفس sendMessage service
+    if (conv.platform === 'whatsapp-qr' || conv.platform === 'whatsapp') {
+      try {
+        const waQRsvc = require('../whatsapp-qr-service');
+        waQRsvc.sendMessage(conv.user_id || 1, conv.sender_id, csatMsg).catch(() => {});
+      } catch(e) { /* تجاهل */ }
+    }
+  } catch(e) {
+    console.warn('[CSAT] sendCsatIfEnabled error:', e.message);
+  }
+}
+
+// GET /api/system/inbox/csat-stats
+router.get('/inbox/csat-stats', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    // lazy migration
+    const cols = db.prepare('PRAGMA table_info(inbox_settings)').all().map(c => c.name);
+    if (!cols.includes('csat_enabled')) {
+      db.prepare('ALTER TABLE inbox_settings ADD COLUMN csat_enabled INTEGER DEFAULT 0').run();
+    }
+    if (!cols.includes('csat_message')) {
+      db.prepare("ALTER TABLE inbox_settings ADD COLUMN csat_message TEXT DEFAULT ''").run();
+    }
+
+    const settings = db.prepare('SELECT csat_enabled, csat_message FROM inbox_settings WHERE id=1').get() || {};
+
+    const stats = db.prepare(`
+      SELECT
+        COUNT(*) as total_sent,
+        COUNT(csat_rating) as total_rated,
+        ROUND(AVG(csat_rating), 2) as avg_rating,
+        SUM(CASE WHEN csat_rating >= 4 THEN 1 ELSE 0 END) as happy,
+        SUM(CASE WHEN csat_rating = 3 THEN 1 ELSE 0 END) as neutral,
+        SUM(CASE WHEN csat_rating <= 2 THEN 1 ELSE 0 END) as unhappy
+      FROM inbox_conversations
+      WHERE csat_sent_at IS NOT NULL
+    `).get() || {};
+
+    // آخر 10 تقييمات
+    const recent = db.prepare(`
+      SELECT sender_name, sender_id, csat_rating, csat_comment, csat_at, platform
+      FROM inbox_conversations
+      WHERE csat_rating IS NOT NULL AND csat_rating > 0
+      ORDER BY csat_at DESC LIMIT 10
+    `).all();
+
+    // توزيع التقييمات
+    const distribution = db.prepare(`
+      SELECT csat_rating as rating, COUNT(*) as count
+      FROM inbox_conversations
+      WHERE csat_rating IS NOT NULL AND csat_rating > 0
+      GROUP BY csat_rating ORDER BY csat_rating DESC
+    `).all();
+
+    res.json({ ok: true, settings, stats, recent, distribution });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// POST /api/system/inbox/csat-settings
+router.post('/inbox/csat-settings', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const { csat_enabled, csat_message } = req.body;
+    const cols = db.prepare('PRAGMA table_info(inbox_settings)').all().map(c => c.name);
+    if (!cols.includes('csat_enabled'))
+      db.prepare('ALTER TABLE inbox_settings ADD COLUMN csat_enabled INTEGER DEFAULT 0').run();
+    if (!cols.includes('csat_message'))
+      db.prepare("ALTER TABLE inbox_settings ADD COLUMN csat_message TEXT DEFAULT ''").run();
+
+    db.prepare('UPDATE inbox_settings SET csat_enabled=?, csat_message=?, updated_at=datetime(\'now\') WHERE id=1')
+      .run(csat_enabled ? 1 : 0, csat_message || '');
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
 // PUT /api/system/inbox/conversations/:id/status
 router.put('/inbox/conversations/:id/status', requireAuth, (req, res) => {
   const db = req.db;
@@ -2080,6 +2198,12 @@ router.put('/inbox/conversations/:id/status', requireAuth, (req, res) => {
     // تسجيل الحدث في التاريخ
     const actor = req.user?.name || req.user?.email || null;
     logTimeline(db, req.params.id, 'status_changed', { actor, status });
+    // إرسال CSAT عند الإغلاق تلقائياً
+    if (status === 'closed') {
+      const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+      const host  = req.headers['x-forwarded-host'] || req.headers.host || 'pro.areejegypt.com';
+      sendCsatIfEnabled(db, req.params.id, `${proto}://${host}`);
+    }
     res.json({ ok: true });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
