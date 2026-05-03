@@ -225,7 +225,7 @@ function iv3BuildMsgBubble(msg) {
       ${!isOut ? `<div class="iv3-msg-sender-name">${iv3EscHtml(senderName)}</div>` : ''}
       ${isNote ? '<div class="iv3-note-label">🔒 ملاحظة داخلية</div>' : ''}
       ${replyBtnHtml}
-      <div class="iv3-msg-bubble">
+      <div class="iv3-msg-bubble" ondblclick="iv3CopyMsgText(event,${msg.id})" title="ضغطة مزدوجة لنسخ الرسالة">
         ${quoteHtml}
         ${content}
         <div class="iv3-msg-meta">
@@ -595,6 +595,37 @@ function iv3DateLabel(ts) {
   if (diff === 0) return 'اليوم';
   if (diff === 1) return 'أمس';
   return d.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+// ── Copy Message Text ──────────────────────────────────────
+
+function iv3CopyMsgText(event, msgId) {
+  event.preventDefault();
+  event.stopPropagation();
+
+  // ابحث عن الرسالة في الـ state
+  const msg = IV3.messages.find(m => m.id === msgId);
+  if (!msg) return;
+
+  const text = msg.content || '';
+  if (!text.trim()) {
+    iv3Toast('لا يوجد نص للنسخ (وسائط)', 'info');
+    return;
+  }
+
+  navigator.clipboard.writeText(text).then(() => {
+    iv3Toast('✅ تم نسخ الرسالة', 'success');
+  }).catch(() => {
+    // fallback: execCommand
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    iv3Toast('✅ تم نسخ الرسالة', 'success');
+  });
 }
 
 function iv3FormatMsgTime(ts) {
