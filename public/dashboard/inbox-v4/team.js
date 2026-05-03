@@ -495,11 +495,201 @@ const InboxTeam = (() => {
       .replace(/"/g, '&quot;');
   }
 
+
+  // ─── Transfer Modal (P2-5) ─────────────────────────────────────────────
+
+  /**
+   * فتح modal تحويل المحادثة لموظف آخر مع context وملاحظة
+   * @param {number} convId
+   * @param {number|null} currentAgentId - الموظف المعيّن حالياً (يُستثنى من القائمة)
+   */
+  function openTransferModal(convId, currentAgentId = null) {
+    _closeTransferModal();
+
+    const overlay = document.createElement('div');
+    overlay.id        = 'iv4-transfer-overlay';
+    overlay.className = 'iv4-modal-overlay';
+
+    overlay.innerHTML = `
+      <div class="iv4-modal iv4-transfer-modal" id="iv4-transfer-modal"
+           role="dialog" aria-modal="true" aria-labelledby="iv4-transfer-title">
+        <div class="iv4-modal-header">
+          <h3 id="iv4-transfer-title">↩️ تحويل المحادثة</h3>
+          <button class="iv4-modal-close" id="iv4-transfer-close" aria-label="إغلاق">×</button>
+        </div>
+
+        <div class="iv4-modal-body">
+          <div class="iv4-transfer-field">
+            <label class="iv4-transfer-label">تحويل إلى</label>
+            <input type="text"
+              id="iv4-transfer-search"
+              class="iv4-transfer-input"
+              placeholder="ابحث عن موظف..."
+              autocomplete="off">
+            <ul class="iv4-transfer-agent-list" id="iv4-transfer-agent-list">
+              ${_renderTransferAgents('', currentAgentId)}
+            </ul>
+          </div>
+
+          <div class="iv4-transfer-field">
+            <label class="iv4-transfer-label">
+              ملاحظة سياق <span class="iv4-optional">اختياري</span>
+            </label>
+            <textarea
+              id="iv4-transfer-note"
+              class="iv4-transfer-textarea"
+              placeholder="تفاصيل مهمة تظهر للموظف المستلم..."
+              maxlength="500"
+              rows="3"></textarea>
+          </div>
+
+          <label class="iv4-transfer-checkbox-label">
+            <input type="checkbox" id="iv4-transfer-context" checked>
+            إدراج سياق آخر الرسائل تلقائياً
+          </label>
+        </div>
+
+        <div class="iv4-modal-footer">
+          <button class="iv4-btn iv4-btn--ghost" id="iv4-transfer-cancel">إلغاء</button>
+          <button class="iv4-btn iv4-btn--primary" id="iv4-transfer-confirm" disabled>تحويل</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // ── State ──────────────────────────────────────────────────────────
+    let selectedAgentId   = null;
+    let selectedAgentName = '';
+
+    const searchEl  = document.getElementById('iv4-transfer-search');
+    const listEl    = document.getElementById('iv4-transfer-agent-list');
+    const confirmEl = document.getElementById('iv4-transfer-confirm');
+    const noteEl    = document.getElementById('iv4-transfer-note');
+    const ctxEl     = document.getElementById('iv4-transfer-context');
+
+    // ── بحث ────────────────────────────────────────────────────────────
+    searchEl.addEventListener('input', () => {
+      const q = searchEl.value.trim().toLowerCase();
+      listEl.innerHTML = _renderTransferAgents(q, currentAgentId);
+      _bindTransferListClicks(listEl);
+    });
+
+    // ── نقر على موظف ───────────────────────────────────────────────────
+    function _bindTransferListClicks(list) {
+      $$('.iv4-transfer-agent-item', list).forEach(item => {
+        item.addEventListener('click', () => {
+          $$('.iv4-transfer-agent-item', list).forEach(i => i.classList.remove('selected'));
+          item.classList.add('selected');
+          selectedAgentId   = parseInt(item.dataset.agentId);
+          selectedAgentName = item.dataset.agentName;
+          confirmEl.disabled    = false;
+          confirmEl.textContent = `تحويل إلى ${_esc(selectedAgentName)}`;
+        });
+      });
+    }
+
+    _bindTransferListClicks(listEl);
+
+    // ── تأكيد ───────────────────────────────────────────────────────────
+    confirmEl.addEventListener('click', async () => {
+      if (!selectedAgentId || confirmEl.disabled) return;
+      confirmEl.disabled    = true;
+      confirmEl.textContent = 'جاري...';
+
+      try {
+        const note    = noteEl.value.trim();
+        const withCtx = ctxEl.checked;
+        const result  = await InboxAPI.team.transfer(convId, selectedAgentId, note, withCtx);
+
+        if (result.data?.ok) {
+          _showToast(`↩️ تم التحويل إلى ${result.data.to_agent_name}`);
+          // تحديث InboxStore محلياً
+          const conv = InboxStore.state.conversations?.find(c => c.id === convId);
+          if (conv) {
+            conv.assigned_to_id = selectedAgentId;
+            conv.agent_name     = selectedAgentName;
+          }
+          InboxStore.emit('conv_assigned', {
+            conv_id:    convId,
+            agent_id:   selectedAgentId,
+            agent_name: selectedAgentName,
+          });
+          InboxStore.emit('conv:transferred', {
+            conv_id:    convId,
+            agent_id:   selectedAgentId,
+            agent_name: selectedAgentName,
+          });
+          _closeTransferModal();
+        } else {
+          const errMsg = result.data?.error || result.error || 'فشل التحويل';
+          _showToast(`⚠️ ${errMsg}`, 'error');
+          confirmEl.disabled    = false;
+          confirmEl.textContent = `تحويل إلى ${_esc(selectedAgentName)}`;
+        }
+      } catch (e) {
+        _showToast('⚠️ خطأ في التحويل', 'error');
+        confirmEl.disabled    = false;
+        confirmEl.textContent = `تحويل إلى ${_esc(selectedAgentName)}`;
+      }
+    });
+
+    // ── إغلاق ───────────────────────────────────────────────────────────
+    document.getElementById('iv4-transfer-close').addEventListener('click', _closeTransferModal);
+    document.getElementById('iv4-transfer-cancel').addEventListener('click', _closeTransferModal);
+    overlay.addEventListener('click', e => { if (e.target === overlay) _closeTransferModal(); });
+    document.addEventListener('keydown', _transferEscHandler);
+
+    setTimeout(() => searchEl.focus(), 50);
+  }
+
+  /**
+   * بناء HTML قائمة الموظفين في modal التحويل
+   */
+  function _renderTransferAgents(query = '', excludeId = null) {
+    const filtered = _agents.filter(a => {
+      if (a.id === excludeId) return false;  // لا تُحوّل للموظف المعيّن حالياً
+      if (!query) return true;
+      return (a.name || a.username || '').toLowerCase().includes(query.toLowerCase());
+    });
+
+    if (!filtered.length) {
+      return '<li class="iv4-transfer-no-results">لا يوجد موظفون</li>';
+    }
+
+    return filtered.map(a => {
+      const s = STATUS_LABELS[a.inbox_status] || STATUS_LABELS.offline;
+      return `
+        <li class="iv4-transfer-agent-item"
+            data-agent-id="${a.id}"
+            data-agent-name="${_esc(a.name || a.username || '')}"
+            role="option">
+          <span class="iv4-transfer-agent-dot" style="background:${s.color}" title="${s.label}"></span>
+          <div class="iv4-transfer-agent-info">
+            <span class="iv4-transfer-agent-name">${_esc(a.name || a.username || '?')}</span>
+            <span class="iv4-transfer-agent-status">${s.label} · ${a.open_count || 0} محادثة</span>
+          </div>
+        </li>
+      `;
+    }).join('');
+  }
+
+  function _closeTransferModal() {
+    const overlay = document.getElementById('iv4-transfer-overlay');
+    if (overlay) overlay.remove();
+    document.removeEventListener('keydown', _transferEscHandler);
+  }
+
+  function _transferEscHandler(e) {
+    if (e.key === 'Escape') _closeTransferModal();
+  }
+
   // ─── Public API ────────────────────────────────────────────────────────
 
   return {
     init,
     openAssignDropdown,
+    openTransferModal,    // P2-5
     autoAssignAll,
 
     /** الوصول لقائمة الموظفين (للـ modules الأخرى) */

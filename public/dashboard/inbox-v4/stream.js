@@ -136,6 +136,18 @@ const InboxStream = (() => {
       InboxStore.emit('conv:viewing:stop', data);
     });
 
+    // ─── conv:transferred (تحويل محادثة لك — P2-5) ───
+    _es.addEventListener('conv:transferred', (e) => {
+      const data = _parse(e.data);
+      if (!data || !data.conversation_id) return;
+
+      // أبلغ InboxStore
+      InboxStore.emit('conv:transferred', data);
+
+      // عرض toast تنبيه: محادثة جديدة حُوّلت إليك
+      _showTransferToast(data);
+    });
+
     // ─── note:mention (تم ذكرك في نوتس — P2-4) ───
     _es.addEventListener('note:mention', (e) => {
       const data = _parse(e.data);
@@ -238,6 +250,42 @@ const InboxStream = (() => {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
+  }
+
+  /**
+   * عرض toast تنبيه عند استلام محادثة محُوّلة (P2-5)
+   * @param {{ contact_name, from_agent_name, transferred_by, note, conversation_id }} data
+   */
+  function _showTransferToast(data) {
+    const container = document.getElementById('iv4-toasts');
+    if (!container) return;
+
+    const contact    = data.contact_name    || 'عميل';
+    const fromAgent  = data.from_agent_name || 'موظف';
+    const by         = data.transferred_by  || 'موظف';
+    const convId     = data.conversation_id;
+
+    const el = document.createElement('div');
+    el.className = 'iv4-toast iv4-toast--transfer';
+    el.innerHTML = `
+      <div class="iv4-toast-transfer-header">
+        <span class="iv4-toast-transfer-icon">↩️</span>
+        <span class="iv4-toast-transfer-title">محادثة جديدة: <strong>${_escHtml(contact)}</strong></span>
+      </div>
+      <div class="iv4-toast-transfer-body">محولة من ${_escHtml(fromAgent)} • ${_escHtml(by)}</div>
+      ${data.note ? `<div class="iv4-toast-transfer-note">${_escHtml(data.note.slice(0, 60))}</div>` : ''}
+    `;
+
+    if (convId) {
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', () => {
+        InboxStore.set('activeConvId', convId);
+        el.remove();
+      });
+    }
+
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 6000);
   }
 
 

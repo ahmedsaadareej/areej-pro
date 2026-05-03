@@ -600,6 +600,9 @@ const InboxChat = (() => {
   </div>
 </div>
 <div class="iv4-header-actions">
+  <button class="iv4-header-btn iv4-header-btn--transfer" id="iv4-btn-transfer" title="تحويل لموظف آخر" ${status === 'closed' ? 'hidden' : ''}>
+    ↩️ تحويل
+  </button>
   <button class="iv4-header-btn" id="iv4-btn-resolve" title="إغلاق المحادثة" ${status === 'closed' ? 'disabled' : ''}>
     ${status === 'closed' ? '✅ مغلقة' : '✅ إغلاق'}
   </button>
@@ -625,8 +628,17 @@ const InboxChat = (() => {
    * ربط أحداث الـ header
    */
   function _bindHeaderActions(header, conv) {
-    const resolveBtn = header.querySelector('#iv4-btn-resolve');
-    const reopenBtn  = header.querySelector('#iv4-btn-reopen');
+    const resolveBtn   = header.querySelector('#iv4-btn-resolve');
+    const reopenBtn    = header.querySelector('#iv4-btn-reopen');
+    const transferBtn  = header.querySelector('#iv4-btn-transfer');
+
+    // ── زر التحويل (P2-5) ────────────────────────────────────────────────────────
+    if (transferBtn && typeof InboxTeam !== 'undefined') {
+      transferBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        InboxTeam.openTransferModal(conv.id, conv.assigned_to_id || null);
+      });
+    }
 
     if (resolveBtn) {
       resolveBtn.addEventListener('click', async () => {

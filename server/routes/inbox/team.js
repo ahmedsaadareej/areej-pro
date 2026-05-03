@@ -7,8 +7,9 @@
  *   GET  /api/inbox/team/agents/:agentId — حالة موظف واحد
  *   PUT  /api/inbox/team/agents/status   — تغيير حالة الموظف الحالي (online/busy/away/offline)
  *
- *   PUT  /api/inbox/conversations/:id/assign   — تعيين موظف لمحادثة (يدوي)
- *   POST /api/inbox/conversations/auto-assign  — auto-assign لمحادثة open غير معيّنة
+ *   PUT  /api/inbox/conversations/:id/assign    — تعيين موظف لمحادثة (يدوي)
+ *   POST /api/inbox/conversations/:id/transfer  — تحويل محادثة مع context وملاحظة (P2-5)
+ *   POST /api/inbox/conversations/auto-assign   — auto-assign لمحادثة open غير معيّنة
  *   POST /api/inbox/conversations/auto-assign-all — تعيين كل المحادثات المفتوحة الغير معيّنة
  *
  * منطق Auto-assign:
@@ -421,6 +422,154 @@ router.post('/conversations/:id/typing', (req, res) => {
     return res.json({ ok: true });
   } catch (e) {
     console.error('[team] POST /typing error:', e.message);
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/**
+ * POST /api/inbox/conversations/:id/transfer
+ * تحويل محادثة لموظف آخر مع سياق وملاحظة داخلية اختيارية (P2-5)
+ * Body: {
+ *   to_agent_id: number,          — الموظف المستلم
+ *   note: string (optional),      — ملاحظة سياق تظهر للموظف المستلم
+ *   include_context: boolean      — إدراج ملخص آخر 3 رسائل في الملاحظة (default: true)
+ * }
+ * متاح للمدير والإداري فقط (لأن التحويل يغيّر التعيين)
+ */
+router.post('/conversations/:id/transfer', (req, res) => {
+  try {
+    const db  = req.db;
+    const id  = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ ok: false, error: 'id غير صالح' });
+
+    const toAgentId      = parseInt(req.body.to_agent_id);
+    if (isNaN(toAgentId)) return res.status(400).json({ ok: false, error: 'to_agent_id مطلوب' });
+
+    const contextNote    = (req.body.note || '').trim().slice(0, 500);
+    const includeContext = req.body.include_context !== false; // default true
+
+    // فقط admin / owner
+    const isAdmin = req.user.role === 'owner' || req.user.role === 'admin';
+    if (!isAdmin) {
+      return res.status(403).json({ ok: false, error: 'صلاحية المدير / الإداري فقط' });
+    }
+
+    // التحقق من وجود المحادثة
+    const conv = db.prepare(
+      `SELECT id, assigned_to_id, contact_name, platform FROM inbox_conversations_v4 WHERE id = ?`
+    ).get(id);
+    if (!conv) return res.status(404).json({ ok: false, error: 'المحادثة غير موجودة' });
+    if (conv.assigned_to_id === toAgentId) {
+      return res.status(400).json({ ok: false, error: 'المحادثة معيّنة لهذا الموظف بالفعل' });
+    }
+
+    // التحقق من وجود الموظف المستلم
+    const toAgent = db.prepare(
+      `SELECT id, name FROM tenant_users WHERE id = ? AND active = 1`
+    ).get(toAgentId);
+    if (!toAgent) return res.status(404).json({ ok: false, error: 'الموظف المستلم غير موجود' });
+
+    const fromAgentName = conv.assigned_to_id
+      ? db.prepare(`SELECT name FROM tenant_users WHERE id = ?`).get(conv.assigned_to_id)?.name || 'موظف'
+      : 'لا أحد';
+
+    const now = _now();
+
+    // ── 1: تحديث assigned_to_id ──────────────────────────────────────────────
+    db.prepare(
+      `UPDATE inbox_conversations_v4 SET assigned_to_id = ?, updated_at = ? WHERE id = ?`
+    ).run(toAgentId, now, id);
+
+    // ── 2: بناء نص النوتس الداخلية ──────────────────────────────────
+    let noteContent = `⬅️ تحويل من **${fromAgentName}** إلى **${toAgent.name}**`;
+    if (contextNote) noteContent += `\nملاحظة: ${contextNote}`;
+
+    // أجمل آخر 3 رسائل للسياق
+    if (includeContext) {
+      const lastMsgs = db.prepare(
+        `SELECT direction, content, content_type, agent_name, created_at
+         FROM inbox_messages_v4
+         WHERE conversation_id = ? AND direction != 'note'
+         ORDER BY created_at DESC LIMIT 3`
+      ).all(id);
+
+      if (lastMsgs.length > 0) {
+        noteContent += '\n\n📝 سياق آخر ' + lastMsgs.length + ' رسائل:';
+        [...lastMsgs].reverse().forEach(m => {
+          const who  = m.direction === 'outbound' ? (m.agent_name || 'موظف') : 'العميل';
+          const text = m.content_type === 'text'
+            ? (m.content || '').slice(0, 80)
+            : `[ملف ${m.content_type}]`;
+          noteContent += `\n• ${who}: ${text}`;
+        });
+      }
+    }
+
+    // ── 3: حفظ النوتس كرسالة ─────────────────────────────────────────
+    const { v4: uuidv4 } = require('uuid');
+    const noteId = uuidv4();
+    db.prepare(
+      `INSERT INTO inbox_messages_v4
+         (id, conversation_id, direction, content_type, content,
+          agent_id, agent_name, status, created_at)
+       VALUES (?, ?, 'note', 'text', ?, ?, ?, 'sent', ?)`
+    ).run(
+      noteId, id, noteContent,
+      req.user.id,
+      req.user.name || req.user.username || 'موظف',
+      now
+    );
+
+    // ── 4: timeline event ─────────────────────────────────────────────────────
+    _addTimeline(db, id, 'transferred', req.user, {
+      from_agent_id:   conv.assigned_to_id,
+      from_agent_name: fromAgentName,
+      to_agent_id:     toAgentId,
+      to_agent_name:   toAgent.name,
+      note:            contextNote || null,
+    });
+
+    // ── 5: SSE broadcast ──────────────────────────────────────────────────
+    try {
+      const { broadcast: sseBroadcast, sendToUser } = require('./stream');
+      // إبلغ كل المتصلين بتحديث التعيين
+      _broadcastConvUpdate(req, id, {
+        assigned_to_id: toAgentId,
+        agent_name:     toAgent.name,
+      });
+      // إبلغ الموظف المستلم بحدث مخصص
+      sendToUser(toAgentId, 'conv:transferred', {
+        conversation_id: id,
+        contact_name:    conv.contact_name,
+        from_agent_name: fromAgentName,
+        transferred_by:  req.user.name || req.user.username || 'موظف',
+        note:            contextNote || null,
+      });
+      // بث النوتس في SSE لكل المتصلين
+      sseBroadcast(req.user.tenant_id, 'message:new', {
+        ...{
+          id:              noteId,
+          conversation_id: id,
+          direction:       'note',
+          content_type:    'text',
+          content:         noteContent,
+          agent_id:        req.user.id,
+          agent_name:      req.user.name || 'موظف',
+          status:          'sent',
+          created_at:      now,
+        },
+      });
+    } catch (_) {}
+
+    return res.json({
+      ok:           true,
+      to_agent_id:  toAgentId,
+      to_agent_name: toAgent.name,
+      note_id:      noteId,
+    });
+
+  } catch (e) {
+    console.error('[team] POST /transfer error:', e.message);
     return res.status(500).json({ ok: false, error: e.message });
   }
 });

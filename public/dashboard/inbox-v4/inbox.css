@@ -1491,3 +1491,316 @@
   .iv4-toast-mention-title strong { color: #fbbf24; }
   .iv4-toast-mention-body { color: #fde68a; }
 }
+
+/* ─── Transfer Modal (P2-5) ──────────────────────────────────────────── */
+
+.iv4-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: iv4-fade-in .15s ease;
+}
+
+@keyframes iv4-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.iv4-modal {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .2);
+  width: 420px;
+  max-width: 95vw;
+  display: flex;
+  flex-direction: column;
+  animation: iv4-slide-up .2s ease;
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+@keyframes iv4-slide-up {
+  from { transform: translateY(16px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.iv4-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.iv4-modal-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+.iv4-modal-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .1s;
+}
+.iv4-modal-close:hover { background: #f1f5f9; color: #0f172a; }
+
+.iv4-modal-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.iv4-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* transfer fields */
+.iv4-transfer-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.iv4-transfer-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.iv4-optional {
+  font-weight: 400;
+  text-transform: none;
+  color: #94a3b8;
+  letter-spacing: 0;
+}
+
+.iv4-transfer-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color .15s;
+}
+.iv4-transfer-input:focus { border-color: #6366f1; }
+
+.iv4-transfer-agent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.iv4-transfer-agent-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  cursor: pointer;
+  transition: background .1s;
+}
+.iv4-transfer-agent-item:hover  { background: #f8fafc; }
+.iv4-transfer-agent-item.selected { background: #eff6ff; }
+
+.iv4-transfer-agent-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.iv4-transfer-agent-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.iv4-transfer-agent-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.iv4-transfer-agent-status {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.iv4-transfer-no-results {
+  padding: 12px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.iv4-transfer-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: border-color .15s;
+}
+.iv4-transfer-textarea:focus { border-color: #6366f1; }
+
+.iv4-transfer-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #475569;
+  cursor: pointer;
+}
+
+/* Buttons */
+.iv4-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background .15s, opacity .15s;
+}
+.iv4-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.iv4-btn--primary {
+  background: #6366f1;
+  color: #fff;
+}
+.iv4-btn--primary:hover:not(:disabled) { background: #4f46e5; }
+
+.iv4-btn--ghost {
+  background: transparent;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+.iv4-btn--ghost:hover:not(:disabled) { background: #f8fafc; }
+
+/* Transfer Toast */
+.iv4-toast--transfer {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1px solid #86efac;
+  color: #14532d;
+  max-width: 300px;
+}
+
+.iv4-toast-transfer-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+
+.iv4-toast-transfer-icon { font-size: 15px; }
+.iv4-toast-transfer-title strong { color: #166534; }
+
+.iv4-toast-transfer-body {
+  font-size: 12px;
+  color: #166534;
+}
+
+.iv4-toast-transfer-note {
+  font-size: 11px;
+  color: #4ade80;
+  margin-top: 2px;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .iv4-modal {
+    background: #1e293b;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+  }
+  .iv4-modal-header { border-color: #334155; }
+  .iv4-modal-header h3 { color: #f1f5f9; }
+  .iv4-modal-footer { border-color: #334155; }
+  .iv4-modal-close { color: #94a3b8; }
+  .iv4-modal-close:hover { background: #334155; color: #f1f5f9; }
+
+  .iv4-transfer-input,
+  .iv4-transfer-textarea { background: #0f172a; border-color: #334155; color: #f1f5f9; }
+  .iv4-transfer-agent-list { border-color: #334155; }
+  .iv4-transfer-agent-item:hover    { background: #0f172a; }
+  .iv4-transfer-agent-item.selected { background: #1e3a5f; }
+  .iv4-transfer-agent-name { color: #f1f5f9; }
+  .iv4-transfer-checkbox-label { color: #94a3b8; }
+
+  .iv4-btn--ghost { border-color: #334155; color: #94a3b8; }
+  .iv4-btn--ghost:hover:not(:disabled) { background: #334155; }
+
+  .iv4-toast--transfer {
+    background: linear-gradient(135deg, #052e16 0%, #14532d 100%);
+    border-color: #166534;
+    color: #bbf7d0;
+  }
+  .iv4-toast-transfer-title strong { color: #4ade80; }
+  .iv4-toast-transfer-body { color: #86efac; }
+}
+
+/* زر التحويل في الـ chat header (P2-5) */
+.iv4-header-btn--transfer {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #86efac;
+  font-size: 12px;
+  padding: 5px 10px;
+}
+.iv4-header-btn--transfer:hover {
+  background: #dcfce7;
+  border-color: #4ade80;
+}
+
+@media (prefers-color-scheme: dark) {
+  .iv4-header-btn--transfer {
+    background: #052e16;
+    color: #86efac;
+    border-color: #166534;
+  }
+  .iv4-header-btn--transfer:hover {
+    background: #14532d;
+  }
+}

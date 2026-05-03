@@ -270,6 +270,21 @@ const InboxAPI = (() => {
     sendTyping(convId, typing = true) {
       return _post(`/inbox/conversations/${convId}/typing`, { typing });
     },
+
+    /**
+     * تحويل محادثة لموظف آخر مع context وملاحظة (P2-5)
+     * @param {number} convId
+     * @param {number} toAgentId - الموظف المستلم
+     * @param {string} [note=''] - ملاحظة سياق اختيارية
+     * @param {boolean} [includeContext=true] - إدراج آخر 3 رسائل
+     */
+    transfer(convId, toAgentId, note = '', includeContext = true) {
+      return _post(`/inbox/conversations/${convId}/transfer`, {
+        to_agent_id:     toAgentId,
+        note:            note,
+        include_context: includeContext,
+      });
+    },
   };
 
   // ─── Stream / Collision (P2-3) ───────────────────────────────────────────
