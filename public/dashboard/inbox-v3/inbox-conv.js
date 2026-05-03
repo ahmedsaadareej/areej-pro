@@ -17,16 +17,24 @@ async function iv3LoadConvs(reset = true) {
   }
 
   try {
-    const data = await IV3_API.getConversations({
+    // تحويل labelFilter لـ API params
+    const lf = IV3.labelFilter || 'all';
+    const apiParams = {
       platform: IV3.platform,
       status:   IV3.statusFilter,
-      assigned: IV3.agentFilter,
       search:   IV3.searchQuery,
       from:     IV3.dateFrom,
       to:       IV3.dateTo,
       page:     IV3.convPage,
       limit:    IV3.convPageSize,
-    });
+    };
+    if (lf === 'mine')        apiParams.assigned = 'me';
+    else if (lf === 'unassigned') apiParams.assigned = 'unassigned';
+    else if (lf !== 'all')    apiParams.label_id = lf;  // رقم الـ label
+    // agentFilter من الـ dropdown يطغى على labelFilter assigned
+    if (IV3.agentFilter) apiParams.assigned = IV3.agentFilter;
+
+    const data = await IV3_API.getConversations(apiParams);
 
     const list = data.conversations || data || [];
     IV3.convHasMore = list.length >= IV3.convPageSize;
@@ -272,10 +280,18 @@ function iv3BuildConvItem(c) {
     : '';
   const statusCls = `iv3-status-${c.status || 'open'}`;
 
-  // التسميات
-  const labelDots = (c.labels || []).slice(0, 3).map(l =>
+  // التسميات — دوائر صغيرة جنب البادج + chips أسفل الاسم
+  const convLabels = c._labels || c.labels || [];
+  const labelDots = convLabels.slice(0, 3).map(l =>
     `<span class="iv3-label-dot" style="background:${l.color || '#9CA3AF'}" title="${iv3EscHtml(l.name)}"></span>`
   ).join('');
+  const labelChips = convLabels.length > 0
+    ? `<div class="iv3-conv-label-chips iv3-conv-label-chips-wrap">${
+        convLabels.slice(0,3).map(l =>
+          `<span class="iv3-label-chip" style="background:${l.color||'#1B5E30'}22;color:${l.color||'#1B5E30'};border-color:${l.color||'#1B5E30'}44">${iv3EscHtml(l.name)}</span>`
+        ).join('')
+      }</div>`
+    : `<div class="iv3-conv-label-chips-wrap" data-conv-id="${c.id}"></div>`;
 
   const isSelected = IV3.selectedIds.has(c.id);
   const checkHtml  = IV3.bulkMode
@@ -285,6 +301,7 @@ function iv3BuildConvItem(c) {
   return `
     <div class="iv3-conv-item ${isActive ? 'active' : ''} ${statusCls} ${isSelected ? 'bulk-selected' : ''}"
          data-id="${c.id}"
+         data-conv-id="${c.id}"
          data-status="${c.status || 'open'}"
          onclick="iv3ConvItemClick(event, ${c.id})">
       ${checkHtml}
@@ -304,6 +321,7 @@ function iv3BuildConvItem(c) {
             ${unread}
           </div>
         </div>
+        ${labelChips}
       </div>
     </div>`;
 }
@@ -1107,4 +1125,236 @@ function iv3ClearDateFilter() {
   const inputs = document.getElementById('iv3-date-inputs');
   if (inputs) inputs.style.display = 'none';
   iv3LoadConvs(true);
+}
+
+// ══════════════════════════════════════════════════════════════
+// LABELS PANEL — Respond.io style folders + label chips
+// ══════════════════════════════════════════════════════════════
+
+// تحميل الـ labels وبناء الـ panel
+async function iv3LoadLabelsPanel() {
+  try {
+    // جلب العدادات (الكل / ملكي / غير معيّن)
+    const counts = await IV3_API._get('/api/system/inbox/counts');
+    if (counts?.counts) {
+      const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val > 0 ? val : ''; };
+      el('iv3-lfc-all',        counts.counts.all);
+      el('iv3-lfc-mine',       counts.counts.mine);
+      el('iv3-lfc-unassigned', counts.counts.unassigned);
+    }
+
+    // جلب Labels
+    const data = await IV3_API._get('/api/system/inbox/labels');
+    if (data?.labels) {
+      IV3.labels = data.labels;
+      iv3RenderLabelsPanel(data.labels);
+    }
+  } catch(e) { /* تجاهل */ }
+}
+
+function iv3RenderLabelsPanel(labels) {
+  const list = document.getElementById('iv3-lp-labels-list');
+  if (!list) return;
+
+  if (!labels || labels.length === 0) {
+    list.innerHTML = '<div class="iv3-lp-empty">لا توجد تسميات بعد</div>';
+    return;
+  }
+
+  const active = IV3.labelFilter;
+  list.innerHTML = labels.map(l => `
+    <div class="iv3-lp-folder${active == l.id ? ' iv3-lp-active' : ''}"
+         id="iv3-lf-${l.id}"
+         onclick="iv3SetLabelFilter(${l.id}, this)">
+      <span class="iv3-lp-dot" style="background:${l.color || '#1B5E30'}"></span>
+      <span class="iv3-lp-name">${iv3EscHtml(l.name)}</span>
+      <span class="iv3-lp-count">${l.conv_count > 0 ? l.conv_count : ''}</span>
+    </div>
+  `).join('');
+}
+
+// تغيير الـ label filter
+function iv3SetLabelFilter(filter, btn) {
+  IV3.labelFilter = filter;
+
+  // تحديث الـ active state بصرياً
+  document.querySelectorAll('.iv3-lp-folder').forEach(f => f.classList.remove('iv3-lp-active'));
+  if (btn) btn.classList.add('iv3-lp-active');
+  else {
+    const id = filter === 'all' ? 'iv3-lf-all'
+             : filter === 'mine' ? 'iv3-lf-mine'
+             : filter === 'unassigned' ? 'iv3-lf-unassigned'
+             : `iv3-lf-${filter}`;
+    document.getElementById(id)?.classList.add('iv3-lp-active');
+  }
+
+  // إعادة تحميل
+  iv3LoadConvs(true);
+}
+
+// فتح Label Manager modal
+function iv3OpenLabelManager() {
+  const modal = document.getElementById('iv3-label-manager-modal');
+  if (!modal) return;
+  iv3RenderLabelManagerList();
+  modal.style.display = 'flex';
+}
+
+function iv3CloseLabelManager() {
+  const modal = document.getElementById('iv3-label-manager-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function iv3RenderLabelManagerList() {
+  const list = document.getElementById('iv3-lm-list');
+  if (!list) return;
+  list.innerHTML = '<div style="color:#9ca3af;font-size:12px;padding:8px">جاري التحميل...</div>';
+  try {
+    const data = await IV3_API._get('/api/system/inbox/labels');
+    const labels = data?.labels || [];
+    if (labels.length === 0) {
+      list.innerHTML = '<div style="color:#9ca3af;font-size:12px;padding:8px">لا توجد تسميات — أنشئ أولى!</div>';
+      return;
+    }
+    list.innerHTML = labels.map(l => `
+      <div class="iv3-lm-item">
+        <span class="iv3-lm-dot" style="background:${l.color || '#1B5E30'}"></span>
+        <input class="iv3-lm-name-input" value="${iv3EscHtml(l.name)}" data-id="${l.id}"
+          onchange="iv3UpdateLabelName(${l.id}, this.value)">
+        <input type="color" class="iv3-lm-color-input" value="${l.color || '#1B5E30'}" data-id="${l.id}"
+          onchange="iv3UpdateLabelColor(${l.id}, this.value, this.parentElement.querySelector('.iv3-lm-dot'))">
+        <button class="iv3-lm-del" onclick="iv3DeleteLabel(${l.id})" title="حذف">×</button>
+      </div>
+    `).join('');
+  } catch(e) { list.innerHTML = '<div style="color:#ef4444;font-size:12px">خطأ في التحميل</div>'; }
+}
+
+async function iv3CreateLabel() {
+  const nameEl  = document.getElementById('iv3-lm-new-name');
+  const colorEl = document.getElementById('iv3-lm-new-color');
+  const name    = nameEl?.value.trim();
+  const color   = colorEl?.value || '#1B5E30';
+  if (!name) return;
+  try {
+    await IV3_API._post('/api/system/inbox/labels', { name, color });
+    if (nameEl) nameEl.value = '';
+    iv3RenderLabelManagerList();
+    iv3LoadLabelsPanel();
+  } catch(e) { alert('خطأ: ' + e.message); }
+}
+
+async function iv3DeleteLabel(id) {
+  if (!confirm('حذف هذه التسمية نهائياً؟')) return;
+  try {
+    await IV3_API._delete(`/api/system/inbox/labels/${id}`);
+    iv3RenderLabelManagerList();
+    iv3LoadLabelsPanel();
+    if (IV3.labelFilter == id) { IV3.labelFilter = 'all'; iv3LoadConvs(true); }
+  } catch(e) { alert('خطأ: ' + e.message); }
+}
+
+async function iv3UpdateLabelName(id, name) {
+  // PATCH not available, use POST to recreate or PUT if added — skip for now, reload
+}
+
+async function iv3UpdateLabelColor(id, color, dotEl) {
+  if (dotEl) dotEl.style.background = color;
+  // update in DB via PUT if endpoint exists — for now just visual
+}
+
+// Label chips في بطاقة المحادثة
+function iv3RenderLabelChips(conv) {
+  if (!IV3.labels || IV3.labels.length === 0) return '';
+  if (!conv._labels || conv._labels.length === 0) return '';
+  return `<div class="iv3-conv-label-chips">${
+    conv._labels.slice(0,3).map(l =>
+      `<span class="iv3-label-chip" style="background:${l.color}22;color:${l.color};border-color:${l.color}44">${iv3EscHtml(l.name)}</span>`
+    ).join('')
+  }</div>`;
+}
+
+// تحميل labels للمحادثة (lazy — بعد الـ render)
+async function iv3LoadConvLabels(convId) {
+  try {
+    const data = await IV3_API._get(`/api/system/inbox/conversations/${convId}/labels`);
+    const labels = data?.labels || [];
+    // تحديث الـ conv في IV3.convs
+    const conv = IV3.convs.find(c => c.id === convId);
+    if (conv) {
+      conv._labels = labels;
+      // تحديث الـ chip في الـ DOM مباشرة (بدون re-render كامل)
+      const chipWrap = document.querySelector(`[data-conv-id="${convId}"] .iv3-conv-label-chips-wrap`);
+      if (chipWrap) chipWrap.innerHTML = iv3RenderLabelChips(conv);
+    }
+  } catch(e) { /* تجاهل */ }
+}
+
+// إضافة/حذف label من الـ conversation header
+async function iv3ToggleConvLabel(convId, labelId, add) {
+  try {
+    if (add) {
+      await IV3_API._post(`/api/system/inbox/conversations/${convId}/labels/${labelId}`, {});
+    } else {
+      await IV3_API._delete(`/api/system/inbox/conversations/${convId}/labels/${labelId}`);
+    }
+    iv3LoadConvLabels(convId);
+    iv3LoadLabelsPanel(); // تحديث العدادات
+  } catch(e) { iv3Toast('خطأ: ' + e.message, 'error'); }
+}
+
+// ── Label Picker في Chat Header ────────────────────────────
+async function iv3OpenLabels() {
+  const picker = document.getElementById('iv3-label-picker');
+  if (!picker) return;
+
+  // Toggle
+  if (picker.style.display !== 'none') {
+    picker.style.display = 'none';
+    return;
+  }
+
+  const convId = IV3.activeConvId;
+  if (!convId) return;
+
+  picker.style.display = 'block';
+  const list = document.getElementById('iv3-lp-picker-list');
+  if (list) list.innerHTML = '<div style="padding:8px 12px;font-size:11px;color:#9ca3af">جاري التحميل...</div>';
+
+  try {
+    // جلب labels الكل + labels هذه المحادثة
+    const [allData, convData] = await Promise.all([
+      IV3_API._get('/api/system/inbox/labels'),
+      IV3_API._get(`/api/system/inbox/conversations/${convId}/labels`),
+    ]);
+    const all    = allData?.labels || [];
+    const active = new Set((convData?.labels || []).map(l => l.id));
+
+    if (!list) return;
+    if (all.length === 0) {
+      list.innerHTML = '<div style="padding:8px 12px;font-size:11px;color:#9ca3af">لا توجد تسميات — أنشئ من زر الإدارة</div>';
+      return;
+    }
+
+    list.innerHTML = all.map(l => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;transition:background .1s"
+           onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''"
+           onclick="iv3ToggleConvLabel(${convId},${l.id},${!active.has(l.id)});this.querySelector('.iv3-lp-check').style.display=${!active.has(l.id)?'\'block\'':'\'none\''};event.stopPropagation()">
+        <span style="width:10px;height:10px;border-radius:50%;background:${l.color || '#1B5E30'};flex-shrink:0"></span>
+        <span style="flex:1;font-size:12px;font-family:Cairo,sans-serif;color:#374151">${iv3EscHtml(l.name)}</span>
+        <span class="iv3-lp-check" style="display:${active.has(l.id)?'block':'none'};color:#1B5E30;font-size:14px;font-weight:700">✓</span>
+      </div>
+    `).join('');
+  } catch(e) {
+    if (list) list.innerHTML = '<div style="padding:8px 12px;font-size:11px;color:#ef4444">خطأ في التحميل</div>';
+  }
+
+  // إغلاق عند الضغط خارج الـ picker
+  setTimeout(() => {
+    document.addEventListener('click', function closePicker(e) {
+      if (!picker.contains(e.target) && !document.getElementById('iv3-labels-btn')?.contains(e.target)) {
+        picker.style.display = 'none';
+        document.removeEventListener('click', closePicker);
+      }
+    });
+  }, 50);
 }

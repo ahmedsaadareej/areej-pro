@@ -25,8 +25,11 @@ async function iv3Init() {
     }
   }
 
-  // 3. تحميل المحادثات
-  await iv3LoadConvs(true);
+  // 3. تحميل المحادثات + Labels Panel
+  await Promise.all([
+    iv3LoadConvs(true),
+    iv3LoadLabelsPanel(),
+  ]);
 
   // 4. بدء الـ Polling
   iv3StartPolling();

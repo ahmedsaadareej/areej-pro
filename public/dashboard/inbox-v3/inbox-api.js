@@ -50,7 +50,8 @@ const IV3_API = {
     const q = new URLSearchParams();
     if (params.platform)  q.set('platform', params.platform);
     if (params.status)    q.set('status', params.status);
-    if (params.assigned)  q.set('assigned', params.assigned);
+    if (params.assigned)  q.set('assigned_to', params.assigned);
+    if (params.label_id)  q.set('label_id', params.label_id);
     if (params.search)    q.set('search', params.search);
     if (params.from)      q.set('from', params.from);
     if (params.to)        q.set('to', params.to);

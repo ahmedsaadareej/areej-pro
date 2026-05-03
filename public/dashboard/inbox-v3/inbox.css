@@ -2588,3 +2588,157 @@ body.ltr .iv3-ctx-icon-btn::before {
   border-color: #EF4444;
   color: #EF4444;
 }
+
+/* ══════════════════════════════════════════════════════════
+   LABELS PANEL — Respond.io style
+   ══════════════════════════════════════════════════════════ */
+.iv3-labels-panel {
+  flex-shrink: 0;
+  border-bottom: 1px solid #F1F5F9;
+  background: #fff;
+}
+.iv3-lp-section {
+  padding: 4px 0;
+}
+.iv3-lp-labels-section {
+  border-top: 1px solid #F1F5F9;
+  padding-top: 4px;
+}
+.iv3-lp-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 14px 2px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.iv3-lp-add-btn {
+  width: 18px; height: 18px;
+  border-radius: 4px;
+  border: none;
+  background: #f1f5f9;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+.iv3-lp-add-btn:hover { background: #e2e8f0; color: #111; }
+
+.iv3-lp-folder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  cursor: pointer;
+  border-radius: 0;
+  transition: background .12s;
+  font-size: 12px;
+  color: #374151;
+  position: relative;
+  user-select: none;
+}
+.iv3-lp-folder:hover { background: #f8fafc; }
+.iv3-lp-folder.iv3-lp-active {
+  background: #f0fdf4;
+  color: #1B5E30;
+  font-weight: 700;
+}
+.iv3-lp-folder.iv3-lp-active::before {
+  content: '';
+  position: absolute;
+  right: 0; top: 4px; bottom: 4px;
+  width: 3px;
+  background: #1B5E30;
+  border-radius: 2px 0 0 2px;
+}
+.iv3-lp-icon { font-size: 13px; flex-shrink: 0; }
+.iv3-lp-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.iv3-lp-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.iv3-lp-count {
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 4px;
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.iv3-lp-count:empty { display: none; }
+.iv3-lp-empty {
+  padding: 8px 14px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* Label Chips على بطاقة المحادثة */
+.iv3-conv-label-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 3px;
+}
+.iv3-label-chip {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+  border: 1px solid;
+  white-space: nowrap;
+  font-family: Cairo, sans-serif;
+}
+
+/* ── Label Manager Modal ─────────────────────────────────── */
+.iv3-lm-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.iv3-lm-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.iv3-lm-name-input {
+  flex: 1;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: Cairo, sans-serif;
+  outline: none;
+}
+.iv3-lm-name-input:focus { border-color: #1B5E30; }
+.iv3-lm-color-input {
+  width: 28px; height: 28px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 2px;
+  background: none;
+}
+.iv3-lm-del {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 2px;
+}
+.iv3-lm-del:hover { color: #b91c1c; }

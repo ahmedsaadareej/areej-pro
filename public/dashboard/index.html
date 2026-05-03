@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/dashboard/css/main.css?v=22a33029">
 <link rel="stylesheet" href="/dashboard/css/inbox-v2.css?v=20260501">
-<link rel="stylesheet" href="/dashboard/inbox-v3/inbox.css?v=1777817456">
+<link rel="stylesheet" href="/dashboard/inbox-v3/inbox.css?v=1777820540">
 <script>document.documentElement.style.setProperty("--brand","#1B5E30");</script>
 <script>
   // تسجيل Service Worker لـ Push Notifications
@@ -2446,6 +2446,41 @@
         </div>
       </div>
 
+      <!-- Labels Panel (Respond.io style folders) -->
+      <div class="iv3-labels-panel" id="iv3-labels-panel">
+        <!-- Folders: الكل / ملكي / غير معيّن -->
+        <div class="iv3-lp-section">
+          <div class="iv3-lp-folder iv3-lp-active" id="iv3-lf-all"
+               onclick="iv3SetLabelFilter('all',this)">
+            <span class="iv3-lp-icon">💬</span>
+            <span class="iv3-lp-name">الكل</span>
+            <span class="iv3-lp-count" id="iv3-lfc-all">—</span>
+          </div>
+          <div class="iv3-lp-folder" id="iv3-lf-mine"
+               onclick="iv3SetLabelFilter('mine',this)">
+            <span class="iv3-lp-icon">👤</span>
+            <span class="iv3-lp-name">ملكي</span>
+            <span class="iv3-lp-count" id="iv3-lfc-mine">—</span>
+          </div>
+          <div class="iv3-lp-folder" id="iv3-lf-unassigned"
+               onclick="iv3SetLabelFilter('unassigned',this)">
+            <span class="iv3-lp-icon">❔</span>
+            <span class="iv3-lp-name">غير معيّنة</span>
+            <span class="iv3-lp-count" id="iv3-lfc-unassigned">—</span>
+          </div>
+        </div>
+        <!-- Labels مخصصة -->
+        <div class="iv3-lp-section iv3-lp-labels-section">
+          <div class="iv3-lp-section-title">
+            <span>التسميات</span>
+            <button class="iv3-lp-add-btn" onclick="iv3OpenLabelManager()" title="إدارة التسميات">+</button>
+          </div>
+          <div id="iv3-lp-labels-list">
+            <div class="iv3-lp-empty">لا توجد تسميات بعد</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Conversations scroll list -->
       <div class="iv3-conv-scroll" id="iv3-conv-list">
         <!-- Skeleton loading -->
@@ -2514,10 +2549,19 @@
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             تعيين
           </button>
-          <button onclick="iv3OpenLabels()" class="iv3-act-btn" id="iv3-labels-btn">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-            تسميات
-          </button>
+          <div style="position:relative;display:inline-block">
+            <button onclick="iv3OpenLabels()" class="iv3-act-btn" id="iv3-labels-btn">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+              تسميات
+            </button>
+            <!-- Label Picker Dropdown -->
+            <div id="iv3-label-picker" style="display:none;position:absolute;top:110%;right:0;z-index:200;background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:180px;direction:rtl;font-family:Cairo,sans-serif;padding:6px 0">
+              <div id="iv3-lp-picker-list" style="max-height:220px;overflow-y:auto"></div>
+              <div style="border-top:1px solid #f1f5f9;padding:6px 10px">
+                <button onclick="iv3OpenLabelManager()" style="background:none;border:none;color:#1B5E30;font-size:11px;font-weight:700;font-family:Cairo,sans-serif;cursor:pointer;padding:0">➕ إدارة التسميات</button>
+              </div>
+            </div>
+          </div>
           <button onclick="iv3SendInvoice()" class="iv3-act-btn branded" id="iv3-invoice-btn">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             إرسال فاتورة
@@ -2932,6 +2976,30 @@
       </div>
     </div>
   </div>
+
+  <!-- Label Manager Modal -->
+  <div id="iv3-label-manager-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:14px;padding:22px;width:380px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.25);direction:rtl;font-family:Cairo,sans-serif">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <h3 style="margin:0;font-size:14px;font-weight:700;color:#111827">🏷️ إدارة التسميات</h3>
+        <button onclick="iv3CloseLabelManager()" style="background:none;border:none;cursor:pointer;font-size:18px;color:#6b7280">×</button>
+      </div>
+      <!-- إنشاء label جديد -->
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input id="iv3-lm-new-name" type="text" placeholder="اسم التسمية (مثال: عميل جديد)"
+          style="flex:1;border:1.5px solid #e5e7eb;border-radius:8px;padding:7px 10px;font-size:12px;font-family:Cairo,sans-serif;outline:none"
+          onfocus="this.style.borderColor='#1B5E30'" onblur="this.style.borderColor='#e5e7eb'"
+          onkeydown="if(event.key==='Enter')iv3CreateLabel()">
+        <input id="iv3-lm-new-color" type="color" value="#1B5E30"
+          style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:none">
+        <button onclick="iv3CreateLabel()"
+          style="padding:7px 14px;background:#1B5E30;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:Cairo,sans-serif">إضافة</button>
+      </div>
+      <!-- قائمة التسميات -->
+      <div id="iv3-lm-list" style="max-height:300px;overflow-y:auto"></div>
+    </div>
+  </div>
+
 </div><!-- /page-inbox -->
 
 
@@ -5629,13 +5697,13 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="/dashboard/js/treasury.js?v=a379cf29"></script>
 <script src="/dashboard/js/inbox.js?v=1777817456"></script>
 <!-- Inbox v3 modules -->
-<script src="/dashboard/inbox-v3/inbox-state.js?v=1777817456"></script>
-<script src="/dashboard/inbox-v3/inbox-api.js?v=1777817456"></script>
-<script src="/dashboard/inbox-v3/inbox-conv.js?v=1777819171"></script>
+<script src="/dashboard/inbox-v3/inbox-state.js?v=1777820540"></script>
+<script src="/dashboard/inbox-v3/inbox-api.js?v=1777820540"></script>
+<script src="/dashboard/inbox-v3/inbox-conv.js?v=1777820540"></script>
 <script src="/dashboard/inbox-v3/inbox-chat.js?v=1777817456"></script>
 <script src="/dashboard/inbox-v3/inbox-reply.js?v=1777817456"></script>
 <script src="/dashboard/inbox-v3/inbox-context.js?v=1777817456"></script>
-<script src="/dashboard/inbox-v3/inbox-init.js?v=1777817456"></script>
+<script src="/dashboard/inbox-v3/inbox-init.js?v=1777820540"></script>
 <script src="/dashboard/js/inbox-settings.js?v=1777817456"></script>
 <script src="/dashboard/js/team-settings.js?v=4b6f9871"></script>
 <script src="/dashboard/js/ui.js?v=fdf2b683"></script>

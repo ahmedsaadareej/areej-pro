@@ -15,6 +15,7 @@ const IV3 = {
   platform: '',         // '' = الكل، 'whatsapp-qr'، 'telegram'، إلخ
   statusFilter: '',     // '' = الكل، 'open'، 'waiting'، 'closed'
   agentFilter: '',      // '' = الكل، 'unassigned'، أو user_id
+  labelFilter: 'all',   // 'all' | 'mine' | 'unassigned' | label_id (number)
   searchQuery: '',      // نص البحث
   dateFrom: '',         // فلتر من تاريخ (YYYY-MM-DD)
   dateTo: '',           // فلتر إلى تاريخ (YYYY-MM-DD)
