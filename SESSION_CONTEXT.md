@@ -1,3 +1,19 @@
+## Session 2026-05-03 (05:54 → 06:15 UTC) — مكتملة
+- الحالة: تم الإكمال (4 مهام من 5)
+- ما تم إنجازه:
+  - WA-Template Sender: زر APPROVED Templates في Reply Box + modal متغيرات + endpoint إرسال (afa1d5d)
+  - Bulk Messaging: إرسال رسالة جماعية من Inbox لمحادثات محددة (Telegram + WA QR + WA API) (343e3f6)
+  - Deep Search: بحث full-text في محتوى الرسائل + highlight + فلتر منصة/نوع + panel مخصص (67ff6b0)
+  - Catalog → فاتورة: زر "📝 فاتورة" في كل منتج + invoice picker + endpoint add-item (576a9c0)
+- قرارات تقنية:
+  - WA Template Sender يظهر فقط لـ platform='whatsapp' (API) ويُخفى للـ QR/Telegram
+  - Bulk Message backend: delay 300ms بين كل رسالة لحماية rate-limit
+  - Deep Search: snippet 60 حرف يسار/يمين الكلمة + highlight بـ <mark>
+  - Catalog: زران منفصلان (إرسال في رسالة / إضافة للفاتورة) بدل زر واحد
+  - invoice picker يظهر فقط لو الفواتير > 1 وغير مدفوعة/ملغية
+- آخر Commit: 576a9c0
+- نقطة البداية القادمة: اختبار بوابات الدفع Sandbox (يحتاج test credentials من أحمد) أو تحسين WA QR انقطاع
+
 ## Session 2026-05-02 (19:29 → 20:20 UTC) — مكتملة
 - الحالة: تم الإكمال
 - ما تم إنجازه:
