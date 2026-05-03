@@ -2635,7 +2635,8 @@ function showSettingsTab(tab, btn) {
   if (tab === 'labels') loadLabelsList();
   if (tab === 'keywords') loadKeywordsList();
   if (tab === 'broadcast') loadBroadcasts();
-  if (tab === 'analytics') loadInboxAnalytics();
+  if (tab === 'analytics') { loadInboxAnalytics(); iv3StartAnalyticsAutoRefresh(); }
+  else { iv3StopAnalyticsAutoRefresh(); }
   if (tab === 'sla') loadSLAData();
   if (tab === 'drip') loadDripCampaigns();
   if (tab === 'revenue') loadRevenueData();
@@ -3003,11 +3004,33 @@ async function saveSLASettings() {
 }
 
 // ── Analytics ──
-async function loadInboxAnalytics() {
+// ── Auto-refresh للإحصائيات (QUAL-4) ────────────────────────────
+let _analyticsRefreshTimer = null;
+
+function iv3StartAnalyticsAutoRefresh() {
+  if (_analyticsRefreshTimer) return; // لا تبدأ مرتين
+  _analyticsRefreshTimer = setInterval(() => {
+    // تحديث فقط لو تبويب الإحصائيات ظاهر والصفحة غير مخفية
+    const tabEl = document.getElementById('stab-analytics');
+    if (tabEl && tabEl.style.display !== 'none' && !document.hidden) {
+      loadInboxAnalytics(true); // true = silent (no loading spinner)
+    }
+  }, 5 * 60 * 1000); // كل 5 دقائق
+}
+
+function iv3StopAnalyticsAutoRefresh() {
+  if (_analyticsRefreshTimer) {
+    clearInterval(_analyticsRefreshTimer);
+    _analyticsRefreshTimer = null;
+  }
+}
+// ────────────────────────────────────────────────────────────
+
+async function loadInboxAnalytics(silent = false) {
   const from   = document.getElementById('analytics-from')?.value || '';
   const to     = document.getElementById('analytics-to')?.value   || '';
   const content = document.getElementById('analytics-content');
-  if (content) content.innerHTML = '<div style="text-align:center;padding:20px;color:#9ca3af;font-size:12px">جاري تحميل التقرير...</div>';
+  if (content && !silent) content.innerHTML = '<div style="text-align:center;padding:20px;color:#9ca3af;font-size:12px">جاري تحميل التقرير...</div>';
 
   // نحسب عدد الأيام من from/to أو 30 يوم افتراضيًا
   let days = 30;
@@ -3141,7 +3164,9 @@ async function loadInboxAnalytics() {
       </div>`;
   }
 
-  content.innerHTML = cardsHtml + platHtml + trendHtml + topHtml + kwHtml + statusHtml;
+  const now = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+  const refreshBadge = `<div style="text-align:left;padding:6px 16px 0;font-size:11px;color:#9CA3AF">تحديث تلقائي كل 5 دقائق • آخر تحديث: ${now}</div>`;
+  content.innerHTML = cardsHtml + platHtml + trendHtml + topHtml + kwHtml + statusHtml + refreshBadge;
 }
 
 async function saveChatbotSettings() {
