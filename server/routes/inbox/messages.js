@@ -625,3 +625,17 @@ router.post(
 );
 
 module.exports = router;
+
+/**
+ * dispatchOutbound — يُستخدمه automation.js لإرسال الرد (تجنب circular require)
+ * @param {Object} db       - tenant DB
+ * @param {Object} conv     - بيانات المحادثة
+ * @param {Object} msg      - { content_type, content, msg_id }
+ * @returns {Promise}
+ */
+async function dispatchOutbound(db, conv, msg) {
+  const channelConfig = await _getChannelConfig(db, conv.platform);
+  return _dispatch(conv, { ...msg, platform: conv.platform }, channelConfig, db);
+}
+
+module.exports.dispatchOutbound = dispatchOutbound;

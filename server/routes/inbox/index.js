@@ -1,6 +1,6 @@
 /**
  * Inbox v4 Routes — /api/inbox/*
- * آخر تحديث: 2026-05-03 (P3-6 analytics route)
+ * آخر تحديث: 2026-05-03 (P4-1 automation route)
  *
  * مسجّل في app.js كـ:
  *   app.use('/api/inbox', require('./routes/inbox/index'))
@@ -44,8 +44,8 @@ router.use('/', require('./team'));
 router.use('/', require('./labels'));
 router.use('/', require('./search'));
 
-// [Phase 4] Automation
-// router.use('/', require('./automation'));
+// Phase 4 — Automation (P4-1 Keywords Auto-Reply)
+router.use('/', require('./automation'));
 
 // Phase 3 cont. — Analytics + SLA (P3-6)
 router.use('/analytics', require('./analytics'));
