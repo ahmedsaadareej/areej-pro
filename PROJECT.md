@@ -1,398 +1,62 @@
-# 📋 PROJECT.md — مرجع مشروع Areej Pro
-> **قاعدة ذهبية:** هذا الملف يُحدَّث بعد كل خطوة بدون استثناء.
-> أي جلسة جديدة تبدأ بقراءة هذا الملف أولاً قبل أي شيء.
-> آخر تحديث: 2026-05-03 07:52 UTC
+# PROJECT.md — Areej Pro
+> آخر تحديث: 2026-05-03
+
+## الحالة الحالية
+- **آخر commit:** `93caab8`
+- **السيرفر:** areej-server — Ubuntu 24.04 — port 3002
+- **PM2:** `pm2 reload areej-pro`
 
 ---
 
-## 🧭 أمر استئناف أي جلسة جديدة
+## ✅ المنجز (هذه الجلسة)
 
-```
-اقرأ /home/areej/areej-pro/PROJECT.md كامل، ثم أخبرني:
-1. ما آخر خطوة تمت؟
-2. ما الخطوة التالية حسب الخطة؟
-3. هل تحتاج أي معلومات إضافية قبل البدء؟
+### WhatsApp Business API — مكتمل بالكامل
+- **Webhook GET** `/api/webhook/whatsapp/:userId` — Meta Verification ✅
+- **Webhook POST** `/api/webhook/whatsapp/:userId` — استقبال الرسايل ✅
+- **إرسال** من الـ Inbox للعميل عبر Graph API ✅
+- **wa_verify_token** يتحفظ تلقائياً مع الإعدادات ✅
+- **Webhook subscription** على `messages` مفعّل عبر Graph API ✅
+- **تعليمات الربط** في الـ Settings UI محدّثة ومفصّلة للحالتين ✅
 
-تذكر: بعد كل خطوة تنفذها، حدّث PROJECT.md فوراً.
-```
-
----
-
-## 🎯 الرؤية الكاملة للمشروع
-
-### المشكلة التي يحلّها Areej Pro:
-أحمد يعمل بنظامين منفصلين:
-- **دفترة** (ERP): حسابات، مخزون، مبيعات، مشتريات، HR
-- **Respond.io**: إدارة قنوات التواصل (WhatsApp, Messenger, Instagram)
-
-**المشكلة الجوهرية:** لا ربط بين الأنظمة.
-
-### الحل = Areej Pro:
-نظام واحد يجمع: ERP + CRM + Inbox + متجر + موردين + دفع + تعليم
-موجّه لصناعة الملابس والطباعة في مصر — Arabic-first — من فرد لـ 20+ موظف
+### إعدادات حساب pro-test (userId=2)
+- Phone Number ID: `307947889061101`
+- WABA ID: `302562432936844`
+- App ID: `1965741480781531`
+- Webhook URL: `https://pro.areejegypt.com/api/webhook/whatsapp/2`
+- Verify Token: `areej_2_verify`
+- wa_active: `1`
 
 ---
 
-## 🏗️ البنية التقنية
+## ✅ المنجز (جلسات سابقة)
 
-| العنصر | التفاصيل |
-|---|---|
-| **السيرفر** | Ubuntu 24.04 — AMD EPYC 4 cores — 15GB RAM — 150GB |
-| **المسار** | `/home/areej/areej-pro/` |
-| **Backend** | Node.js + Express + SQLite (better-sqlite3) |
-| **Frontend** | HTML/CSS/JS — no framework |
-| **DB** | Multi-tenant: `data/master.db` + `data/tenants/*.db` |
-| **Process** | PM2 — `areej-pro` (id: 1) على port 3002 |
-| **Reverse Proxy** | Caddy → `/etc/caddy/Caddyfile` |
-| **Domains** | `pro.areejegypt.com` (prod) + `pro-test.areejegypt.com` (test) |
-| **Git** | GitHub: areej-pro repo — branch: main |
-
-### اعتبارات السيرفر:
-- لا تشغّل builds ثقيلة وقت الذروة
-- استخدم `pm2 reload areej-pro` للـ deploy (لا restart)
-- `pro-test.areejegypt.com` للاختبار فقط — لا تكسر prod
-
----
-
-## 📁 هيكل ملفات الـ Inbox v3
-
-```
-public/dashboard/inbox-v3/
-├── inbox-state.js      ← IV3 object — الـ State المركزي
-├── inbox-api.js        ← IV3_API object — كل الـ API calls
-├── inbox-conv.js       ← قائمة المحادثات + render + فلاتر
-├── inbox-chat.js       ← Chat window + messages + header actions
-├── inbox-reply.js      ← Reply box + templates + AI + media + voice
-├── inbox-context.js    ← Context Panel + ERP + labels + notes
-├── inbox-init.js       ← Init + Polling + Toast + Sound
-└── inbox.css           ← CSS كامل
-
-public/dashboard/js/
-├── inbox.js            ← showPage routing + legacy functions (3300+ سطر)
-├── inbox-settings.js   ← إعدادات الرسائل (554 سطر)
-└── core.js             ← apiFetch + NAV_PERM_MAP + auth
-
-public/dashboard/index.html  ← المصدر الوحيد للـ HTML (4700+ سطر)
-  ↳ page-inbox              ← سطر ~2237
-  ↳ page-inbox-settings     ← سطر ~2992
-  ↳ inboxSettingsModal      ← legacy مخفي (display:none!important)
-
-server/routes/inbox.js       ← Backend كامل (2400+ سطر، 116 endpoint)
-```
-
-### قواعد الكود:
-- **`apiFetch(url, opts)`** في `core.js` — تُضيف Bearer تلقائاً وترجع JSON مباشرة
-- **`IV3_API`** لكل calls، لا تكتب `fetch` مباشرة في ملفات أخرى
-- **`IV3.activeConvId`** هو الـ state الأساسي — تحقق منه قبل أي action
-- **`iv3Toast(msg, type)`** للإشعارات — type: success/error/info/warning
-- **`index.html` هو المصدر** — `inbox.html` مجرد reference، أي تعديل يكون في index.html
+| # | الميزة | Commit |
+|---|--------|--------|
+| FEAT-1 | Browser Push Notifications + sw-inbox.js | eab6336 |
+| FEAT-2 | Mark All as Read | be2796f |
+| FEAT-3 | Relative Time "منذ X دقيقة" | cb1e79e |
+| FEAT-4 | Copy message on double-click | bfce41e |
+| FEAT-6 | AI Suggestions via Genspark API | ceb26d0 |
+| QUAL-1 | Snooze Dashboard + cancel snooze | 137430f |
+| QUAL-1b | Snooze Badge | 3546570 |
+| QUAL-4 | Auto-refresh analytics | 353fff6 |
+| QUAL-2 | CSAT full implementation | c71537e |
+| — | Cache-bust JS/CSS v=1777798076 | 3aaf667 |
+| — | WhatsApp settings UI — تعليمات واضحة | 27cb845 |
+| — | WhatsApp Webhook endpoints | 7d48264 |
+| — | WhatsApp إرسال واستقبال كامل | 93caab8 |
 
 ---
 
-## 📊 Schema الـ Inbox
-
-```sql
-inbox_conversations  (id, platform, sender_id, sender_name, status, assigned_to_id, unread_count, last_message_at)
-inbox_messages       (id, conversation_id, direction, content, sent_at, media_url, media_type, is_note, status)
-inbox_notes          (id, conversation_id, content, author_id, user_name, created_at)
-inbox_templates      (id, name, content)
-inbox_labels         (id, name, color)
-inbox_settings       (id, telegram_token, telegram_active, welcome_active, welcome_message, away_active, ...)
-inbox_keywords       (id, word, reply)
-inbox_broadcasts     (id, title, status, sent_count)
-inbox_agent_status   (id, user_id, status)
-```
+## 📋 التالي
+- FEAT-5: New Conversation Modal — Instagram/Meta support
+- اختبار Payment Gateways sandbox (محتاج credentials)
+- Live Mode للتطبيق على Meta Developers (لما يتطلب)
 
 ---
 
-## 🔌 المنصات المدعومة
-
-| المنصة | الحالة | الملاحظات |
-|---|---|---|
-| Telegram | ✅ شغّال | Bot Token في inbox_settings |
-| WhatsApp QR | ✅ شغّال | Baileys — يحتاج مسح QR من أحمد |
-| WhatsApp API | ⚠️ جزئي | 360dialog / Meta — يحتاج token |
-| Facebook Messenger | ⚠️ جزئي | Meta webhook موجود |
-| Instagram DM | ⚠️ جزئي | Meta webhook موجود |
-
----
-
-## 💳 مشروع Payment Gateway — White-Label SaaS
-
-### القرارات المعمارية المتفق عليها (2026-05-02):
-
-1. **areej-payment لا يُلمس** — يبقى مشروع أحمد الخاص كما هو
-2. **منطق الدفع يُعاد كتابته داخل areej-pro** كـ modules مستقلة (Xيار B)
-3. **كل Tenant عنده credentials خاصة** في جدول `payment_gateways` في tenant DB
-4. **صفحة الدفع White-Label** على نفس subdomain الـ tenant:
-   `{slug}.areejegypt.com/pay/{token}`
-5. **الـ tenant_profile موجود فعلاً** ويحتوي: `company_name`, `logo_url`, `brand_color`
-6. **جدول payment_links موجود فعلاً** في tenant DB — سيُستخدم مباشرة
-7. **نوعان من روابط الدفع:**
-   - رابط حر: `invoice_id = NULL` + مبلغ محدد أو مفتوح (عربون / مقدم)
-   - رابط فاتورة: `invoice_id = X` + مبلغ ثابت → يُحدّث الفاتورة بعد الدفع
-8. **البوابات المدعومة:** Fawaterk + Paymob + InstaPay (قابل للتوسع)
-9. **كل tenant يختار بوابته** من صفحة إعدادات الدفع في dashboard
-
-### Schema الجديد:
-```sql
--- في كل tenant DB (lazy migration)
-payment_gateways (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  gateway_name TEXT NOT NULL,   -- 'fawaterk' | 'paymob' | 'instapay' | ...
-  display_name TEXT,
-  enabled INTEGER DEFAULT 0,
-  credentials_json TEXT,        -- مشفّر بـ AES
-  config_json TEXT,             -- integration IDs وإعدادات إضافية
-  created_at TEXT DEFAULT (datetime('now')),
-  updated_at TEXT DEFAULT (datetime('now'))
-)
-
--- payment_links موجود فعلاً — تعديل بسيط:
--- invoice_id = NULL → رابط حر
--- amount = NULL → العميل يحدد المبلغ
-```
-
-### خطة ACUs المتبقية:
-| # | المهمة | الملفات | الحالة |
-|---|---|---|---|
-| **ACU-1** | جدول `payment_gateways` + route CRUD كامل | `server/routes/payment-gateways.js` + `app.js` | ✅ commit 99750a2 |
-| **ACU-2** | صفحة إعدادات بوابات الدفع في dashboard | `index.html` + route | ✅ |
-| **ACU-3** | Gateway modules (Fawaterk + Paymob) + route `/pay/:token` + صفحة White-Label | modules جديدة + route | ✅ |
-| **ACU-4** | زر "رابط دفع" في Inbox → token → يُرسل في المحادثة | `inbox-context.js` | ✅ commit ef3211f |
-| **ACU-5** | زر "إرسال للدفع" في الفواتير + تحديث status بعد الدفع | `invoices.js` | ✅ commit f7a854b |
-| **ACU-A** | ربط بوابات الدفع بالخزنة + العمولة (نسبة + ثابتة) | `payment-gateways.js` + `index.html` | ✅ commit 99750a2 |
-| **ACU-B** | `handlePaymentSuccess()` — دورة حياة كاملة بعد الدفع | `pay.js` | ✅ commit 897fa80 |
-| **ACU-C** | `conversation_id` في `payment_links` — ربط الإشعارات | `inbox.js` + `inbox-context.js` + `inbox-api.js` | ✅ commit e6d7c1d |
-
----
-
-## ✅ ما تم إنجازه حتى الآن (2026-05-02)
-
-### Inbox v3 — البنية الكاملة
-- [x] CSS كامل (inbox.css — 1328+ سطر)
-- [x] JS مقسّم 7 ملفات — كلها syntax OK وموجودة في index.html
-- [x] 3-panel layout (محادثات + chat + context) شغّال ✅
-- [x] Polling كل 8 ثواني شغّال ✅
-- [x] API calls كلها مع Bearer token ✅
-
-### Inbox v3 — الـ Features المكتملة
-- [x] قائمة المحادثات مع فلترة (منصة / حالة / موظف / بحث)
-- [x] Infinite scroll + Skeleton loading
-- [x] Unread badges + Title badge
-- [x] فتح محادثة + تحميل رسائل
-- [x] Bubbles (in/out) + فاصل يومي + Media rendering
-- [x] Lightbox للصور
-- [x] Tick status (✓ ✓✓ 🔵 ✗)
-- [x] Internal Notes (🔒) في الرسائل
-- [x] تغيير حالة المحادثة (open/waiting/closed)
-- [x] تعيين لموظف
-- [x] Labels — عرض في القائمة
-- [x] Context Panel — CRM data (رصيد + فواتير + أوردرات)
-- [x] Notes Panel — إضافة + حذف + عرض
-- [x] Voice Recording — MediaRecorder + رفع + إرسال
-- [x] Slash command `/` لفتح Templates
-- [x] AI suggestions
-- [x] إرفاق ملفات مع preview
-- [x] Internal Notes mode في صندوق الرد
-- [x] إرسال فاتورة من المحادثة
-- [x] Quick actions (ملف عميل / فاتورة / أوردر جديد)
-- [x] Sound toggle
-- [x] Toast notifications
-- [x] Quote/Reply على رسالة محددة — commit bbe54f7
-- [x] Snooze المحادثة — commit 6920703
-- [x] Conversation Timeline — commit f3579d2
-- [x] زر "تحويل لأوردر" من المحادثة — commit 5c18915
-- [x] Bulk Actions — commit d4b9d94
-- [x] Collision Detection — commit 17c91cb
-- [x] Keyboard Shortcuts — commit 7b4fec8
-
-### منظومة الدفع (Payment Gateway) — مكتملة ✅
-- [x] جدول `payment_gateways` + CRUD + AES encryption — commit 99750a2
-- [x] صفحة إعدادات بوابات الدفع في dashboard
-- [x] Gateway modules: Fawaterk + Paymob + InstaPay
-- [x] صفحة دفع White-Label: `{slug}.areejegypt.com/pay/{token}`
-- [x] زر "رابط دفع" في Inbox Context Panel — commit ef3211f
-- [x] زر "إرسال للدفع" من صفحة الفواتير — commit f7a854b
-- [x] ربط بوابات الدفع بالخزنة + العمولة (نسبة + ثابتة) — commit 99750a2
-- [x] `handlePaymentSuccess()`: receivable خصم + خزنة صافي + عمولة مصروف + CRM + inbox — commit 897fa80
-- [x] `conversation_id` في `payment_links` — commit e6d7c1d
-
-### إعدادات الرسائل (page-inbox-settings)
-- [x] صفحة منفصلة كاملة (مش modal) — شغّالة ✅
-- [x] قنوات التواصل: Telegram / WhatsApp QR / Messenger / Instagram
-- [x] رسائل تلقائية (ترحيب + خارج أوقات العمل) — شغّالة ✅
-- [x] كلمات مفتاحية — شغّالة ✅
-- [x] Labels — شغّالة ✅
-- [x] ردود جاهزة — شغّالة ✅
-- [x] التحليلات — شغّالة (cards + platform breakdown) ✅
-- [x] فريق الرد (team-management) — موجود
-
-### Bug Fixes هامة
-- [x] `#page-inbox { display:flex }` كان يظهر الـ inbox فوق الإعدادات → تصحيح لـ `#page-inbox.active`
-- [x] `page-inbox-settings` ظاهر مع inbox → إضافة `display:none` في inline style
-- [x] `showInboxSettings()` stub في inbox-init.js كان يطغى على الدالة الشغّالة → حُذف
-- [x] `addNote` كانت ترسل `{note}` والـ API يتوقع `{content}` → إصلاح
-- [x] Legacy modal IDs مكررة مع page-inbox-settings → توحيد
-
----
-
-## 🎯 المهام القادمة — مرتبة بالأولوية
-
-### ✅ منظومة الدفع مكتملة بالكامل
-→ ACU-1 → ACU-5 + ACU-A + ACU-B + ACU-C كلها مُنجزة
-
-### ✅ Inbox v3 Features الأساسية مكتملة
-→ CLV Badge + Catalog + Bulk Actions + Keyboard Shortcuts + Collision Detection
-
----
-
-## 🔴 المهام القادمة — مرتبة بالأولوية
-
-> آخر تحديث: 2026-05-03 07:52 UTC — بعد مراجعة شاملة للـ Inbox
-
----
-
-### ✅ WhatsApp API Channel Management — مكتمل
-- WA-1: صفحة إعدادات WhatsApp API ✅ commit 8c11f0a
-- WA-2: Template Manager ✅ commit da75f1d
-- WA-3: Analytics Dashboard ✅ commit e2d28a1
-
----
-
-### 🔴 الأولوية القصوى — Bugs حقيقية (بدون تدخل أحمد)
-
-#### BUG-1 — Token key خاطئ في CSV Export
-**المشكلة:** `iv3ExportConvs` تبحث عن `'token'` في localStorage لكن النظام يحفظه كـ `'pro_token'` → التصدير يرسل طلب بدون auth → 401
-**الملفات:** `public/dashboard/inbox-v3/inbox-conv.js` سطر 783
-**الإصلاح:** تغيير `localStorage.getItem('token')` إلى `localStorage.getItem('pro_token')`
-**التقدير:** 5 دقائق
-
-#### BUG-2 — Polling يتجاهل فلتر التاريخ
-**المشكلة:** `iv3PollUpdate` يستدعي `getConversations` بدون `dateFrom/dateTo` + الـ `IV3_API.getConversations` لا يمرر `from/to` أصلاً → فلتر التاريخ يُعاد كسره كل 8 ثواني
-**الملفات:** `inbox-init.js` + `inbox-api.js`
-**الإصلاح:** إضافة `from/to` في الـ API call داخل `iv3PollUpdate` + في `IV3_API.getConversations`
-**التقدير:** 15 دقيقة
-
-#### BUG-3 — Messages pagination غير موجود
-**المشكلة:** `getMessages` يحمّل آخر 100 رسالة فقط. لا يوجد زر "تحميل رسائل أقدم" → المحادثات الطويلة تفقد تاريخها
-**الملفات:** `server/routes/inbox.js` + `inbox-chat.js` + `inbox-api.js`
-**الإصلاح:** إضافة `?before=<msg_id>` parameter + زر "تحميل المزيد" في أعلى chat window
-**التقدير:** 45 دقيقة
-
-#### BUG-4 — Polling لا يتوقف لما الـ Tab مخفي
-**المشكلة:** الـ polling يستمر بنفس الـ 8 ثواني حتى لو المستخدم غاب عن الـ tab → استهلاك غير ضروري للسيرفر (900-1800 request/ساعة)
-**الملفات:** `inbox-init.js`
-**الإصلاح:** استخدام `document.addEventListener('visibilitychange')` — 15s لما مخفي، 8s لما نشط
-**التقدير:** 10 دقيقة
-
----
-
-### 🟡 أولوية متوسطة — Features مفيدة (بدون تدخل أحمد)
-
-#### ~~FEAT-1~~ ✅ Browser Push Notifications — مكتمل (eab6336)
-**الوصف:** إشعار حقيقي للمتصفح حتى لو التبويب في الخلفية (Notification API)
-**الملفات:** `inbox-init.js`
-**التقدير:** 30 دقيقة
-
-#### ~~FEAT-2~~ ✅ Mark All as Read — مكتمل (be2796f)
-**الوصف:** زر واحد يصفّر كل الـ unread دفعة واحدة
-**الملفات:** `inbox-conv.js` + `server/routes/inbox.js` (endpoint جديد)
-**التقدير:** 20 دقيقة
-
-#### ~~FEAT-3~~ ✅ Relative Time — مكتمل (cb1e79e)
-**الوصف:** "منذ 3 دقائق" بدل `14:32` — أوضح للمستخدم، يُحدَّث كل دقيقة
-**الملفات:** `inbox-chat.js`
-**التقدير:** 15 دقيقة
-
-#### ~~FEAT-4~~ ✅ نسخ رسالة بـ Double-click — مكتمل (bfce41e)
-**الوصف:** عند الضغط على الرسالة → نسخ المحتوى للـ clipboard مع toast تأكيد
-**الملفات:** `inbox-chat.js`
-**التقدير:** 10 دقيقة
-
-#### FEAT-5 — New Conversation Modal — إضافة Instagram/Meta
-**الوصف:** إرسال أول رسالة عبر Meta API (يحتاج template message معتمد)
-**الملفات:** `inbox-conv.js` + `server/routes/inbox.js`
-**التقدير:** 2 ساعة
-
-#### FEAT-6 — AI Suggestions — استبدال execSync بـ OpenAI API
-**المشكلة الحالية:** يستخدم `gsk ai` CLI بـ `execSync` — هش وغير موثوق
-**الإصلاح:** استدعاء OpenAI API مباشرة من الـ backend
-**الملفات:** `server/routes/inbox.js`
-**التقدير:** 30 دقيقة (يحتاج OpenAI key في SECRETS.md)
-
----
-
-### 🟢 أولوية منخفضة — تحسينات جودة (بدون تدخل أحمد)
-
-#### QUAL-1 — Snooze Dashboard
-**الوصف:** صفحة/panel يعرض كل المحادثات المؤجلة وموعد إيقاظها
-**الملفات:** `inbox-conv.js` + `server/routes/inbox.js`
-**التقدير:** 30 دقيقة
-
-#### QUAL-2 — CSAT تقييم العملاء
-**الوصف:** إرسال رابط تقييم بعد إغلاق المحادثة + عرض النتائج في الإحصائيات
-**الملفات:** `inbox-chat.js` + `server/routes/inbox.js`
-**التقدير:** 2 ساعة
-
-#### QUAL-3 — تصدير تقرير Inbox PDF
-**الوصف:** تقرير الإحصائيات الكاملة كـ PDF قابل للطباعة
-**الملفات:** `inbox-settings.js` + backend
-**التقدير:** 1 ساعة
-
-#### QUAL-4 — Auto-refresh للإحصائيات
-**الوصف:** تحديث analytics كل 5 دقائق تلقائياً بدون ضغط "عرض"
-**الملفات:** `js/inbox.js`
-**التقدير:** 10 دقائق
-
----
-
-### ⚪ يحتاج تدخّل أحمد
-
-#### ربط WhatsApp API الرسمي
-**المطلوب:** Phone Number ID + WABA ID + System User Token من Meta Business Suite
-
-#### اختبار بوابات الدفع Sandbox
-**المطلوب:** Paymob test API Key + Integration ID أو Fawaterk test key
-
-#### ربط Telegram Bot
-**المطلوب:** Bot Token في إعدادات → قنوات التواصل
-
----
-
-## 🔧 أوامر مهمة
-
-```bash
-# Deploy آمن
-cd /home/areej/areej-pro && pm2 reload areej-pro
-
-# Syntax check
-node --check public/dashboard/inbox-v3/inbox-chat.js
-
-# لوج السيرفر
-pm2 logs areej-pro --lines 50
-
-# OTP للـ owner login في pro-test
-sqlite3 /home/areej/areej-pro/data/master.db \
-  "INSERT INTO otp_codes (email,code,expires_at,used) VALUES ('sales@areejegypt.com','123456',datetime('now','+10 minutes'),0);"
-# ثم استخدم 123456 في صفحة الـ OTP
-
-# مسار DB العملاء
-# Master: /home/areej/areej-pro/data/master.db
-# Tenant 1 (pro-test): /home/areej/areej-pro/data/tenants/1.db
-```
-
----
-
-## ⚠️ قواعد العمل المتفق عليها
-
-1. **PROJECT.md يُحدَّث بعد كل خطوة** — بدون استثناء
-2. **كل جلسة جديدة تبدأ بقراءة PROJECT.md**
-3. **Syntax check قبل كل commit**
-4. **الأسرار في SECRETS.md فقط**
-5. **القاعدة الذهبية:** سيرفر + GitHub + Cloudflare
-6. **pro-test فقط للاختبار** — لا تكسر prod
-7. **بروتوكول المهام:** ACU → تنفيذ → Syntax check → Commit → انتظار 10 ثواني
-8. **حد أقصى 5 مهام في الجلسة الواحدة**
-9. **SESSION_CONTEXT.md يُحدَّث في أعلى الملف قبل إغلاق الجلسة**
-10. **areej-payment لا يُلمس أبداً** — منطق الدفع يُعاد كتابته داخل areej-pro
+## ⚠️ ملاحظات مهمة
+- التطبيق `Areej Egypt App` لازال في Development Mode — الرسايل بتوصل لأن الـ subscription شغال عبر WABA مباشرة
+- `wa_active=1` شرط أساسي عشان الاستقبال يشتغل
+- App Secret: موجود في SECRETS.md (لا يُكتب هنا)
+- كل عميل جديد: لازم يعمل نفس خطوات الربط على حسابه
