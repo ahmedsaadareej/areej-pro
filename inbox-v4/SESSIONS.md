@@ -3,6 +3,252 @@
 
 ---
 
+## جلسة 2026-05-03 22:40 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P7-1: `server/routes/inbox/ai.js` — backend جديد بالكامل
+    - `POST /conversations/:id/ai/suggest` — اقتراح رد ذكي (tone: formal/friendly/brief)
+    - `POST /conversations/:id/ai/summary` — ملخص المحادثة
+    - `POST /conversations/:id/ai/translate` — ترجمة عربي/إنجليزي
+    - `POST /conversations/:id/ai/improve` — تحسين النص (formal/shorter/friendlier/fix)
+    - `_callAI()` — محرك OpenAI-compatible (Genspark proxy) مع timeout 30s
+  - P7-1: `public/dashboard/inbox-v4/ai.js` — frontend جديد
+    - زر "✨ AI" dropdown في reply toolbar — كل الأدوات في menu واحد
+    - Tone Panel (ودي/رسمي/مختصر) يظهر بعد الاقتراح لإعادة التوليد
+    - Summary Overlay مع نسخ النص
+    - تحسين + ترجمة يكتبان في الـ textarea مباشرة
+  - `api.js`: إضافة `InboxAPI.ai.*` (suggest/summary/translate/improve)
+  - `index.html`: زر AI toolbar + زر "📋 ملخص" في chat header + ai.js script
+  - `app.js`: `InboxAI.init()`
+  - `inbox.css`: ~130 سطر CSS (كل مكونات AI + dark mode)
+- قرارات: لا جديد
+- آخر commit: 73a2f2f
+- المهمة القادمة: **P7-2 Conversation Summary** مكتمل ضمن P7-1 — التالي: **P7-3 Auto-Label Suggestion** أو **P8-2 WA Interactive Messages**
+
+---
+
+## جلسة 2026-05-03 22:24 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P4-5: **migration v29** — جدول `inbox_scheduled_messages_v4`
+  - P4-5: `automation.js` backend:
+    - `GET /api/inbox/scheduled` — كل الرسائل بحسب الحالة
+    - `GET /api/inbox/conversations/:id/scheduled` — رسائل محادثة
+    - `POST /api/inbox/conversations/:id/scheduled` — إنشاء
+    - `PUT /api/inbox/scheduled/:id` — تعديل
+    - `DELETE /api/inbox/scheduled/:id` — حذف
+    - `POST /api/inbox/automation/scheduled/run` — تشغيل يدوي
+    - `runScheduledMessages(db, tenantId)` — محرك الإرسال (sent/failed tracking)
+  - P4-5: `scheduled.js` frontend:
+    - Dashboard عام (Pending/Sent/Failed tabs)
+    - Form Modal (إضافة/تعديل مع datetime-local picker)
+    - زر "▶ تشغيل الآن" مع عرض sent/failed
+    - Mini panel في المحادثة لعرض الرسائل المجدولة
+  - `api.js`: `InboxAPI.scheduled.*` (6 methods)
+  - `app.js`: `InboxScheduled.init()`
+  - `index.html`: زر 📅 مجدولة في الـ sidebar
+  - `inbox.css`: ~160 سطر CSS + dark mode
+- قرارات: لا جديد
+- آخر commit: 6ef4429
+- المهمة القادمة: **Phase 4 ✅ مكتملة** — التالي: **P7-1 AI Suggestions** — `reply.js` + backend
+
+---
+
+## جلسة 2026-05-03 22:17 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P4-4: **migration v28** — جدول `inbox_auto_close_v4`
+  - P4-4: `automation.js` backend:
+    - `GET/PUT /api/inbox/automation/auto-close`
+    - `POST /api/inbox/automation/auto-close/run` — تشغيل يدوي
+    - `runAutoClose(db, tenantId)` — محرك كامل: تحذير + إغلاق
+      - overnight idle detection
+      - تحتفظ بعدم تكرار التحذير بفحص آخر رسالة Bot
+  - P4-4: `automation.js` frontend:
+    - قسم جديد داخل نفس overlay الـ Welcome/Away
+    - idle_minutes + live hint بالدقائق/ساعات/أيام
+    - فلتر حالة المحادثة (open/waiting)
+    - رسالة إغلاق اختيارية + تحذير قبل الإغلاق
+    - زر "▶ تشغيل الآن" مع عرض النتيجة
+  - `api.js`: `InboxAPI.autoClose.get/update/run`
+  - `inbox.css`: ~55 سطر CSS جديد
+- قرارات: لا جديد
+- آخر commit: 851dc52
+- المهمة القادمة: **P4-5 Scheduled Messages** — backend `automation.js` + frontend أو **P7-1 AI Suggestions**
+
+---
+
+## جلسة 2026-05-03 22:10 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P4-3: **migration v27** — جدول `inbox_welcome_away_v4`
+  - P4-3: `automation.js` backend — `GET/PUT /api/inbox/automation/welcome-away`
+    - `processWelcomeAway(db, conv, isNew, tenantId)` — محرك الترحيب/الغياب
+    - `_isAwayNow(cfg)` — حساب دقيق بالـ timezone + أيام العمل + overnight support
+  - P4-3: `public/dashboard/inbox-v4/automation.js` — frontend كامل
+    - Toggle تفعيل/تعطيل لكل رسالة
+    - اختيار أيام العمل (0–6)
+    - جدول الغياب (away_start → away_end) + overnight
+    - Timezone selector (8 مناطق)
+    - Away Mode: schedule / always
+    - معاينة حية للوضع الحالي (عمل/غياب)
+  - `api.js`: `InboxAPI.welcomeAway.get/update`
+  - `app.js`: `InboxAutomation.init()`
+  - `index.html`: زر 🌙 ترحيب/غياب في الـ sidebar
+  - `inbox.css`: ~160 سطر CSS + dark mode
+  - `routes-inbox-webhook.js`: ربط WA webhook بمحرك Welcome/Away
+- قرارات: لا جديد
+- آخر commit: 715105d
+- المهمة القادمة: **P4-4 Auto-Close** — backend `automation.js` + مهمة Cron أو **P7-1 AI Suggestions** — `reply.js` + backend
+
+---
+
+## جلسة 2026-05-03 22:00 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P4-2: **migration v26** — 3 جداول جديدة:
+    - `inbox_chatbot_flows_v4` (الـ flows)
+    - `inbox_chatbot_steps_v4` (خطوات الـ flow)
+    - `inbox_chatbot_sessions_v4` (جلسات المحادثات النشطة)
+  - P4-2: `server/routes/inbox/chatbot.js` — backend كامل
+    - CRUD flows (GET/POST/PUT/DELETE/toggle)
+    - Bulk replace steps (`PUT /flows/:id/steps`)
+    - Test endpoint (`POST /flows/:id/test`) — simulate
+    - **محرك** `processChatbot()` للـ webhook
+    - دعم step types: message / question / input / condition / action / delay
+    - دعم triggers: keyword / always
+  - P4-2: `public/dashboard/inbox-v4/chatbot.js` — frontend Visual Builder
+    - قائمة flows مع toggle تفعيل/تعطيل
+    - Flow Editor: شجرة steps بصرية (إضافة/تعديل/حذف/child steps)
+    - Step Modal بحقول ديناميكية حسب النوع
+    - زر اختبار (simulate) قبل الحفظ
+  - `api.js`: إضافة `InboxAPI.chatbot.*` (8 methods)
+  - `app.js`: تفعيل `InboxChatbot.init()`
+  - `index.html`: زر 🤖 Chatbot في الـ sidebar
+  - `inbox.css`: ~200 سطر CSS (كل مكونات الـ builder + dark mode)
+  - `routes-inbox-webhook.js`: ربط خفيف بمحرك chatbot عند WA webhook
+- قرارات: لا جديد
+- آخر commit: 560ba36
+- المهمة القادمة: **P4-3 Welcome + Away Messages** — backend `automation.js` أو **P7-1 AI Suggestions** — `reply.js` + backend
+
+---
+
+## جلسة 2026-05-03 21:56 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P6-4: `server/routes/inbox/analytics.js` — `GET /analytics/csat`
+    - ملخص + distribution نجوم + daily trend + by_agent
+  - P6-4: `analytics.js` — section CSAT كامل (KPI + star bars + daily + agent table)
+  - P6-6: `_exportFullExcel()` — CSV بـ BOM (Excel-friendly)
+    - زر "📅 Excel كامل" يصدّر الموظفين + CSAT + توزيع النجوم
+  - `api.js`: analytics.csat()
+  - `inbox.css`: star bars + export-group + export-btn--primary
+- قرارات: لا جديد
+- آخر commit: 14ae51e
+- المهمة القادمة: **Phase 6 ✅ مكتملة** — التالي: **P4-2 Chatbot Flows** أو **P7-1 AI Suggestions**
+
+---
+
+## جلسة 2026-05-03 21:52 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P6-3: `server/routes/inbox/analytics.js` — `GET /analytics/platforms/:platform`
+    - ملخص + تطور يومي + توزيع أولوية + أداء موظفين على المنصة
+  - P6-3: `analytics.js` — `_openPlatformDetail()` modal مع drill-down
+  - P6-5: `server/routes/inbox/analytics.js` — `GET /analytics/sla/detail`
+    - التزام يومي + SLA بالمنصة + أسوأ 10 محادثات
+  - P6-5: `analytics.js` — `_openSLADetail()` modal + زر "🔍 تفصيل" داخل section SLA
+  - `api.js`: analytics.platformDetail() + analytics.slaDetail()
+  - `inbox.css`: hover + detail hint
+- قرارات: لا جديد
+- آخر commit: c16cc9f
+- المهمة القادمة: **P6-4 CSAT Analytics** أو **P6-6 Export PDF/Excel** أو **P4-2 Chatbot Flows**
+
+---
+
+## جلسة 2026-05-03 21:48 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P6-2: `server/routes/inbox/analytics.js` — endpoint جديد
+    - `GET /analytics/agents/:id`: تفاصيل موظف واحد (تطور + منصات + أولوية + آخر 10 محادثات)
+  - P6-2: `public/dashboard/inbox-v4/analytics.js` — `_openAgentDetail()` modal
+    - KPI row + mini bar chart يومي + two-col منصات/أولوية + جدول آخر محادثات
+    - النقر على اسم الموظف في الجدول يفتح drill-down modal
+  - `api.js`: analytics.agentDetail(agentId, { from, to })
+  - `inbox.css`: ~110 سطر CSS (modal + KPI + bars + status badges + dark mode)
+- قرارات: لا جديد
+- آخر commit: ff88979
+- المهمة القادمة: **P6-3 Platform Breakdown** أو **P6-5 SLA Reports**
+
+---
+
+## جلسة 2026-05-03 21:41 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P6-1: `server/routes/inbox/analytics.js` — أضاف endpointين جديدين
+    - `GET /analytics/volume`: حجم المحادثات يومياً (إجمالي + مغلقة + توزيع منصات)
+    - `GET /analytics/hourly`: توزيع الرسائل الواردة على 24 ساعة
+  - P6-1: `public/dashboard/inbox-v4/analytics.js` — جديد بالكامل
+    - Overlay Dashboard مستقل فوق اللّينبوكس
+    - KPI Cards: إجمالي / معدل إغلاق / وقت أول رد / وقت إغلاق / رسائل
+    - Volume Chart: SVG bar chart يومي مع tooltip
+    - Hourly Heatmap: 24 خلية بألوان حرارية (cold→hot)
+    - Platforms: progress bars بنسب المنصات
+    - SLA: ملخص نسبة الالتزام + تفصيل حسب الأولوية
+    - Agents Table: أداء الموظفين مع export CSV
+    - Date Range: presets 7d/30d/90d + custom picker
+  - `api.js`: أضاف analytics.sla / platforms / volume / hourly
+  - `index.html`: زر 📊 الإحصاءات في الـ sidebar + analytics.js script
+  - `app.js`: ربط زر الإحصائات بـ InboxAnalytics.open()
+  - `inbox.css`: ~200 سطر CSS كامل (overlay + dark mode)
+- قرارات: لا جديد
+- آخر commit: 0d49909
+- المهمة القادمة: **P6-2 Agent Performance Reports** أو **P4-2 Chatbot Flows**
+
+---
+
+## جلسة 2026-05-03 21:33 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P5-5: `server/routes/inbox/context.js` — endpoint جديد
+    - `GET /conversations/:id/timeline`: جلب أحداث المحادثة (max 100، cursor-based pagination)
+    - يدعم: assigned / unassigned / transferred / label_added|removed / note_mention / crm_linked|unlinked / invoice_created / paylink_created / status_changed / snoozed / unsnoozed / priority_set
+  - P5-5: `public/dashboard/inbox-v4/context.js` — تب "⏱ التاريخ" جديد
+    - `TIMELINE_META`: خريطة icon + label + color لكل event type
+    - `_loadTimeline(append)`: جلب مع cursor-based load more
+    - `_renderTimelineList()`: HTML مع خط رأسي يربط الأحداث
+    - `_renderTimelineEvent()`: بطاقة حدث مع dot ملون + actor + وصف + تاريخ
+    - `_tlEventDesc()`: نص وصفي عربي لكل نوع حدث
+    - Reset `_timeline` عند فتح محادثة جديدة
+  - P5-5: `inbox.css` — ~80 سطر CSS (timeline dots + vertical line + tag chips + dark mode)
+- قرارات: لا جديد
+- آخر commit: 58ace35
+- المهمة القادمة: **P4-2 Chatbot Flows** — `settings.js` + backend أو **P6-1 Analytics Dashboard**
+
+---
+
+## جلسة 2026-05-03 21:27 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P5-4: `inbox_conv_notes_v4` migration جديد (v25)
+  - P5-4: `server/routes/inbox/context.js` — 3 endpoints
+    - `GET /conversations/:id/context/notes`: جلب كل النوتس (الأحدث أولاً)
+    - `POST /conversations/:id/context/notes`: إضافة نوتة + SSE broadcast
+    - `DELETE /conversations/:id/context/notes/:nid`: حذف بصلاحية (author أو admin)
+  - P5-4: `public/dashboard/inbox-v4/context.js` — تب "📝 نوتس" جديد
+    - `_loadNotes()` + `_renderNotesList()` + `_renderNoteItem()`
+    - `_submitNote()` مع Optimistic UI + `_deleteNote()` مع rollback
+    - SSE listeners: `conv:note_added` + `conv:note_deleted`
+    - Reset `_notes` عند فتح محادثة جديدة
+  - P5-4: `api.js` — إضافة `getNotes` + `addNote` + `deleteNote`
+  - P5-4: `stream.js` — إضافة listeners: `conv:note_added` + `conv:note_deleted`
+  - P5-4: `inbox.css` — ~100 سطر CSS (نوتة بطاقة + composer + dark mode)
+- قرارات: لا جديد
+- آخر commit: 8ccfcd8
+- المهمة القادمة: **P5-5 Conversation Timeline** — `context.js`
+
+---
+
 ## جلسة 2026-05-03 21:21 UTC
 - الحالة: مكتملة
 - ما تم:

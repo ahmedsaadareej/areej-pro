@@ -59,10 +59,10 @@
 | # | المهمة | الملفات | الحالة |
 |---|--------|---------|--------|
 | P4-1 | Keywords Auto-Reply | backend `automation.js` | ✅ مكتملة |
-| P4-2 | Chatbot Flows (visual builder) | `settings.js` + backend | ⬜ |
-| P4-3 | Welcome + Away Messages | backend `automation.js` | ⬜ |
-| P4-4 | Auto-Close | backend `automation.js` | ⬜ |
-| P4-5 | Scheduled Messages | backend `automation.js` | ⬜ |
+| P4-2 | Chatbot Flows (visual builder) | `chatbot.js` + backend | ✅ مكتملة |
+| P4-3 | Welcome + Away Messages | backend `automation.js` | ✅ مكتملة |
+| P4-4 | Auto-Close | backend `automation.js` | ✅ مكتملة |
+| P4-5 | Scheduled Messages | backend `automation.js` | ✅ مكتملة |
 
 ---
 
@@ -73,8 +73,8 @@
 | P5-1 | Customer Info + CRM Link | `context.js` | ✅ مكتملة |
 | P5-2 | Order/Invoice History + CLV | `context.js` + backend | ✅ مكتملة |
 | P5-3 | Quick Actions (New Invoice / Payment Link) | `context.js` | ✅ مكتملة |
-| P5-4 | Internal Notes | `context.js` | ⬜ |
-| P5-5 | Conversation Timeline | `context.js` | ⬜ |
+| P5-4 | Internal Notes | `context.js` | ✅ مكتملة |
+| P5-5 | Conversation Timeline | `context.js` | ✅ مكتملة |
 
 ---
 
@@ -82,12 +82,12 @@
 
 | # | المهمة | الملفات | الحالة |
 |---|--------|---------|--------|
-| P6-1 | Overview Dashboard | `analytics.js` + backend `analytics.js` | ⬜ |
-| P6-2 | Agent Performance Reports | backend `analytics.js` | ⬜ |
-| P6-3 | Platform Breakdown | backend `analytics.js` | ⬜ |
-| P6-4 | CSAT Analytics | backend `analytics.js` | ⬜ |
-| P6-5 | SLA Reports | backend `analytics.js` | ⬜ |
-| P6-6 | Export PDF/Excel | backend `analytics.js` | ⬜ |
+| P6-1 | Overview Dashboard | `analytics.js` + backend `analytics.js` | ✅ مكتملة |
+| P6-2 | Agent Performance Reports | backend `analytics.js` | ✅ مكتملة |
+| P6-3 | Platform Breakdown | backend `analytics.js` | ✅ مكتملة |
+| P6-4 | CSAT Analytics | backend `analytics.js` | ✅ مكتملة |
+| P6-5 | SLA Reports | backend `analytics.js` | ✅ مكتملة |
+| P6-6 | Export PDF/Excel | backend `analytics.js` | ✅ مكتملة (CSV+BOM) |
 
 ---
 
@@ -95,8 +95,8 @@
 
 | # | المهمة | الملفات | الحالة |
 |---|--------|---------|--------|
-| P7-1 | AI Suggestions محسّنة | `reply.js` + backend | ⬜ |
-| P7-2 | Conversation Summary | `chat.js` + backend | ⬜ |
+| P7-1 | AI Suggestions محسّنة | `reply.js` + backend | ✅ مكتملة |
+| P7-2 | Conversation Summary | `chat.js` + backend | ✅ مكتملة (ضمن P7-1) |
 | P7-3 | Auto-Label Suggestion | backend `automation.js` | ⬜ |
 | P7-4 | Sentiment Analysis | backend `analytics.js` | ⬜ |
 | P7-5 | Voice Note Transcript (Whisper) | `components/media-player.js` + backend | ⬜ |
@@ -116,6 +116,5 @@
 ---
 
 ## 🔴 المهمة القادمة
-**P5-4: Internal Notes** — `context.js`
-أو — **P5-5: Conversation Timeline** — `context.js`
-أو — **P4-2: Chatbot Flows** — `settings.js` + backend
+**P7-3: Auto-Label Suggestion** — backend `automation.js`
+أو — **P8-2: WA Interactive Messages (Buttons/Lists)** — backend `messages.js`
