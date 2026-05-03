@@ -815,3 +815,253 @@ router.get('/csat', (req, res) => {
 });
 
 module.exports = router;
+
+// ─── GET /api/inbox/analytics/sentiment ──────────────────────────────────────
+// P7-4: تحليل مشاعر رسائل العملاء الواردة باستخدام الذكاء الاصطناعي
+//
+// الاستراتيجية:
+//   - نجلب آخر N رسالة واردة (inbound) من المحادثات المغلقة في الفترة
+//   - نرسلها دفعة واحدة للـ AI للتصنيف (positive / neutral / negative)
+//   - نحفظ النتيجة في metadata الرسالة لتجنب إعادة الحساب
+//   - نُعيد ملخصاً + توزيع يومي + top negative conversations
+//
+// Query params:
+//   ?from=YYYY-MM-DD  ?to=YYYY-MM-DD  ?limit=200 (max رسائل تُحلَّل)
+
+router.get('/sentiment', async (req, res) => {
+  try {
+    const db = req.db;
+    const { fromTs, toTs, fromIso, toIso } = _parseRange(req.query);
+    const msgLimit = Math.min(parseInt(req.query.limit || '200', 10), 500);
+
+    // 1) جلب الرسائل الواردة غير المحلَّلة + المحلَّلة سابقاً
+    const messages = db.prepare(`
+      SELECT
+        m.id, m.conversation_id, m.content, m.created_at,
+        m.metadata,
+        c.contact_name
+      FROM inbox_messages_v4 m
+      JOIN inbox_conversations_v4 c ON c.id = m.conversation_id
+      WHERE m.direction = 'inbound'
+        AND m.content IS NOT NULL AND m.content != ''
+        AND m.content_type IN ('text', 'image', 'document')
+        AND m.created_at BETWEEN ? AND ?
+      ORDER BY m.created_at DESC
+      LIMIT ?
+    `).all(fromTs, toTs, msgLimit);
+
+    if (!messages.length) {
+      return res.json({
+        ok: true, period: { from: fromIso, to: toIso },
+        summary: { total: 0, positive: 0, neutral: 0, negative: 0 },
+        daily: [], top_negative: [],
+      });
+    }
+
+    // 2) فصل المحلَّلة مسبقاً (تحتوي على sentiment في metadata) عن الجديدة
+    const toAnalyze = [];
+    const alreadyDone = [];
+
+    for (const msg of messages) {
+      let meta = {};
+      try { meta = JSON.parse(msg.metadata || '{}'); } catch (_) {}
+      if (meta.sentiment) {
+        alreadyDone.push({ id: msg.id, conversation_id: msg.conversation_id,
+          sentiment: meta.sentiment, created_at: msg.created_at });
+      } else {
+        toAnalyze.push(msg);
+      }
+    }
+
+    // 3) تحليل الرسائل الجديدة — batch بحجم 30 رسالة لتوفير tokens
+    const BATCH_SIZE = 30;
+    const newResults = [];
+
+    if (toAnalyze.length > 0) {
+      let _aiModule = null;
+      try { _aiModule = require('./ai'); } catch (_) {}
+
+      // نستخدم _callAI مباشرة عبر require الـ ai module
+      // لكن لأن ai.js = express router، نستدعي AI مستقلاً هنا
+      const https   = require('https');
+      const http    = require('http');
+      const urlMod  = require('url');
+      require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
+
+      const AI_KEY   = process.env.OPENAI_API_KEY || '';
+      const AI_BASE  = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
+      const AI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+
+      /**
+       * batch sentiment: يرسل مصفوفة نصوص ويعيد مصفوفة 'positive'|'neutral'|'negative'
+       */
+      async function _batchSentiment(texts) {
+        if (!AI_KEY) return texts.map(() => 'neutral');
+
+        const numbered = texts.map((t, i) => `${i + 1}. ${t.slice(0, 120)}`).join('\n');
+        const body = JSON.stringify({
+          model: AI_MODEL,
+          messages: [
+            {
+              role: 'system',
+              content: `صنّف مشاعر كل رسالة عميل بكلمة واحدة فقط: positive أو neutral أو negative.
+أجب بـ JSON array فقط بهذا الشكل: ["positive","neutral","negative",...]
+عدد العناصر يجب أن يساوي عدد الرسائل المُدخَلة.
+لا تضف أي شرح أو نص خارج الـ JSON.`,
+            },
+            { role: 'user', content: numbered },
+          ],
+          max_tokens: texts.length * 10 + 20,
+          temperature: 0,
+        });
+
+        return new Promise((resolve) => {
+          const parsed  = urlMod.parse(`${AI_BASE}/chat/completions`);
+          const isHttps = parsed.protocol === 'https:';
+          const lib     = isHttps ? https : http;
+
+          const opts = {
+            hostname: parsed.hostname,
+            port:     parsed.port || (isHttps ? 443 : 80),
+            path:     parsed.path,
+            method:   'POST',
+            headers: {
+              'Content-Type':   'application/json',
+              'Authorization':  `Bearer ${AI_KEY}`,
+              'Content-Length': Buffer.byteLength(body),
+            },
+            timeout: 30000,
+          };
+
+          const reqAI = lib.request(opts, aiRes => {
+            let data = '';
+            aiRes.on('data', c => { data += c; });
+            aiRes.on('end', () => {
+              try {
+                const json = JSON.parse(data);
+                const raw  = json.choices?.[0]?.message?.content?.trim() || '[]';
+                const match = raw.match(/\[.*?\]/s);
+                if (match) {
+                  const arr = JSON.parse(match[0]);
+                  // تطبيع وضمان الطول
+                  const normalized = arr.map(s => {
+                    const v = String(s).toLowerCase().trim();
+                    return ['positive','neutral','negative'].includes(v) ? v : 'neutral';
+                  });
+                  // تأكد أن الطول مطابق
+                  while (normalized.length < texts.length) normalized.push('neutral');
+                  resolve(normalized.slice(0, texts.length));
+                } else {
+                  resolve(texts.map(() => 'neutral'));
+                }
+              } catch (_) {
+                resolve(texts.map(() => 'neutral'));
+              }
+            });
+          });
+          reqAI.on('timeout', () => { reqAI.destroy(); resolve(texts.map(() => 'neutral')); });
+          reqAI.on('error',   () => resolve(texts.map(() => 'neutral')));
+          reqAI.write(body);
+          reqAI.end();
+        });
+      }
+
+      // تحليل على batches
+      for (let i = 0; i < toAnalyze.length; i += BATCH_SIZE) {
+        const batch  = toAnalyze.slice(i, i + BATCH_SIZE);
+        const texts  = batch.map(m => m.content || '');
+        const labels = await _batchSentiment(texts);
+
+        for (let j = 0; j < batch.length; j++) {
+          const msg       = batch[j];
+          const sentiment = labels[j] || 'neutral';
+
+          // حفظ في metadata لتجنب إعادة الحساب لاحقاً
+          try {
+            let meta = {};
+            try { meta = JSON.parse(msg.metadata || '{}'); } catch (_) {}
+            meta.sentiment = sentiment;
+            db.prepare('UPDATE inbox_messages_v4 SET metadata = ? WHERE id = ?')
+              .run(JSON.stringify(meta), msg.id);
+          } catch (_) {}
+
+          newResults.push({ id: msg.id, conversation_id: msg.conversation_id,
+            sentiment, created_at: msg.created_at });
+        }
+      }
+    }
+
+    // 4) دمج النتائج
+    const all = [...alreadyDone, ...newResults];
+
+    // 5) ملخص عام
+    let positive = 0, neutral = 0, negative = 0;
+    for (const r of all) {
+      if      (r.sentiment === 'positive') positive++;
+      else if (r.sentiment === 'negative') negative++;
+      else                                 neutral++;
+    }
+    const total = all.length;
+
+    // 6) توزيع يومي
+    const byDay = {};
+    for (const r of all) {
+      const day = new Date(r.created_at * 1000).toISOString().slice(0, 10);
+      if (!byDay[day]) byDay[day] = { day, positive: 0, neutral: 0, negative: 0, total: 0 };
+      byDay[day][r.sentiment]++;
+      byDay[day].total++;
+    }
+    const daily = Object.values(byDay).sort((a, b) => a.day.localeCompare(b.day))
+      .map(d => ({
+        ...d,
+        positive_pct: d.total > 0 ? Math.round((d.positive / d.total) * 100) : 0,
+        negative_pct: d.total > 0 ? Math.round((d.negative / d.total) * 100) : 0,
+      }));
+
+    // 7) أعلى محادثات سلبية (top_negative)
+    const negByConv = {};
+    for (const r of all.filter(r => r.sentiment === 'negative')) {
+      negByConv[r.conversation_id] = (negByConv[r.conversation_id] || 0) + 1;
+    }
+    const topNegIds = Object.entries(negByConv)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([id]) => id);
+
+    const topNegConvs = topNegIds.map(convId => {
+      const conv = db.prepare(`
+        SELECT id, contact_name, platform, status, created_at
+        FROM inbox_conversations_v4 WHERE id = ?
+      `).get(convId);
+      return conv ? {
+        id:           conv.id,
+        contact_name: conv.contact_name || 'عميل غير محدد',
+        platform:     conv.platform,
+        status:       conv.status,
+        neg_count:    negByConv[convId],
+      } : null;
+    }).filter(Boolean);
+
+    res.json({
+      ok: true,
+      period:  { from: fromIso, to: toIso },
+      summary: {
+        total,
+        positive,
+        neutral,
+        negative,
+        positive_pct: total > 0 ? Math.round((positive / total) * 100) : null,
+        neutral_pct:  total > 0 ? Math.round((neutral  / total) * 100) : null,
+        negative_pct: total > 0 ? Math.round((negative / total) * 100) : null,
+        analyzed_new: newResults.length,
+        from_cache:   alreadyDone.length,
+      },
+      daily,
+      top_negative: topNegConvs,
+    });
+
+  } catch (e) {
+    console.error('[inbox/analytics/sentiment]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});

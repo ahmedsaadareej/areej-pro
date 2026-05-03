@@ -351,6 +351,10 @@ const InboxAPI = (() => {
     csat({ from, to } = {}) {
       return _get('/inbox/analytics/csat', { from, to });
     },
+    /** P7-4: تحليل مشاعر رسائل العملاء */
+    sentiment({ from, to, limit } = {}) {
+      return _get('/inbox/analytics/sentiment', { from, to, limit });
+    },
     csatStats() {
       return _get('/inbox/csat-stats');
     },

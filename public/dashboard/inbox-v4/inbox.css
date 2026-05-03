@@ -4745,3 +4745,143 @@
   .iv4-ai-summary-footer { border-color: #334155; }
   .iv4-ai-copy-btn      { background: #0f172a; color: #cbd5e1; border-color: #334155; }
 }
+
+/* ── P7-4: Sentiment Analysis Section ──────────────────────────────────────── */
+.iv4-an-sentiment-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* hint صغير بجانب العنوان */
+.iv4-an-sentiment-hint {
+  font-size: 11px;
+  color: var(--iv4-text-muted, #888);
+  margin-right: auto;
+}
+
+/* KPI pills ثلاثية */
+.iv4-an-sentiment-kpi {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.iv4-an-sentiment-pill {
+  flex: 1;
+  min-width: 110px;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.iv4-sentiment--positive { background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.3); }
+.iv4-sentiment--neutral  { background: rgba(245,158,11,.10); border: 1px solid rgba(245,158,11,.3); }
+.iv4-sentiment--negative { background: rgba(239,68,68,.10);  border: 1px solid rgba(239,68,68,.3); }
+
+.iv4-sentiment-emoji { font-size: 18px; }
+
+.iv4-sentiment-label {
+  flex: 1;
+  font-weight: 500;
+}
+
+.iv4-sentiment-pct {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.iv4-sentiment-count {
+  font-size: 11px;
+  color: var(--iv4-text-muted, #888);
+}
+
+/* شريط التوزيع الكلي */
+.iv4-an-sentiment-bar-wrap { padding: 0 2px; }
+
+.iv4-an-sentiment-bar {
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  display: flex;
+  background: var(--iv4-surface-2, #f5f5f5);
+}
+
+.iv4-sentiment-seg {
+  height: 100%;
+  transition: width 0.4s ease;
+}
+.iv4-sentiment-seg--pos { background: #22c55e; }
+.iv4-sentiment-seg--neu { background: #f59e0b; }
+.iv4-sentiment-seg--neg { background: #ef4444; }
+
+/* chart يومي */
+.iv4-an-sentiment-chart-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.iv4-an-chart-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--iv4-text-muted, #888);
+}
+
+.iv4-an-sentiment-svg {
+  width: 100%;
+  height: 80px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* Top Negative Conversations */
+.iv4-an-sentiment-neg-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.iv4-an-sentiment-neg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.iv4-an-sentiment-neg-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: var(--iv4-surface-2);
+  transition: background 0.15s;
+}
+
+.iv4-an-sentiment-neg-row:hover { background: rgba(239,68,68,.08); }
+
+.iv4-an-sentiment-neg-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iv4-an-sentiment-neg-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ef4444;
+  white-space: nowrap;
+}
+
+/* dark mode */
+.iv4-dark .iv4-sentiment--positive { background: rgba(34,197,94,.15); }
+.iv4-dark .iv4-sentiment--neutral  { background: rgba(245,158,11,.12); }
+.iv4-dark .iv4-sentiment--negative { background: rgba(239,68,68,.12); }
+.iv4-dark .iv4-an-sentiment-bar    { background: #2a2a2a; }
+.iv4-dark .iv4-an-sentiment-neg-row { background: var(--iv4-surface-2, #1e1e1e); }

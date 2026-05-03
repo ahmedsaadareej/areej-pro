@@ -55,6 +55,15 @@ const InboxAnalytics = (() => {
     return m > 0 ? `${h}س ${m}د` : `${h}س`;
   }
 
+  /** HTML escape آمن */
+  function _esc(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   /** تنسيق رقم مع فاصلة آلاف */
   function _fmt(n) {
     if (n == null) return '—';
@@ -164,6 +173,17 @@ const InboxAnalytics = (() => {
           <section class="iv4-an-section" id="iv4-an-csat-section">
             <h3 class="iv4-an-section-title">⭐ رضا العملاء (CSAT)</h3>
             <div id="iv4-an-csat" class="iv4-an-csat-wrap">
+              <!-- تُحمَّل ديناميكياً -->
+            </div>
+          </section>
+
+          <!-- ── Section 7: Sentiment Analysis (P7-4) ── -->
+          <section class="iv4-an-section" id="iv4-an-sentiment-section">
+            <div class="iv4-an-section-header-row">
+              <h3 class="iv4-an-section-title">🧠 تحليل المشاعر</h3>
+              <span class="iv4-an-sentiment-hint" id="iv4-an-sentiment-hint"></span>
+            </div>
+            <div id="iv4-an-sentiment" class="iv4-an-sentiment-wrap">
               <!-- تُحمَّل ديناميكياً -->
             </div>
           </section>
@@ -1036,6 +1056,152 @@ const InboxAnalytics = (() => {
 
   let _lastAgentsData = [];
 
+  // ─── P7-4: Sentiment Analysis ─────────────────────────────────────────────
+
+  /**
+   * رسم قسم تحليل المشاعر
+   * @param {Object} data - البيانات من /analytics/sentiment
+   */
+  function _renderSentiment(data) {
+    const wrap = document.getElementById('iv4-an-sentiment');
+    const hint = document.getElementById('iv4-an-sentiment-hint');
+    if (!wrap) return;
+
+    if (!data || !data.summary) {
+      wrap.innerHTML = '<div class="iv4-an-empty">لا توجد بيانات كافية</div>';
+      return;
+    }
+
+    const s = data.summary;
+    const daily = data.daily || [];
+    const topNeg = data.top_negative || [];
+
+    // hint: عدد الرسائل المحلَّلة
+    if (hint) {
+      hint.textContent = s.total > 0
+        ? `${s.total} رسالة محلَّلة (${s.analyzed_new || 0} جديدة / ${s.from_cache || 0} من الكاش)`
+        : '';
+    }
+
+    if (s.total === 0) {
+      wrap.innerHTML = '<div class="iv4-an-empty">لا توجد رسائل في هذه الفترة</div>';
+      return;
+    }
+
+    const posP = s.positive_pct ?? 0;
+    const neuP = s.neutral_pct  ?? 0;
+    const negP = s.negative_pct ?? 0;
+
+    // رسم SVG bar chart اليومي (مشاعر مكدسة)
+    const svgChart = _renderSentimentChart(daily);
+
+    wrap.innerHTML = `
+      <!-- KPI Row -->
+      <div class="iv4-an-sentiment-kpi">
+        <div class="iv4-an-sentiment-pill iv4-sentiment--positive">
+          <span class="iv4-sentiment-emoji">😊</span>
+          <span class="iv4-sentiment-label">إيجابي</span>
+          <span class="iv4-sentiment-pct">${posP}%</span>
+          <span class="iv4-sentiment-count">${s.positive}</span>
+        </div>
+        <div class="iv4-an-sentiment-pill iv4-sentiment--neutral">
+          <span class="iv4-sentiment-emoji">😐</span>
+          <span class="iv4-sentiment-label">محايد</span>
+          <span class="iv4-sentiment-pct">${neuP}%</span>
+          <span class="iv4-sentiment-count">${s.neutral}</span>
+        </div>
+        <div class="iv4-an-sentiment-pill iv4-sentiment--negative">
+          <span class="iv4-sentiment-emoji">😞</span>
+          <span class="iv4-sentiment-label">سلبي</span>
+          <span class="iv4-sentiment-pct">${negP}%</span>
+          <span class="iv4-sentiment-count">${s.negative}</span>
+        </div>
+      </div>
+
+      <!-- شريط التوزيع الكلي -->
+      <div class="iv4-an-sentiment-bar-wrap" title="إيجابي ${posP}% / محايد ${neuP}% / سلبي ${negP}%">
+        <div class="iv4-an-sentiment-bar">
+          ${posP > 0 ? `<div class="iv4-sentiment-seg iv4-sentiment-seg--pos" style="width:${posP}%"></div>` : ''}
+          ${neuP > 0 ? `<div class="iv4-sentiment-seg iv4-sentiment-seg--neu" style="width:${neuP}%"></div>` : ''}
+          ${negP > 0 ? `<div class="iv4-sentiment-seg iv4-sentiment-seg--neg" style="width:${negP}%"></div>` : ''}
+        </div>
+      </div>
+
+      <!-- Chart يومي -->
+      ${daily.length > 1 ? `
+        <div class="iv4-an-sentiment-chart-wrap">
+          <div class="iv4-an-chart-title">توزيع المشاعر يومياً</div>
+          ${svgChart}
+        </div>
+      ` : ''}
+
+      <!-- Top Negative Conversations -->
+      ${topNeg.length ? `
+        <div class="iv4-an-sentiment-neg-section">
+          <div class="iv4-an-chart-title">⚠️ أكثر محادثات سلبية</div>
+          <div class="iv4-an-sentiment-neg-list">
+            ${topNeg.map(c => `
+              <div class="iv4-an-sentiment-neg-row" data-conv-id="${c.id}">
+                <span class="iv4-an-sentiment-neg-name">${_esc(c.contact_name)}</span>
+                <span class="iv4-an-platform-badge">${PLATFORM_ICON[c.platform] || '💬'} ${c.platform}</span>
+                <span class="iv4-an-sentiment-neg-count">🔴 ${c.neg_count} رسالة سلبية</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+    `;
+
+    // النقر على محادثة سلبية → فتحها في الـ inbox
+    wrap.querySelectorAll('.iv4-an-sentiment-neg-row[data-conv-id]').forEach(row => {
+      row.style.cursor = 'pointer';
+      row.onclick = () => {
+        const convId = row.dataset.convId;
+        if (convId && window.InboxStore) {
+          window.InboxAnalytics.close();
+          InboxStore.emit('open:conversation', convId);
+        }
+      };
+    });
+  }
+
+  /**
+   * SVG Stacked Bar Chart للمشاعر اليومية
+   */
+  function _renderSentimentChart(daily) {
+    if (!daily.length) return '';
+
+    const W = 600, H = 100, padL = 0, padR = 0, barGap = 2;
+    const barW = Math.max(4, Math.floor((W - padL - padR) / daily.length) - barGap);
+
+    const bars = daily.map((d, i) => {
+      const x    = padL + i * (barW + barGap);
+      const tot  = d.total || 1;
+      const posH = Math.round((d.positive / tot) * H);
+      const neuH = Math.round((d.neutral  / tot) * H);
+      const negH = H - posH - neuH;
+
+      // من أسفل: negative → neutral → positive
+      const yNeg = H - negH;
+      const yNeu = yNeg - neuH;
+      const yPos = yNeu - posH;
+
+      const tipText = `${d.day}\n😊 ${d.positive} / 😐 ${d.neutral} / 😞 ${d.negative}`;
+
+      return `
+        <g class="iv4-sentiment-bar-group" title="${tipText}">
+          ${negH > 0 ? `<rect x="${x}" y="${yNeg}" width="${barW}" height="${negH}" fill="#ef4444" rx="1"/>` : ''}
+          ${neuH > 0 ? `<rect x="${x}" y="${yNeu}" width="${barW}" height="${neuH}" fill="#f59e0b" rx="1"/>` : ''}
+          ${posH > 0 ? `<rect x="${x}" y="${yPos}" width="${barW}" height="${posH}" fill="#22c55e" rx="1"/>` : ''}
+        </g>
+      `;
+    }).join('');
+
+    return `<svg viewBox="0 0 ${W} ${H}" class="iv4-an-sentiment-svg" preserveAspectRatio="none">
+      ${bars}
+    </svg>`;
+  }
+
   function _exportAgentsCSV() {
     if (!_lastAgentsData.length) return;
     const header = 'الموظف,محادثات,مغلقة,معدل الإغلاق%,رسائل أُرسلت,وقت أول رد,وقت الإغلاق';
@@ -1086,7 +1252,7 @@ const InboxAnalytics = (() => {
 
     try {
       // نجلب كل الـ endpoints بالتوازي
-      const [overviewRes, slaRes, agentsRes, platformsRes, volumeRes, hourlyRes, csatRes] = await Promise.all([
+      const [overviewRes, slaRes, agentsRes, platformsRes, volumeRes, hourlyRes, csatRes, sentimentRes] = await Promise.all([
         InboxAPI.analytics.overview({ from: _from, to: _to }),
         InboxAPI.analytics.sla({ from: _from, to: _to }),
         InboxAPI.analytics.agentStats({ from: _from, to: _to }),
@@ -1094,19 +1260,21 @@ const InboxAnalytics = (() => {
         InboxAPI.analytics.volume({ from: _from, to: _to }),
         InboxAPI.analytics.hourly({ from: _from, to: _to }),
         InboxAPI.analytics.csat({ from: _from, to: _to }),
+        InboxAPI.analytics.sentiment({ from: _from, to: _to }),
       ]);
 
       // رسم كل قسم
-      if (!overviewRes.error)  _renderKPI(overviewRes.data);
-      if (!volumeRes.error)    _renderVolumeChart(volumeRes.data?.volume || []);
-      if (!hourlyRes.error)    _renderHourly(hourlyRes.data?.hourly || []);
-      if (!platformsRes.error) _renderPlatforms(platformsRes.data?.platforms || []);
-      if (!slaRes.error)       _renderSLA(slaRes.data);
-      if (!csatRes.error)      _renderCSAT(csatRes.data);
-      if (!agentsRes.error)    _renderAgents(agentsRes.data?.agents || []);
+      if (!overviewRes.error)   _renderKPI(overviewRes.data);
+      if (!volumeRes.error)     _renderVolumeChart(volumeRes.data?.volume || []);
+      if (!hourlyRes.error)     _renderHourly(hourlyRes.data?.hourly || []);
+      if (!platformsRes.error)  _renderPlatforms(platformsRes.data?.platforms || []);
+      if (!slaRes.error)        _renderSLA(slaRes.data);
+      if (!csatRes.error)       _renderCSAT(csatRes.data);
+      if (!agentsRes.error)     _renderAgents(agentsRes.data?.agents || []);
+      if (!sentimentRes.error)  _renderSentiment(sentimentRes.data);
 
       // لو في أخطاء — اعرض toast
-      const errors = [overviewRes, slaRes, agentsRes, platformsRes, volumeRes, hourlyRes, csatRes]
+      const errors = [overviewRes, slaRes, agentsRes, platformsRes, volumeRes, hourlyRes, csatRes, sentimentRes]
         .filter(r => r.error).map(r => r.error);
       if (errors.length && window.showInboxToast) {
         window.showInboxToast('خطأ في تحميل بعض البيانات: ' + errors[0], 'error');
