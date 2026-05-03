@@ -2222,26 +2222,79 @@ router.post('/inbox/conversations/bulk-message', requireAuth, async (req, res) =
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
-// GET /api/system/inbox/search?q=xxx
+// GET /api/system/inbox/search?q=xxx&platform=&type=all|messages|convs&limit=20
 router.get('/inbox/search', requireAuth, (req, res) => {
   const db = req.db;
   try {
-    const q = (req.query.q || '').trim();
-    if (q.length < 2) return res.json({ ok:true, results:[] });
-    const messages = db.prepare(`
-      SELECT m.*, c.sender_name, c.platform
-      FROM inbox_messages m
-      JOIN inbox_conversations c ON c.id = m.conversation_id
-      WHERE m.content LIKE ?
-      ORDER BY m.sent_at DESC LIMIT 20
-    `).all('%'+q+'%');
-    const convs = db.prepare(`
-      SELECT * FROM inbox_conversations
-      WHERE sender_name LIKE ? OR sender_id LIKE ?
-      ORDER BY last_message_at DESC LIMIT 10
-    `).all('%'+q+'%', '%'+q+'%');
-    res.json({ ok:true, results:{ messages, conversations: convs } });
-  } catch(e) { res.json({ ok:false, error: e.message }); }
+    const q        = (req.query.q || '').trim();
+    const platform = (req.query.platform || '').trim();
+    const type     = req.query.type || 'all';            // 'all' | 'messages' | 'convs'
+    const limit    = Math.min(parseInt(req.query.limit) || 20, 50);
+
+    if (q.length < 2) return res.json({ ok: true, results: { messages: [], conversations: [], total: 0 } });
+
+    const like    = '%' + q + '%';
+    const platCnd = platform ? ' AND c.platform = ?' : '';
+    const platArg = platform ? [platform] : [];
+
+    // ── helper: استخراج snippet محيط بالكلمة (80 حرف يسار + 80 يمين)
+    function snippet(text, keyword) {
+      if (!text) return '';
+      const idx = text.toLowerCase().indexOf(keyword.toLowerCase());
+      if (idx === -1) return text.slice(0, 120);
+      const start = Math.max(0, idx - 60);
+      const end   = Math.min(text.length, idx + keyword.length + 60);
+      const pre   = start > 0 ? '…' : '';
+      const suf   = end < text.length ? '…' : '';
+      return pre + text.slice(start, end) + suf;
+    }
+
+    let messages = [];
+    let convs    = [];
+
+    // ── بحث في محتوى الرسائل
+    if (type === 'all' || type === 'messages') {
+      const rows = db.prepare(`
+        SELECT m.id, m.conversation_id, m.direction, m.content, m.sent_at,
+               m.media_type, m.is_note,
+               c.sender_name, c.sender_id, c.platform, c.status
+        FROM inbox_messages m
+        JOIN inbox_conversations c ON c.id = m.conversation_id
+        WHERE m.content LIKE ? AND m.is_note = 0 ${platCnd}
+        ORDER BY m.sent_at DESC
+        LIMIT ?
+      `).all(like, ...platArg, limit);
+
+      messages = rows.map(r => ({
+        ...r,
+        snippet: snippet(r.content, q),
+      }));
+    }
+
+    // ── بحث في أسماء المحادثات + sender_id
+    if (type === 'all' || type === 'convs') {
+      const cWhere = platform ? ' AND platform = ?' : '';
+      const cArgs  = platform ? [like, like, platform] : [like, like];
+      convs = db.prepare(`
+        SELECT id, sender_name, sender_id, platform, status, last_message, last_message_at,
+               unread_count, assigned_to_name
+        FROM inbox_conversations
+        WHERE (sender_name LIKE ? OR sender_id LIKE ?) ${cWhere}
+        ORDER BY last_message_at DESC
+        LIMIT ?
+      `).all(...cArgs, Math.min(limit, 15));
+    }
+
+    res.json({
+      ok: true,
+      results: {
+        messages,
+        conversations: convs,
+        total: messages.length + convs.length,
+        query: q,
+      }
+    });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
 // SLA: GET /api/system/inbox/sla

@@ -48,12 +48,114 @@ async function iv3LoadConvs(reset = true) {
 // ── تطبيق الفلاتر المحلية وإعادة الرسم ─────────────────────
 
 function iv3FilterConvs() {
-  const q = (document.getElementById('iv3-search')?.value || '').trim().toLowerCase();
+  const q = (document.getElementById('iv3-search')?.value || '').trim();
   IV3.searchQuery = q;
 
-  // بحث محلي سريع + إعادة تحميل من الـ API
   clearTimeout(IV3._searchTimer);
   IV3._searchTimer = setTimeout(() => iv3LoadConvs(true), 400);
+}
+
+// ── Deep Search Panel ───────────────────────────────────────────────────────────
+
+let _iv3DeepSearchTimer = null;
+
+function iv3OpenDeepSearch() {
+  const panel = document.getElementById('iv3-deep-search-panel');
+  if (!panel) return;
+  panel.style.display = 'flex';
+  setTimeout(() => document.getElementById('iv3-deep-q')?.focus(), 80);
+}
+
+function iv3CloseDeepSearch() {
+  const panel = document.getElementById('iv3-deep-search-panel');
+  if (panel) panel.style.display = 'none';
+  const results = document.getElementById('iv3-deep-results');
+  if (results) results.innerHTML = '';
+}
+
+function iv3DeepSearchInput(el) {
+  clearTimeout(_iv3DeepSearchTimer);
+  const q = el.value.trim();
+  if (q.length < 2) {
+    const results = document.getElementById('iv3-deep-results');
+    if (results) results.innerHTML = '<div class="iv3-deep-empty">اكتب كلمتين على الأقل...</div>';
+    return;
+  }
+  _iv3DeepSearchTimer = setTimeout(() => iv3RunDeepSearch(q), 350);
+}
+
+async function iv3RunDeepSearch(q) {
+  const results = document.getElementById('iv3-deep-results');
+  const platform = document.getElementById('iv3-deep-platform')?.value || '';
+  const type     = document.getElementById('iv3-deep-type')?.value     || 'all';
+  if (!results) return;
+
+  results.innerHTML = '<div class="iv3-deep-loading"><div class="iv3-spinner-sm"></div> جاري البحث...</div>';
+
+  try {
+    const data = await IV3_API.search(q, { platform, type, limit: 25 });
+    if (!data.ok) throw new Error(data.error || 'فشل البحث');
+    iv3RenderDeepResults(data.results, q);
+  } catch(e) {
+    results.innerHTML = `<div class="iv3-deep-empty" style="color:#ef4444">❌ ${iv3EscHtml(e.message)}</div>`;
+  }
+}
+
+function iv3RenderDeepResults(res, q) {
+  const el = document.getElementById('iv3-deep-results');
+  if (!el) return;
+
+  const msgs  = res.messages       || [];
+  const convs = res.conversations   || [];
+  const total = res.total           || 0;
+
+  if (!total) {
+    el.innerHTML = '<div class="iv3-deep-empty">لا توجد نتائج لـ "' + iv3EscHtml(q) + '"</div>';
+    return;
+  }
+
+  // Helper: highlight الكلمة في النص
+  function hl(text) {
+    if (!text) return '';
+    const escaped = iv3EscHtml(text);
+    const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi');
+    return escaped.replace(re, '<mark class="iv3-deep-hl">$1</mark>');
+  }
+
+  let html = `<div class="iv3-deep-summary">${total} نتيجة — ${msgs.length} رسالة ، ${convs.length} محادثة</div>`;
+
+  // قسم المحادثات (اسم/ID)
+  if (convs.length) {
+    html += '<div class="iv3-deep-section-title">💬 محادثات</div>';
+    html += convs.map(c => `
+      <div class="iv3-deep-item iv3-deep-conv" onclick="iv3CloseDeepSearch();iv3OpenConv(${c.id})">
+        <div class="iv3-deep-item-top">
+          <span class="iv3-deep-name">${hl(c.sender_name || c.sender_id)}</span>
+          <span class="iv3-deep-plat">${iv3PlatBadge(c.platform)}</span>
+        </div>
+        ${c.last_message ? `<div class="iv3-deep-preview">${hl(iv3TruncText(c.last_message, 80))}</div>` : ''}
+      </div>`).join('');
+  }
+
+  // قسم الرسائل (محتوى)
+  if (msgs.length) {
+    html += '<div class="iv3-deep-section-title">📝 رسائل</div>';
+    html += msgs.map(m => {
+      const dir   = m.direction === 'out' ? '→ صادرة' : '← واردة';
+      const time  = m.sent_at ? new Date(m.sent_at).toLocaleDateString('ar-EG',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+      return `
+      <div class="iv3-deep-item iv3-deep-msg" onclick="iv3CloseDeepSearch();iv3OpenConv(${m.conversation_id})">
+        <div class="iv3-deep-item-top">
+          <span class="iv3-deep-name">${hl(m.sender_name || m.sender_id || '?')}</span>
+          <span class="iv3-deep-meta">${iv3PlatBadge(m.platform)} ${iv3EscHtml(dir)}</span>
+          <span class="iv3-deep-time">${iv3EscHtml(time)}</span>
+        </div>
+        <div class="iv3-deep-snippet">${hl(m.snippet || m.content || '')}</div>
+      </div>`;
+    }).join('');
+  }
+
+  el.innerHTML = html;
 }
 
 function iv3SetStatusFilter(status, btn) {

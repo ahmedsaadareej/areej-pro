@@ -2361,6 +2361,37 @@
           <input type="text" id="iv3-search" class="iv3-search"
             placeholder="بحث بالاسم أو الرسالة..."
             oninput="iv3FilterConvs()">
+          <button class="iv3-deep-search-btn" onclick="iv3OpenDeepSearch()" title="بحث عميق في الرسائل">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          </button>
+        </div>
+
+        <!-- Deep Search Panel -->
+        <div class="iv3-deep-search-panel" id="iv3-deep-search-panel" style="display:none">
+          <div class="iv3-deep-search-header">
+            <span style="font-weight:700;font-size:13px;color:#111">🔍 بحث عميق في الرسائل</span>
+            <button onclick="iv3CloseDeepSearch()" style="background:none;border:none;color:#9ca3af;font-size:16px;cursor:pointer;line-height:1">&times;</button>
+          </div>
+          <div class="iv3-deep-search-controls">
+            <input type="text" id="iv3-deep-q" class="iv3-deep-input"
+              placeholder="ابحث في محتوى الرسائل..."
+              oninput="iv3DeepSearchInput(this)"
+              onkeydown="if(event.key==='Escape')iv3CloseDeepSearch()">
+            <select id="iv3-deep-platform" class="iv3-deep-select" onchange="iv3DeepSearchInput(document.getElementById('iv3-deep-q'))">
+              <option value="">كل المنصات</option>
+              <option value="telegram">✈️ تيليجرام</option>
+              <option value="whatsapp-qr">📱 واتساب QR</option>
+              <option value="whatsapp">💬 واتساب API</option>
+            </select>
+            <select id="iv3-deep-type" class="iv3-deep-select" onchange="iv3DeepSearchInput(document.getElementById('iv3-deep-q'))">
+              <option value="all">الكل</option>
+              <option value="messages">رسائل فقط</option>
+              <option value="convs">محادثات فقط</option>
+            </select>
+          </div>
+          <div class="iv3-deep-results" id="iv3-deep-results">
+            <div class="iv3-deep-empty">اكتب كلمتين على الأقل...</div>
+          </div>
         </div>
 
         <!-- Status filters -->

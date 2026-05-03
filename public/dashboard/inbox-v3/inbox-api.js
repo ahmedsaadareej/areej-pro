@@ -185,8 +185,12 @@ const IV3_API = {
 
   // ── Search ─────────────────────────────────────────────────
 
-  async search(query) {
-    const data = await this._get(`/api/system/inbox/search?q=${encodeURIComponent(query)}`);
+  async search(query, { platform = '', type = 'all', limit = 20 } = {}) {
+    const p = new URLSearchParams({ q: query });
+    if (platform) p.set('platform', platform);
+    if (type !== 'all') p.set('type', type);
+    if (limit !== 20)   p.set('limit', limit);
+    const data = await this._get(`/api/system/inbox/search?${p}`);
     if (!data) throw new Error('فشل البحث');
     return data;
   },
