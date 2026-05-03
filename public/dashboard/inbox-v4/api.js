@@ -270,6 +270,27 @@ const InboxAPI = (() => {
     },
   };
 
+  // ─── Stream / Collision (P2-3) ───────────────────────────────────────────
+
+  const stream = {
+    /**
+     * إخبار السيرفر بأننا فتحنا هذه المحادثة (بداية الـ Collision Detection)
+     * يرجع قائمة الموظفين المتواجدين الآن (viewers)
+     * @param {number} convId
+     */
+    startViewing(convId) {
+      return _post('/inbox/stream/viewing', { conv_id: convId });
+    },
+
+    /**
+     * إخبار السيرفر بأننا أغلقنا هذه المحادثة
+     * @param {number} convId
+     */
+    stopViewing(convId) {
+      return _delete(`/inbox/stream/viewing/${convId}`);
+    },
+  };
+
   // ─── Analytics ────────────────────────────────────────────────────────
 
   const analytics = {
@@ -364,6 +385,7 @@ const InboxAPI = (() => {
     messages,
     labels,
     team,
+    stream,
     // shortcuts مباشرة لأكثر استخداماً في team.js
     getAgents:      () => team.list(),
     setAgentStatus: (s) => team.setStatus(s),

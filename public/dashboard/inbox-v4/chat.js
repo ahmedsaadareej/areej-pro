@@ -10,6 +10,7 @@
  *   - تحديث real-time عبر SSE events
  *   - Read tracking عند فتح المحادثة
  *   - عرض Header المحادثة (اسم + platform + status)
+ *   - Collision Detection (P2-3): إظهار banner لما موظف آخر يشاهد نفس المحادثة
  */
 
 const InboxChat = (() => {
@@ -64,6 +65,7 @@ const InboxChat = (() => {
   let _prevScrollTop   = 0;
   let _readTimer       = null;
   let _intersectObs    = null;   // IntersectionObserver للـ load more
+  let _currentViewingConvId = null; // المحادثة التي نحن نشاهدها حالياً (Collision)
 
   // ─── Init ─────────────────────────────────────────────────────────────────
 
@@ -86,6 +88,18 @@ const InboxChat = (() => {
 
     // عرض الـ empty state في البداية
     _showEmpty(true);
+
+    // (P2-3) Collision: أرسل stopViewing عند إغلاق الـ tab/window
+    window.addEventListener('beforeunload', () => {
+      if (_currentViewingConvId) {
+        // navigator.sendBeacon للضمان أن الطلب يُرسل حتى عند الإغلاق
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(`/api/inbox/stream/viewing/${_currentViewingConvId}`, null);
+        } else {
+          InboxAPI.stream.stopViewing(_currentViewingConvId);
+        }
+      }
+    });
   }
 
   // ─── فتح محادثة ──────────────────────────────────────────────────────────
@@ -99,6 +113,19 @@ const InboxChat = (() => {
       _showEmpty(true);
       return;
     }
+
+    // ─ Collision Detection: أنهِ مشاهدة المحادثة السابقة وابدأ الجديدة
+    if (_currentViewingConvId && _currentViewingConvId !== convId) {
+      InboxAPI.stream.stopViewing(_currentViewingConvId);
+      _hideCollisionBanner();
+    }
+    _currentViewingConvId = convId;
+    // أبلغ السيرفر ببدء مشاهدتنا + اجلب قائمة المشاهدين الحاليين
+    InboxAPI.stream.startViewing(convId).then(({ data }) => {
+      if (data && data.viewers && data.viewers.length > 0) {
+        _showCollisionBanner(data.viewers);
+      }
+    });
 
     _showEmpty(false);
     _clearMessages();
@@ -676,6 +703,19 @@ const InboxChat = (() => {
       if (conv_id !== InboxStore.state.activeConvId) return;
       _showTypingIndicator(agent_name, typing);
     });
+
+    // (P2-3) Collision Detection — موظف آخر فتح نفس المحادثة
+    InboxStore.on('conv:viewing', ({ conv_id, agent_id, agent_name }) => {
+      if (conv_id !== InboxStore.state.activeConvId) return;
+      // أضف هذا الموظف للـ banner
+      _addCollisionViewer(agent_id, agent_name);
+    });
+
+    // (P2-3) Collision Detection — موظف آخر أغلق المحادثة
+    InboxStore.on('conv:viewing:stop', ({ conv_id, agent_id }) => {
+      if (conv_id !== InboxStore.state.activeConvId) return;
+      _removeCollisionViewer(agent_id);
+    });
   }
 
   // ─── Append رسالة جديدة ────────────────────────────────────────────────────
@@ -1033,6 +1073,102 @@ const InboxChat = (() => {
     // auto-hide بعد 4 ثوانٍ لو ما جاء توقف صريح
     clearTimeout(_typingTimer);
     _typingTimer = setTimeout(() => bar?.remove(), 4000);
+  }
+
+  // ─── Collision Detection Banner (P2-3) ──────────────────────────────────
+
+  /**
+   * Map: agentId → agentName للمشاهدين الحاليين (بخلاف المستخدم الحالي)
+   * @type {Map<number, string>}
+   */
+  const _collisionViewers = new Map();
+
+  /**
+   * عرض collision banner مع قائمة الموظفين المشاهدين
+   * @param {Array<{ id, name }>} viewers
+   */
+  function _showCollisionBanner(viewers) {
+    // أعِد بناء الـ Map
+    _collisionViewers.clear();
+    viewers.forEach(v => _collisionViewers.set(v.id, v.name));
+    _renderCollisionBanner();
+  }
+
+  /**
+   * إضافة موظف لقائمة المشاهدين وتحديث الـ banner
+   * @param {number} agentId
+   * @param {string} agentName
+   */
+  function _addCollisionViewer(agentId, agentName) {
+    _collisionViewers.set(agentId, agentName);
+    _renderCollisionBanner();
+  }
+
+  /**
+   * إزالة موظف من قائمة المشاهدين وتحديث الـ banner
+   * @param {number} agentId
+   */
+  function _removeCollisionViewer(agentId) {
+    _collisionViewers.delete(agentId);
+    _renderCollisionBanner();
+  }
+
+  /**
+   * رسم/تحديث/إخفاء الـ banner حسب حالة _collisionViewers
+   */
+  function _renderCollisionBanner() {
+    // اعثر على موضع الـ banner (داخل chat panel فوق الـ messages)
+    const panel = $panel();
+    if (!panel) return;
+
+    let banner = panel.querySelector('#iv4-collision-banner');
+
+    if (_collisionViewers.size === 0) {
+      // لا أحد يشاهد — أخفِ الـ banner
+      if (banner) {
+        banner.classList.add('iv4-collision-banner--hiding');
+        setTimeout(() => banner?.remove(), 300);
+      }
+      return;
+    }
+
+    // بنِ نص الـ banner
+    const names = Array.from(_collisionViewers.values()).map(n => `<strong>${_escHtml(n)}</strong>`);
+    const text  = names.length === 1
+      ? `${names[0]} يشاهد هذه المحادثة الآن`
+      : `${names.join(' و')} يشاهدون هذه المحادثة الآن`;
+
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id        = 'iv4-collision-banner';
+      banner.className = 'iv4-collision-banner';
+      // أدرج الـ banner بين الـ header والـ messages
+      const messages = $messages();
+      if (messages) {
+        panel.insertBefore(banner, messages);
+      } else {
+        panel.appendChild(banner);
+      }
+    }
+
+    banner.innerHTML = `
+      <span class="iv4-collision-icon">👁️</span>
+      <span class="iv4-collision-text">${text}</span>
+      <button class="iv4-collision-dismiss" title="إغلاق">✕</button>
+    `;
+
+    // زر الإغلاق اليدوي
+    banner.querySelector('.iv4-collision-dismiss')?.addEventListener('click', () => {
+      banner.remove();
+    });
+  }
+
+  /**
+   * إخفاء الـ banner فوراً (عند تغيير المحادثة)
+   */
+  function _hideCollisionBanner() {
+    _collisionViewers.clear();
+    document.getElementById('iv4-collision-banner')?.remove();
   }
 
   function _showError(msg) {

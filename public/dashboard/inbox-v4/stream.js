@@ -103,6 +103,33 @@ const InboxStream = (() => {
       InboxStore.state.agentStatuses[data.agent_id] = data.status;
       InboxStore.emit('agentStatuses:update', InboxStore.state.agentStatuses);
     });
+
+    // ─── conv:viewing (موظف آخر فتح هذه المحادثة — Collision Detection) ───
+    _es.addEventListener('conv:viewing', (e) => {
+      const data = _parse(e.data);
+      if (!data || !data.conv_id) return;
+      // أضف المشاهد للقائمة المحلية
+      if (!InboxStore.state.convViewers) InboxStore.state.convViewers = {};
+      if (!InboxStore.state.convViewers[data.conv_id]) {
+        InboxStore.state.convViewers[data.conv_id] = {};
+      }
+      InboxStore.state.convViewers[data.conv_id][data.agent_id] = data.agent_name;
+      InboxStore.emit('conv:viewing', data);
+    });
+
+    // ─── conv:viewing:stop (موظف أغلق المحادثة) ───
+    _es.addEventListener('conv:viewing:stop', (e) => {
+      const data = _parse(e.data);
+      if (!data || !data.conv_id) return;
+      // احذف المشاهد من القائمة
+      if (InboxStore.state.convViewers && InboxStore.state.convViewers[data.conv_id]) {
+        delete InboxStore.state.convViewers[data.conv_id][data.agent_id];
+        if (Object.keys(InboxStore.state.convViewers[data.conv_id]).length === 0) {
+          delete InboxStore.state.convViewers[data.conv_id];
+        }
+      }
+      InboxStore.emit('conv:viewing:stop', data);
+    });
   }
 
   // ─── Disconnect ───────────────────────────────────────────────────────

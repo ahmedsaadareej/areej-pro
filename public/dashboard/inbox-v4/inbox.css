@@ -1289,3 +1289,83 @@
   flex-shrink: 0;
   transition: background .3s;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   P2-3 — Collision Detection Banner
+   آخر تحديث: 2026-05-03
+══════════════════════════════════════════════════════════════ */
+
+/* ─── Collision Banner ───────────────────────────────────────── */
+.iv4-collision-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
+  border-bottom: 1px solid #fbbf24;
+  font-size: 12.5px;
+  color: #92400e;
+  animation: iv4-collision-slide-in .25s ease;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+/* animation إخفاء تدريجي */
+.iv4-collision-banner--hiding {
+  animation: iv4-collision-slide-out .3s ease forwards;
+}
+
+@keyframes iv4-collision-slide-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes iv4-collision-slide-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-6px); }
+}
+
+.iv4-collision-icon {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.iv4-collision-text {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.iv4-collision-text strong {
+  color: #78350f;
+  font-weight: 700;
+}
+
+/* زر إغلاق الـ banner */
+.iv4-collision-dismiss {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: #b45309;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity .15s, background .15s;
+}
+.iv4-collision-dismiss:hover {
+  opacity: 1;
+  background: rgba(180, 83, 9, .1);
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .iv4-collision-banner {
+    background: linear-gradient(90deg, #451a03 0%, #78350f 100%);
+    border-color: #92400e;
+    color: #fde68a;
+  }
+  .iv4-collision-text strong { color: #fbbf24; }
+  .iv4-collision-dismiss     { color: #fbbf24; }
+}
