@@ -1,6 +1,6 @@
 /**
  * app.js — Inbox v4 Entry Point
- * آخر تحديث: 2026-05-03 (P6-1 Analytics Dashboard)
+ * آخر تحديث: 2026-05-03 (P7-1 AI Suggestions)
  *
  * يُشغَّل آخر script في index.html بعد تحميل:
  *   store.js → api.js → stream.js → [conv-list.js → chat.js → ...] → app.js
@@ -235,6 +235,9 @@
 
     // Phase 4-5 — Scheduled Messages
     if (typeof InboxScheduled   !== 'undefined') InboxScheduled.init();   // P4-5 ✅
+
+    // Phase 7-1 — AI Features
+    if (typeof InboxAI          !== 'undefined') InboxAI.init();           // P7-1 ✅
 
     // expose showInboxToast globally (for team.js + other modules)
     window.showInboxToast = toast;

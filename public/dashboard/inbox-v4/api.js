@@ -541,6 +541,18 @@ const InboxAPI = (() => {
     test       : (id, text)  => _post(`/inbox/chatbot/flows/${id}/test`, { input_text: text }),
   };
 
+  // ─── AI Features (P7-1) ──────────────────────────────────────────────────
+  const ai = {
+    /** اقتراح رد ذكي — tone: 'formal'|'friendly'|'brief' */
+    suggest  : (convId, tone = 'friendly')           => _post(`/inbox/conversations/${convId}/ai/suggest`,   { tone }),
+    /** ملخص المحادثة */
+    summary  : (convId)                              => _post(`/inbox/conversations/${convId}/ai/summary`,   {}),
+    /** ترجمة نص — targetLang: 'ar'|'en' */
+    translate: (convId, text, targetLang = 'ar')     => _post(`/inbox/conversations/${convId}/ai/translate`, { text, targetLang }),
+    /** تحسين نص — goal: 'formal'|'shorter'|'friendlier'|'fix' */
+    improve  : (convId, text, goal = 'formal')       => _post(`/inbox/conversations/${convId}/ai/improve`,   { text, goal }),
+  };
+
   // ─── Public API ───────────────────────────────────────────────────────
   return {
     conversations,
@@ -562,6 +574,7 @@ const InboxAPI = (() => {
     newConversation,
     context,
     chatbot,
+    ai,
     welcomeAway,
     autoClose,
     scheduled,

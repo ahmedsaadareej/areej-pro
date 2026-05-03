@@ -4496,3 +4496,169 @@
   .iv4-sched-dash-item, .iv4-sched-conv-item { background: #0f172a; border-color: #334155; }
   .iv4-sched-tab:hover { background: #1e293b; }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   P7-1 AI Features
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── AI Toolbar Button ───────────────────────────────────────── */
+.iv4-ai-toolbar-btn {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  color: #fff !important;
+  border-radius: 8px;
+  font-size: .78rem;
+  font-weight: 600;
+  padding: .28rem .7rem;
+  gap: .2rem;
+  transition: opacity .15s, transform .1s;
+}
+.iv4-ai-toolbar-btn:hover  { opacity: .88; transform: scale(1.03); }
+.iv4-ai-toolbar-btn.ai-loading { opacity: .6; cursor: wait; }
+
+/* ── AI Dropdown Menu ────────────────────────────────────────── */
+.iv4-ai-menu {
+  position: fixed;
+  z-index: 5000;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.14);
+  min-width: 220px;
+  padding: .4rem 0;
+  font-size: .86rem;
+}
+.iv4-ai-menu-item {
+  display: block;
+  width: 100%;
+  text-align: right;
+  padding: .52rem 1rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #1e293b;
+  transition: background .12s;
+}
+.iv4-ai-menu-item:hover { background: #f1f5f9; }
+.iv4-ai-menu-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: .3rem 0;
+}
+
+/* ── Tone Panel ──────────────────────────────────────────────── */
+.iv4-ai-tone-panel {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .45rem .8rem;
+  background: #f5f3ff;
+  border-top: 1px solid #ddd6fe;
+  font-size: .82rem;
+  flex-wrap: wrap;
+}
+.iv4-ai-tone-label { color: #6d28d9; font-weight: 600; margin-left: auto; }
+.iv4-ai-tone-btn {
+  padding: .22rem .65rem;
+  border-radius: 16px;
+  border: 1px solid #c4b5fd;
+  background: #fff;
+  color: #7c3aed;
+  font-size: .8rem;
+  cursor: pointer;
+  transition: background .12s, border-color .12s;
+}
+.iv4-ai-tone-btn:hover,
+.iv4-ai-tone-btn.active { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+.iv4-ai-tone-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: .82rem;
+  margin-right: .2rem;
+  padding: .1rem .3rem;
+}
+.iv4-ai-tone-close:hover { color: #ef4444; }
+
+/* ── Summary Overlay ─────────────────────────────────────────── */
+.iv4-ai-summary-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 6000;
+  background: rgba(15,23,42,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.iv4-ai-summary-box {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.18);
+  width: min(480px, 94vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.iv4-ai-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .9rem 1.2rem;
+  border-bottom: 1px solid #f1f5f9;
+  background: linear-gradient(90deg, #7c3aed 0%, #a855f7 100%);
+  color: #fff;
+  border-radius: 14px 14px 0 0;
+}
+.iv4-ai-summary-title { font-weight: 700; font-size: .95rem; }
+.iv4-ai-summary-close {
+  background: rgba(255,255,255,.2);
+  border: none;
+  color: #fff;
+  border-radius: 50%;
+  width: 26px; height: 26px;
+  cursor: pointer; font-size: .85rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.iv4-ai-summary-close:hover { background: rgba(255,255,255,.35); }
+.iv4-ai-summary-body {
+  padding: 1.1rem 1.3rem;
+  overflow-y: auto;
+  flex: 1;
+  line-height: 1.75;
+}
+.iv4-ai-summary-line {
+  margin: 0 0 .55rem;
+  color: #1e293b;
+  font-size: .9rem;
+}
+.iv4-ai-summary-footer {
+  padding: .8rem 1.2rem;
+  border-top: 1px solid #f1f5f9;
+  text-align: left;
+}
+.iv4-ai-copy-btn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: .35rem .9rem;
+  font-size: .83rem;
+  cursor: pointer;
+  color: #475569;
+  transition: background .12s;
+}
+.iv4-ai-copy-btn:hover { background: #f1f5f9; }
+
+/* ── Dark Mode ──────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .iv4-ai-menu          { background: #1e293b; border-color: #334155; }
+  .iv4-ai-menu-item     { color: #e2e8f0; }
+  .iv4-ai-menu-item:hover { background: #0f172a; }
+  .iv4-ai-menu-divider  { background: #334155; }
+  .iv4-ai-tone-panel    { background: #1e1a2e; border-color: #4c1d95; }
+  .iv4-ai-tone-btn      { background: #1e293b; color: #c4b5fd; border-color: #4c1d95; }
+  .iv4-ai-summary-box   { background: #1e293b; }
+  .iv4-ai-summary-body  .iv4-ai-summary-line { color: #e2e8f0; }
+  .iv4-ai-summary-footer { border-color: #334155; }
+  .iv4-ai-copy-btn      { background: #0f172a; color: #cbd5e1; border-color: #334155; }
+}
