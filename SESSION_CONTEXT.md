@@ -1,3 +1,19 @@
+## Session 2026-05-03 (06:20 → 06:31 UTC) — مكتملة
+- الحالة: تم الإكمال
+- ما تم إنجازه:
+  - fix: WA QR Chrome — السبب الجذري للانقطاع كان LD_LIBRARY_PATH ناقص في بيئة pm2
+  - إضافة LD_LIBRARY_PATH في ecosystem.config.js
+  - إضافة checkChromeHealth() قبل autoRestore
+  - حذف --single-process (كان يسبب SIGTRAP crash)
+  - إضافة --no-zygote + --memory-pressure-off
+  - النتيجة: QR يتولّد الآن بشكل صحيح ✅
+- قرارات تقنية:
+  - LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/lib في ecosystem.config.js
+  - --single-process محذوف نهائياً (SIGTRAP في VPS)
+  - health check يستخدم spawnSync مع --no-zygote بدون --single-process
+- آخر Commit: d0f3c39
+- نقطة البداية القادمة: صوت التنبيه عند رسالة جديدة — inbox-init.js + index.html + public/sounds/
+
 ## Session 2026-05-03 (06:08 → 06:30 UTC) — مكتملة
 - الحالة: تم الإكمال (5 مهام — اكتملت الجلسة)
 - ما تم إنجازه:
