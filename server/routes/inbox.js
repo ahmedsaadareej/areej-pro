@@ -175,11 +175,11 @@ router.post('/inbox/typing', requireAuth, async (req, res) => {
 router.post('/inbox/send', requireAuth, async (req, res) => {
   const db = req.db;
   try {
-    const body = validate(req.body, {
-      conversation_id: { required: true, type: 'int', min: 1, label: 'المحادثة' },
-      content: { required: true, type: 'string', maxLen: 4096, noSanitize: true, label: 'الرسالة' },
-    });
-    const { conversation_id, content } = body;
+    // Support both naming conventions: conv_id/message (inbox-v3) and conversation_id/content (legacy)
+    const rawConvId = req.body.conv_id || req.body.conversation_id;
+    const rawContent = req.body.message || req.body.content;
+    const conversation_id = parseInt(rawConvId);
+    const content = typeof rawContent === 'string' ? rawContent.trim() : '';
     if (!conversation_id || !content) return res.json({ ok: false, error: 'missing fields' });
     const conv = db.prepare(`SELECT * FROM inbox_conversations WHERE id=?`).get(conversation_id);
     if (!conv) return res.json({ ok: false, error: 'conversation not found' });
@@ -233,6 +233,27 @@ router.post('/inbox/send', requireAuth, async (req, res) => {
         const waQRService = require('../whatsapp-qr-service');
         await waQRService.sendMessage(req.user.id, conv.sender_id, content);
         sendResult.sent = true;
+      } catch(e) {
+        sendResult.error = e.message;
+      }
+    }
+
+    // WhatsApp API send
+    if (conv.platform === 'whatsapp' && settings && settings.wa_active && settings.wa_token && settings.wa_phone_id) {
+      try {
+        const r = await fetch(`https://graph.facebook.com/v19.0/${settings.wa_phone_id}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${settings.wa_token}` },
+          body: JSON.stringify({ messaging_product: 'whatsapp', to: conv.sender_id, type: 'text', text: { body: content } })
+        });
+        const d = await r.json();
+        if (d.messages && d.messages[0]) {
+          sendResult.sent = true;
+          // Update platform_msg_id for sent message
+          db.prepare(`UPDATE inbox_messages SET platform_msg_id=? WHERE conversation_id=? AND direction='out' AND platform_msg_id IS NULL ORDER BY id DESC LIMIT 1`).run(d.messages[0].id, conversation_id);
+        } else {
+          sendResult.error = d.error ? d.error.message : 'WhatsApp API error';
+        }
       } catch(e) {
         sendResult.error = e.message;
       }

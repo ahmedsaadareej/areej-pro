@@ -339,7 +339,11 @@ router.post('/whatsapp/:userId', express.json(), async (req, res) => {
   res.status(200).send('OK'); // رد فوري لـ Meta
   const userId = parseInt(req.params.userId);
   const body = req.body;
-  if (!body || body.object !== 'whatsapp_business_account') return;
+  console.log('[WA Webhook POST] userId=' + userId + ' body=' + JSON.stringify(body));
+  if (!body || body.object !== 'whatsapp_business_account') {
+    console.log('[WA Webhook POST] ignored — object=' + (body && body.object));
+    return;
+  }
 
   if (!userId || isNaN(userId)) return;
   const userExists = master.prepare('SELECT id FROM users WHERE id=?').get(userId);
@@ -379,17 +383,18 @@ router.post('/whatsapp/:userId', express.json(), async (req, res) => {
           // Upsert conversation
           let conv = db.prepare('SELECT id FROM inbox_conversations WHERE platform=? AND sender_id=?').get('whatsapp', senderId);
           if (!conv) {
-            db.prepare("INSERT INTO inbox_conversations (platform, sender_id, sender_name, unread_count, last_message_at, created_at) VALUES ('whatsapp', ?, ?, 1, datetime('now'), datetime('now'))").run(senderId, senderName);
+            db.prepare("INSERT INTO inbox_conversations (platform, sender_id, sender_name, unread_count, last_message, last_message_at, created_at, status) VALUES ('whatsapp', ?, ?, 1, ?, datetime('now'), datetime('now'), 'open')").run(senderId, senderName, content);
             conv = db.prepare('SELECT id FROM inbox_conversations WHERE platform=? AND sender_id=?').get('whatsapp', senderId);
           } else {
-            db.prepare("UPDATE inbox_conversations SET unread_count=unread_count+1, last_message_at=datetime('now'), sender_name=? WHERE id=?").run(senderName, conv.id);
+            db.prepare("UPDATE inbox_conversations SET unread_count=unread_count+1, last_message=?, last_message_at=datetime('now'), sender_name=? WHERE id=?").run(content, senderName, conv.id);
           }
 
-          // Insert message — avoid duplicates
-          const exists = db.prepare('SELECT id FROM inbox_messages WHERE external_id=?').get(msgId);
+          // Insert message — avoid duplicates by platform_msg_id
+          const exists = db.prepare('SELECT id FROM inbox_messages WHERE platform_msg_id=?').get(msgId);
           if (!exists) {
-            db.prepare("INSERT INTO inbox_messages (conversation_id, direction, content, media_type, is_read, external_id, created_at) VALUES (?, 'in', ?, ?, 0, ?, datetime(?, 'unixepoch'))").run(conv.id, content, mediaType, msgId, ts);
+            db.prepare("INSERT INTO inbox_messages (conversation_id, platform, direction, content, media_type, is_read, platform_msg_id, sent_at) VALUES (?, 'whatsapp', 'in', ?, ?, 0, ?, datetime(?, 'unixepoch'))").run(conv.id, content, mediaType, msgId, ts);
           }
+          console.log('[WA Webhook POST] saved msg convId=' + (conv && conv.id) + ' from=' + senderId + ' content=' + content);
         }
       }
     }
