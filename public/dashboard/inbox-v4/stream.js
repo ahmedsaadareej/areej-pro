@@ -165,6 +165,20 @@ const InboxStream = (() => {
       }
     });
 
+    // ─── conv:note_added (نوتة داخلية جديدة — P5-4) ───
+    _es.addEventListener('conv:note_added', (e) => {
+      const data = _parse(e.data);
+      if (!data) return;
+      InboxStore.emit('sse:conv:note_added', data);
+    });
+
+    // ─── conv:note_deleted (حذف نوتة — P5-4) ───
+    _es.addEventListener('conv:note_deleted', (e) => {
+      const data = _parse(e.data);
+      if (!data) return;
+      InboxStore.emit('sse:conv:note_deleted', data);
+    });
+
     // ─── labels_update (تحديث labels — P3-1) ───
     _es.addEventListener('labels_update', (e) => {
       const data = _parse(e.data);

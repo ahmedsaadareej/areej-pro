@@ -132,6 +132,7 @@ const InboxContext = (() => {
       { id: 'orders',   icon: '📦', label: 'الطلبات'  },
       { id: 'pay',      icon: '💳', label: 'الدفع'    },
       { id: 'clv',      icon: '📊', label: 'CLV'      },
+      { id: 'notes',    icon: '📝', label: 'نوتس'     },
     ];
 
     const container = document.querySelector('.iv4-ctx-tabs');
@@ -195,6 +196,7 @@ const InboxContext = (() => {
       case 'orders':   _loadOrders();     break;
       case 'pay':      _loadPayLinks();   break;
       case 'clv':      _loadCLV();        break;
+      case 'notes':    _loadNotes();      break;
     }
   }
 
@@ -853,6 +855,133 @@ const InboxContext = (() => {
     _loadOrders();
   }
 
+  // ─── Notes: load + render ──────────────────────────────────────────────────
+
+  // حالة نوتس الجلسة (مستقلة عن _data)
+  let _notes = null; // null = لم تُحمَّل بعد
+
+  async function _loadNotes() {
+    if (!_convId) return;
+    const content = _content();
+    content.innerHTML = `
+      <div class="iv4-notes-wrap">
+        <div class="iv4-notes-list" id="iv4-notes-list">
+          <div class="iv4-ctx-loading"><div class="iv4-ctx-spinner"></div><span>جارٍ التحميل...</span></div>
+        </div>
+        <div class="iv4-notes-composer">
+          <textarea id="iv4-notes-input" class="iv4-notes-input" placeholder="اكتب ملاحظة داخلية... (لن يراها العميل)" maxlength="2000" rows="3"></textarea>
+          <div class="iv4-notes-composer-footer">
+            <span id="iv4-notes-chars" class="iv4-notes-chars">0 / 2000</span>
+            <button id="iv4-notes-submit" class="iv4-notes-submit" disabled>إضافة ملاحظة</button>
+          </div>
+        </div>
+      </div>`;
+
+    // ربط الـ composer
+    const input  = document.getElementById('iv4-notes-input');
+    const submit = document.getElementById('iv4-notes-submit');
+    const chars  = document.getElementById('iv4-notes-chars');
+
+    input.addEventListener('input', () => {
+      const len = input.value.length;
+      chars.textContent = `${len} / 2000`;
+      submit.disabled = len === 0;
+    });
+
+    // Ctrl+Enter أو Shift+Enter لا يُرسل — Enter العادي فقط في زر الإرسال
+    submit.addEventListener('click', _submitNote);
+
+    // تحميل النوتس
+    try {
+      const res = await _req('GET', `/conversations/${_convId}/context/notes`);
+      _notes = res.notes || [];
+      _renderNotesList();
+    } catch (err) {
+      const list = document.getElementById('iv4-notes-list');
+      if (list) list.innerHTML = `<div class="iv4-ctx-error">${_esc(err.message)}</div>`;
+    }
+  }
+
+  function _renderNotesList() {
+    const list = document.getElementById('iv4-notes-list');
+    if (!list) return;
+
+    if (!_notes || _notes.length === 0) {
+      list.innerHTML = `<div class="iv4-notes-empty">لا توجد ملاحظات بعد.</div>`;
+      return;
+    }
+
+    list.innerHTML = _notes.map(n => _renderNoteItem(n)).join('');
+
+    // ربط أزرار الحذف
+    list.querySelectorAll('.iv4-note-del').forEach(btn => {
+      btn.addEventListener('click', () => _deleteNote(parseInt(btn.dataset.id, 10)));
+    });
+  }
+
+  function _renderNoteItem(n) {
+    const dt = new Date(n.created_at * 1000);
+    const dateStr = isNaN(dt) ? n.created_at : dt.toLocaleString('ar-EG', {
+      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+    });
+    return `
+      <div class="iv4-note-item" data-id="${n.id}">
+        <div class="iv4-note-header">
+          <span class="iv4-note-author">${_esc(n.author_name || 'موظف')}</span>
+          <span class="iv4-note-date">${dateStr}</span>
+          <button class="iv4-note-del" data-id="${n.id}" title="حذف">🗑</button>
+        </div>
+        <div class="iv4-note-body">${_esc(n.body)}</div>
+      </div>`;
+  }
+
+  async function _submitNote() {
+    const input  = document.getElementById('iv4-notes-input');
+    const submit = document.getElementById('iv4-notes-submit');
+    if (!input || !_convId) return;
+
+    const body = input.value.trim();
+    if (!body) return;
+
+    submit.disabled = true;
+    submit.textContent = 'جارٍ الإرسال...';
+
+    try {
+      const res = await _req('POST', `/conversations/${_convId}/context/notes`, { body });
+      if (res.ok && res.note) {
+        _notes = _notes ? [res.note, ..._notes] : [res.note];
+        _renderNotesList();
+        input.value = '';
+        document.getElementById('iv4-notes-chars').textContent = '0 / 2000';
+        _showToast('✅ تمت إضافة الملاحظة');
+      }
+    } catch (err) {
+      _showToast('❌ ' + err.message);
+    } finally {
+      submit.disabled = false;
+      submit.textContent = 'إضافة ملاحظة';
+    }
+  }
+
+  async function _deleteNote(noteId) {
+    if (!confirm('تأكيد حذف الملاحظة؟')) return;
+
+    // Optimistic UI
+    const prev = _notes;
+    _notes = _notes.filter(n => n.id !== noteId);
+    _renderNotesList();
+
+    try {
+      await _req('DELETE', `/conversations/${_convId}/context/notes/${noteId}`);
+      _showToast('🗑 تم حذف الملاحظة');
+    } catch (err) {
+      // rollback
+      _notes = prev;
+      _renderNotesList();
+      _showToast('❌ ' + err.message);
+    }
+  }
+
   // ── Toast helper ──────────────────────────────────────────────────────────
   function _showToast(msg) {
     const t = document.createElement('div');
@@ -900,6 +1029,7 @@ const InboxContext = (() => {
     _pager.invoices = { page: 1, total: 0, pages: 0, status: '', clv: null };
     _pager.orders   = { page: 1, total: 0, pages: 0, status: '' };
     _pager.pay      = { page: 1, total: 0, pages: 0 };
+    _notes          = null; // إعادة تعيين — ستُحمَل عند فتح التب
 
     _renderLoading();
     _renderTabBar();
@@ -976,6 +1106,25 @@ const InboxContext = (() => {
     // Tab clicks (بعد render)
     document.querySelectorAll('.iv4-ctx-tab[data-tab]').forEach(btn => {
       btn.addEventListener('click', () => _switchTab(btn.dataset.tab));
+    });
+
+    // استقبال SSE — نوتة جديدة من موظف آخر
+    InboxStore.on('sse:conv:note_added', ({ convId, note }) => {
+      if (convId !== _convId || _tab !== 'notes') return;
+      // أضف فقط لو ما كانت مجودة مسبقاً
+      if (_notes && !_notes.find(n => n.id === note.id)) {
+        _notes = [note, ..._notes];
+        _renderNotesList();
+      }
+    });
+
+    // نوتة محذوفة من موظف آخر
+    InboxStore.on('sse:conv:note_deleted', ({ convId, noteId }) => {
+      if (convId !== _convId || _tab !== 'notes') return;
+      if (_notes) {
+        _notes = _notes.filter(n => n.id !== noteId);
+        _renderNotesList();
+      }
     });
 
     console.log('[InboxContext] ✅ جاهز');

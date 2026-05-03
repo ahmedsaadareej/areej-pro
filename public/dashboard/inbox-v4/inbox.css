@@ -3104,3 +3104,99 @@
   .iv4-ctx-modal-close  { background: #334155; }
   .iv4-ctx-toast        { background: #f8fafc; color: #1e293b; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   P5-4 · Internal Notes — Context Panel
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Wrapper ─────────────────────────────────────────────────────────── */
+.iv4-notes-wrap {
+  display: flex; flex-direction: column; height: 100%;
+  overflow: hidden;
+}
+
+/* ── قائمة النوتس ─────────────────────────────────────────────────── */
+.iv4-notes-list {
+  flex: 1; overflow-y: auto; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+.iv4-notes-empty {
+  text-align: center; color: var(--iv4-text-muted);
+  font-size: .85rem; padding: 32px 0;
+}
+
+/* ── بطاقة نوتة ─────────────────────────────────────────────────────── */
+.iv4-note-item {
+  background: #fefce8; border: 1px solid #fde68a;
+  border-radius: 10px; padding: 10px 12px;
+  font-size: .84rem; line-height: 1.5;
+  animation: iv4-note-in .2s ease;
+}
+@keyframes iv4-note-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.iv4-note-header {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 6px;
+}
+.iv4-note-author {
+  font-weight: 600; font-size: .8rem; color: #92400e;
+  flex: 1;
+}
+.iv4-note-date {
+  font-size: .74rem; color: #a16207;
+}
+.iv4-note-del {
+  background: none; border: none; cursor: pointer;
+  font-size: .85rem; padding: 2px 4px; line-height: 1;
+  border-radius: 4px; opacity: 0.55; transition: opacity .15s;
+}
+.iv4-note-del:hover { opacity: 1; background: #fde68a; }
+
+.iv4-note-body {
+  color: #1c1917; white-space: pre-wrap; word-break: break-word;
+}
+
+/* ── Composer ────────────────────────────────────────────────────────── */
+.iv4-notes-composer {
+  border-top: 1px solid var(--iv4-border);
+  padding: 10px 14px; background: var(--iv4-bg);
+}
+.iv4-notes-input {
+  width: 100%; resize: vertical; min-height: 70px; max-height: 160px;
+  border: 1px solid var(--iv4-border); border-radius: 8px;
+  padding: 8px 10px; font-size: .84rem; font-family: inherit;
+  color: var(--iv4-text); background: var(--iv4-surface);
+  transition: border-color .15s;
+}
+.iv4-notes-input:focus { outline: none; border-color: #f59e0b; }
+.iv4-notes-input::placeholder { color: var(--iv4-text-muted); }
+
+.iv4-notes-composer-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 6px;
+}
+.iv4-notes-chars {
+  font-size: .75rem; color: var(--iv4-text-muted);
+}
+.iv4-notes-submit {
+  background: #f59e0b; color: #fff; border: none;
+  border-radius: 7px; padding: 6px 14px; font-size: .82rem;
+  cursor: pointer; font-weight: 600; transition: background .15s, opacity .15s;
+}
+.iv4-notes-submit:hover:not(:disabled) { background: #d97706; }
+.iv4-notes-submit:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ── Dark Mode ───────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .iv4-note-item   { background: #1c1917; border-color: #44403c; }
+  .iv4-note-author { color: #fcd34d; }
+  .iv4-note-date   { color: #a78bfa; }
+  .iv4-note-body   { color: #e2e8f0; }
+  .iv4-note-del:hover { background: #292524; }
+  .iv4-notes-input { background: #0f172a; border-color: #334155; color: #f1f5f9; }
+  .iv4-notes-submit { background: #d97706; }
+}

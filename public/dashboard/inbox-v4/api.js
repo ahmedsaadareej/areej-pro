@@ -414,6 +414,59 @@ const InboxAPI = (() => {
     },
   };
 
+  // ─── Context Panel ──────────────────────────────────────────────────────
+
+  const context = {
+    /** بيانات العميل الكاملة (overview) */
+    get(convId) {
+      return _get(`/inbox/conversations/${convId}/context`);
+    },
+    /** قائمة الفواتير مع pagination */
+    invoices(convId, { page = 1, limit = 20, status = '' } = {}) {
+      return _get(`/inbox/conversations/${convId}/context/invoices`, { page, limit, status });
+    },
+    /** قائمة الطلبات مع pagination */
+    orders(convId, { page = 1, limit = 20, status = '' } = {}) {
+      return _get(`/inbox/conversations/${convId}/context/orders`, { page, limit, status });
+    },
+    /** روابط الدفع */
+    paylinks(convId, { page = 1, limit = 20 } = {}) {
+      return _get(`/inbox/conversations/${convId}/context/paylinks`, { page, limit });
+    },
+    /** تقرير CLV تفصيلي */
+    clv(convId) {
+      return _get(`/inbox/conversations/${convId}/context/clv`);
+    },
+    /** ربط/إلغاء ربط جهة اتصال CRM */
+    link(convId, contactId) {
+      return _post(`/inbox/conversations/${convId}/context/link`, { contact_id: contactId ?? null });
+    },
+    /** بحث في CRM contacts */
+    search(convId, q) {
+      return _get(`/inbox/conversations/${convId}/context/search`, { q });
+    },
+    /** إنشاء فاتورة سريعة (Quick Action) */
+    createInvoice(convId, { amount, description, notes } = {}) {
+      return _post(`/inbox/conversations/${convId}/context/invoice`, { amount, description, notes });
+    },
+    /** إنشاء رابط دفع سريع (Quick Action) */
+    createPaylink(convId, { amount, description } = {}) {
+      return _post(`/inbox/conversations/${convId}/context/paylink`, { amount, description });
+    },
+    /** جلب نوتس داخلية (P5-4) */
+    getNotes(convId) {
+      return _get(`/inbox/conversations/${convId}/context/notes`);
+    },
+    /** إضافة نوتة داخلية */
+    addNote(convId, body) {
+      return _post(`/inbox/conversations/${convId}/context/notes`, { body });
+    },
+    /** حذف نوتة */
+    deleteNote(convId, noteId) {
+      return _delete(`/inbox/conversations/${convId}/context/notes/${noteId}`);
+    },
+  };
+
   // ─── New Conversation ─────────────────────────────────────────────────
 
   const newConversation = {
@@ -446,6 +499,7 @@ const InboxAPI = (() => {
     broadcast,
     search,
     newConversation,
+    context,
     // expose للـ debugging
     _fetch,
     _get,

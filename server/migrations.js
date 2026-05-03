@@ -383,6 +383,19 @@ const TENANT_MIGRATIONS = [
     )`,
   ]},
 
+  // v25: inbox_conv_notes_v4 — نوتس داخلية للمحادثات (Internal Notes للـ Context Panel)
+  { version: 25, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_conv_notes_v4 (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      conversation_id INTEGER NOT NULL REFERENCES inbox_conversations_v4(id) ON DELETE CASCADE,
+      author_id       INTEGER,
+      author_name     TEXT,
+      body            TEXT NOT NULL,
+      created_at      INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_conv_notes_v4_conv ON inbox_conv_notes_v4(conversation_id)`,
+  ]},
+
   // أضف migrations جديدة هنا دايماً — لا تعدّل القديمة أبداً
 ];
 
