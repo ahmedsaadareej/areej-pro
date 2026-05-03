@@ -355,6 +355,19 @@ router.get('/inbox/unread-count', requireAuth, (req, res) => {
   } catch(e) { res.json({ ok: true, count: 0 }); }
 });
 
+// POST /api/system/inbox/mark-all-read
+// يُصفّر unread_count لكل المحادثات + يضع is_read=1 على كل الرسائل الواردة
+router.post('/inbox/mark-all-read', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    db.prepare(`UPDATE inbox_messages SET is_read=1 WHERE direction='in' AND is_read=0`).run();
+    db.prepare(`UPDATE inbox_conversations SET unread_count=0 WHERE unread_count > 0`).run();
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // GET /api/system/inbox/templates
 router.get('/inbox/templates', requireAuth, (req, res) => {
   const db = req.db;

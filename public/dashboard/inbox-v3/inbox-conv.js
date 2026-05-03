@@ -837,6 +837,34 @@ function iv3ApplyDateFilter() {
   iv3LoadConvs(true);
 }
 
+// ── Mark All as Read ─────────────────────────────────
+
+async function iv3MarkAllRead() {
+  // تحقق أولاً: هل يوجد شيء غير مقروء
+  const totalUnread = IV3.convs.reduce((s, c) => s + (c.unread_count || 0), 0);
+  if (totalUnread === 0) {
+    iv3Toast('لا يوجد رسائل غير مقروءة', 'info');
+    return;
+  }
+
+  const btn = document.getElementById('iv3-mark-all-read-btn');
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+
+  try {
+    await IV3_API.markAllRead();
+
+    // تحديث الـ state محلياً
+    IV3.convs.forEach(c => { c.unread_count = 0; });
+    iv3RenderConvs();
+    iv3UpdateUnreadBadge();
+    iv3Toast(`✅ تم قراءة ${totalUnread} رسالة`, 'success');
+  } catch (e) {
+    iv3Toast('فشل تحديث حالة القراءة', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+  }
+}
+
 function iv3ClearDateFilter() {
   IV3.dateFrom = '';
   IV3.dateTo   = '';

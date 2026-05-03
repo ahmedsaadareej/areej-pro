@@ -170,6 +170,10 @@ const IV3_API = {
     return data || { count: 0 };
   },
 
+  async markAllRead() {
+    return await this._post('/api/system/inbox/mark-all-read', {});
+  },
+
   // ── AI Reply ───────────────────────────────────────────────
 
   async getAISuggestions(convId) {
