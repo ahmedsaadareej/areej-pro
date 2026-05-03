@@ -1973,3 +1973,43 @@ body.ltr .iv3-ctx-icon-btn::before {
   border-right-color: transparent;
   border-left-color: #1f2937;
 }
+
+/* ── WA Template Sender ──────────────────────────────────────── */
+.iv3-wa-tmpl-item {
+  padding: 10px 14px;
+  border-bottom: 1px solid #f0fdf4;
+  cursor: pointer;
+  transition: background .15s;
+}
+.iv3-wa-tmpl-item:hover { background: #f0fdf4; }
+.iv3-wa-tmpl-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #15803d;
+  margin-bottom: 3px;
+}
+.iv3-wa-tmpl-preview {
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+.iv3-wa-tmpl-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.iv3-wa-tmpl-lang {
+  font-size: 10px;
+  background: #e0f2fe;
+  color: #0369a1;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.iv3-wa-tmpl-status.approved {
+  font-size: 10px;
+  background: #dcfce7;
+  color: #15803d;
+  border-radius: 4px;
+  padding: 1px 5px;
+}

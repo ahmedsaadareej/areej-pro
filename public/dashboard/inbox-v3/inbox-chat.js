@@ -39,6 +39,8 @@ async function iv3OpenConv(convId) {
     IV3.activeConv = conv;
     iv3UpdateChatHeader(conv);
     iv3UpdateContextPanel(conv);
+    // أظهر/أخفِ زر WA Template حسب المنصة
+    if (typeof iv3UpdateWaTemplateBtnVisibility === 'function') iv3UpdateWaTemplateBtnVisibility();
   }
 
   // صفّر الـ unread

@@ -427,6 +427,7 @@ function iv3CloseDropdowns() {
   iv3CloseTemplatesDropdown();
   iv3CloseAIDropdown();
   iv3CloseCatalog();
+  iv3CloseWaTemplates();
   const slash = document.getElementById('iv3-slash-dropdown');
   if (slash) slash.style.display = 'none';
 }
@@ -534,6 +535,195 @@ function iv3CatalogSearch(val) {
   _iv3CatalogTimer = setTimeout(() => iv3LoadCatalog(val.trim()), 300); // debounce 300ms
 }
 
+// ── WA Template Sender ─────────────────────────────────────────────────────
+// يظهر فقط عندما تكون المحادثة على منصة 'whatsapp' (API)
+
+let _iv3WaTmplCache = null;  // cache لـ APPROVED templates
+
+function iv3IsWaApiConv() {
+  return IV3.activeConv?.platform === 'whatsapp';
+}
+
+async function iv3ToggleWaTemplates() {
+  const dropdown = document.getElementById('iv3-wa-tmpl-dropdown');
+  if (!dropdown) return;
+  const isOpen = dropdown.style.display !== 'none';
+  iv3CloseDropdowns();
+  if (isOpen) return;
+
+  dropdown.style.display = 'block';
+  await iv3LoadWaTemplates();
+}
+
+function iv3CloseWaTemplates() {
+  const dropdown = document.getElementById('iv3-wa-tmpl-dropdown');
+  if (dropdown) dropdown.style.display = 'none';
+}
+
+async function iv3LoadWaTemplates(forceRefresh) {
+  const listEl = document.getElementById('iv3-wa-tmpl-list');
+  if (!listEl) return;
+
+  if (_iv3WaTmplCache && !forceRefresh) {
+    iv3RenderWaTemplates(_iv3WaTmplCache);
+    return;
+  }
+
+  listEl.innerHTML = '<div style="padding:16px;text-align:center;color:#9ca3af;font-size:12px">⏳ جاري تحميل الـ Templates...</div>';
+
+  try {
+    const data = await apiFetch('/api/system/inbox/wa-templates');
+    if (!data.ok) throw new Error(data.error || 'فشل التحميل');
+
+    // فلتر: APPROVED فقط
+    const approved = (data.templates || []).filter(t => t.status === 'APPROVED');
+    _iv3WaTmplCache = approved;
+    iv3RenderWaTemplates(approved);
+  } catch(e) {
+    listEl.innerHTML = `<div style="padding:16px;text-align:center;color:#ef4444;font-size:12px">❌ ${iv3EscHtml(e.message)}</div>`;
+  }
+}
+
+function iv3RenderWaTemplates(templates) {
+  const listEl = document.getElementById('iv3-wa-tmpl-list');
+  if (!listEl) return;
+
+  if (!templates.length) {
+    listEl.innerHTML = '<div style="padding:16px;text-align:center;color:#9ca3af;font-size:12px">لا توجد Templates معتمدة (APPROVED)</div>';
+    return;
+  }
+
+  listEl.innerHTML = templates.map(t => {
+    const body = (t.components || []).find(c => c.type === 'BODY');
+    const preview = body?.text ? iv3TruncText(body.text, 70) : '—';
+    const lang    = t.language || '?';
+    return `
+    <div class="iv3-wa-tmpl-item" onclick="iv3SelectWaTemplate('${iv3EscHtml(t.name)}', '${lang}')">
+      <div class="iv3-wa-tmpl-name">📋 ${iv3EscHtml(t.name)}</div>
+      <div class="iv3-wa-tmpl-preview">${iv3EscHtml(preview)}</div>
+      <div class="iv3-wa-tmpl-meta"><span class="iv3-wa-tmpl-lang">${lang}</span> <span class="iv3-wa-tmpl-status approved">✅ معتمد</span></div>
+    </div>`;
+  }).join('');
+}
+
+async function iv3SelectWaTemplate(name, lang) {
+  // أغلق القائمة وافتح modal التأكيد
+  iv3CloseWaTemplates();
+
+  // البحث عن الـ template في الـ cache لاستخراج المتغيرات
+  const tmpl = (_iv3WaTmplCache || []).find(t => t.name === name);
+  const body  = (tmpl?.components || []).find(c => c.type === 'BODY');
+  const bodyText = body?.text || '';
+
+  // استخراج المتغيرات {{1}}, {{2}}, ...
+  const varMatches = [...bodyText.matchAll(/\{\{(\d+)\}\}/g)];
+  const varNums    = [...new Set(varMatches.map(m => m[1]))].sort();
+
+  // اعرض modal بسيط
+  iv3ShowWaTmplModal(name, lang, bodyText, varNums);
+}
+
+function iv3ShowWaTmplModal(name, lang, bodyText, varNums) {
+  // إنشاء modal مؤقت إذا لم يكن موجوداً
+  let modal = document.getElementById('iv3-wa-tmpl-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'iv3-wa-tmpl-modal';
+    modal.style.cssText = `
+      position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;
+      display:flex;align-items:center;justify-content:center;padding:16px`;
+    document.body.appendChild(modal);
+  }
+
+  const varsHtml = varNums.map(n => `
+    <div style="margin-bottom:8px">
+      <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:3px">المتغير {{${n}}}</label>
+      <input id="iv3-wa-var-${n}" type="text" placeholder="القيمة..."
+        style="width:100%;box-sizing:border-box;border:1.5px solid #d1d5db;border-radius:7px;
+               padding:7px 10px;font-size:13px;font-family:Cairo,sans-serif;outline:none"
+        onfocus="this.style.borderColor='#25D366'" onblur="this.style.borderColor='#d1d5db'">
+    </div>`).join('');
+
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:14px;padding:22px;width:100%;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,.18)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <span style="font-size:20px">📋</span>
+        <div>
+          <div style="font-weight:700;font-size:15px;color:#111">${iv3EscHtml(name)}</div>
+          <div style="font-size:11px;color:#9ca3af">${lang}</div>
+        </div>
+        <button onclick="iv3CloseWaTmplModal()" style="margin-right:auto;background:none;border:none;font-size:18px;color:#9ca3af;cursor:pointer">✕</button>
+      </div>
+
+      ${bodyText ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:#166534;line-height:1.6">${iv3EscHtml(bodyText)}</div>` : ''}
+
+      ${varsHtml ? `<div style="margin-bottom:16px">${varsHtml}</div>` : ''}
+
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="iv3CloseWaTmplModal()" style="padding:8px 16px;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff;color:#374151;font-family:Cairo,sans-serif;font-size:13px;cursor:pointer">إلغاء</button>
+        <button onclick="iv3SendWaTemplate('${iv3EscHtml(name)}','${lang}',${varNums.length})" style="padding:8px 18px;border:none;border-radius:8px;background:#25D366;color:#fff;font-family:Cairo,sans-serif;font-size:13px;font-weight:600;cursor:pointer">📤 إرسال Template</button>
+      </div>
+    </div>`;
+
+  modal.style.display = 'flex';
+}
+
+function iv3CloseWaTmplModal() {
+  const modal = document.getElementById('iv3-wa-tmpl-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function iv3SendWaTemplate(name, lang, varCount) {
+  if (!IV3.activeConvId) return;
+
+  // جمع قيم المتغيرات
+  const components = [];
+  if (varCount > 0) {
+    const params = [];
+    for (let i = 1; i <= varCount; i++) {
+      const val = document.getElementById(`iv3-wa-var-${i}`)?.value?.trim() || '';
+      params.push({ type: 'text', text: val || ` ` });
+    }
+    components.push({ type: 'body', parameters: params });
+  }
+
+  iv3CloseWaTmplModal();
+  iv3Toast('جاري إرسال الـ Template...', 'info');
+
+  try {
+    const res = await apiFetch('/api/system/inbox/wa-send-template', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        conversation_id: IV3.activeConvId,
+        template_name:   name,
+        language_code:   lang,
+        components:      components.length ? components : undefined
+      })
+    });
+
+    if (!res.ok) throw new Error(res.error || 'فشل الإرسال');
+
+    iv3Toast('تم إرسال الـ Template ✓', 'success');
+    await iv3LoadMessages(IV3.activeConvId);
+    iv3UpdateConvInList({
+      id: IV3.activeConvId,
+      last_message: `[Template: ${name}]`,
+      last_message_at: new Date().toISOString()
+    });
+  } catch(e) {
+    iv3Toast('فشل الإرسال: ' + e.message, 'error');
+  }
+}
+
+// ── Helper: إظهار/إخفاء زر WA Template حسب المنصة ──────────────
+function iv3UpdateWaTemplateBtnVisibility() {
+  const btn = document.getElementById('iv3-wa-tmpl-btn');
+  if (!btn) return;
+  btn.style.display = iv3IsWaApiConv() ? 'flex' : 'none';
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 function iv3FormatFileSize(bytes) {
   if (bytes < 1024) return bytes + ' B';
   if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';

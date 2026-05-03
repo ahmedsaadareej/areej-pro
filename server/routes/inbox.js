@@ -2765,6 +2765,54 @@ router.delete('/inbox/wa-templates/:name', requireAuth, async (req, res) => {
   }
 });
 
+// POST /api/system/inbox/wa-send-template — إرسال WhatsApp Template Message لمحادثة
+router.post('/inbox/wa-send-template', requireAuth, async (req, res) => {
+  try {
+    const db = req.db;
+    const { wa_token, wa_phone_id } = getWaCredentials(db);
+    if (!wa_token || !wa_phone_id) return res.json({ ok: false, error: 'wa_token و wa_phone_id غير مضبوطَين' });
+
+    const { conversation_id, template_name, language_code, components } = req.body;
+    if (!conversation_id || !template_name) return res.json({ ok: false, error: 'conversation_id + template_name مطلوبان' });
+
+    // جلب رقم المرسل من المحادثة
+    const conv = db.prepare('SELECT sender_id, platform FROM inbox_conversations WHERE id=?').get(conversation_id);
+    if (!conv) return res.json({ ok: false, error: 'المحادثة غير موجودة' });
+    if (conv.platform !== 'whatsapp') return res.json({ ok: false, error: 'هذه الميزة متاحة فقط لمحادثات WhatsApp API' });
+
+    const payload = {
+      messaging_product: 'whatsapp',
+      to: conv.sender_id,
+      type: 'template',
+      template: {
+        name: template_name,
+        language: { code: language_code || 'ar' },
+        ...(components && components.length ? { components } : {})
+      }
+    };
+
+    const r = await fetch(`https://graph.facebook.com/v19.0/${wa_phone_id}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${wa_token}` },
+      body: JSON.stringify(payload)
+    });
+    const data = await r.json();
+    if (data.error) return res.json({ ok: false, error: data.error.message });
+
+    // حفظ الرسالة في inbox_messages
+    const wamId = data.messages?.[0]?.id || null;
+    const msgText = `[Template: ${template_name}]`;
+    db.prepare(`INSERT INTO inbox_messages (conversation_id, direction, content, sent_at, status) VALUES (?,?,?,datetime('now'),?)`)
+      .run(conversation_id, 'out', msgText, 'sent');
+    db.prepare(`UPDATE inbox_conversations SET last_message_at=datetime('now'), last_message=? WHERE id=?`)
+      .run(msgText, conversation_id);
+
+    return res.json({ ok: true, wam_id: wamId });
+  } catch(e) {
+    return res.json({ ok: false, error: e.message });
+  }
+});
+
 // GET /api/system/inbox/wa-analytics — fetch analytics from Meta + local DB stats
 router.get('/inbox/wa-analytics', requireAuth, async (req, res) => {
   try {

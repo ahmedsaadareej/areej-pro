@@ -2518,6 +2518,16 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
             </button>
 
+            <!-- WA Template Button — يظهر فقط لـ WhatsApp API conversations -->
+            <button class="iv3-reply-btn" id="iv3-wa-tmpl-btn"
+              onclick="iv3ToggleWaTemplates()" title="إرسال WA Template"
+              style="display:none;color:#25D366">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                <line x1="9" y1="10" x2="15" y2="10"/><line x1="12" y1="7" x2="12" y2="13"/>
+              </svg>
+            </button>
+
             <!-- Templates dropdown -->
             <div class="iv3-dropdown" id="iv3-tmpl-dropdown" style="display:none">
               <div class="iv3-dropdown-header">
@@ -2552,6 +2562,17 @@
                   onfocus="this.style.borderColor='#0891b2'" onblur="this.style.borderColor='#e5e7eb'">
               </div>
               <div class="iv3-dropdown-body" id="iv3-catalog-list" style="max-height:220px;overflow-y:auto">
+                <div style="padding:20px;text-align:center;color:#9CA3AF;font-size:12px">جاري التحميل...</div>
+              </div>
+            </div>
+
+            <!-- WA Template dropdown -->
+            <div class="iv3-dropdown" id="iv3-wa-tmpl-dropdown" style="display:none;width:320px">
+              <div class="iv3-dropdown-header" style="color:#25D366">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                WA Templates — المعتمدة فقط
+              </div>
+              <div class="iv3-dropdown-body" id="iv3-wa-tmpl-list" style="max-height:240px;overflow-y:auto">
                 <div style="padding:20px;text-align:center;color:#9CA3AF;font-size:12px">جاري التحميل...</div>
               </div>
             </div>
