@@ -221,28 +221,43 @@ const InboxAPI = (() => {
     },
   };
 
-  // ─── Team ─────────────────────────────────────────────────────────────
+  // ─── Team (P2-1) ──────────────────────────────────────────────────────
 
   const team = {
     /**
-     * قائمة الموظفين
+     * قائمة الموظفين مع حالتهم + إحصائياتهم
      */
     list() {
-      return _get('/inbox/team');
+      return _get('/inbox/team/agents');
     },
 
     /**
-     * تحديث حالة الموظف
+     * تحديث حالة الموظف الحالي
+     * @param {string} status - online | busy | away | offline
      */
     setStatus(status) {
-      return _put('/inbox/team/status', { status });
+      return _put('/inbox/team/agents/status', { status });
     },
 
     /**
-     * قائمة حالات الموظفين
+     * بيانات موظف واحد
      */
-    statuses() {
-      return _get('/inbox/team/statuses');
+    getAgent(agentId) {
+      return _get(`/inbox/team/agents/${agentId}`);
+    },
+
+    /**
+     * auto-assign محادثة واحدة
+     */
+    autoAssign(convId) {
+      return _post('/inbox/conversations/auto-assign', { conversation_id: convId });
+    },
+
+    /**
+     * auto-assign لكل المحادثات المفتوحة الغير معيّنة
+     */
+    autoAssignAll() {
+      return _post('/inbox/conversations/auto-assign-all');
     },
   };
 
@@ -340,6 +355,12 @@ const InboxAPI = (() => {
     messages,
     labels,
     team,
+    // shortcuts مباشرة لأكثر استخداماً في team.js
+    getAgents:      () => team.list(),
+    setAgentStatus: (s) => team.setStatus(s),
+    assignConversation: (convId, agentId) => conversations.assign(convId, agentId),
+    autoAssign:     (convId) => team.autoAssign(convId),
+    autoAssignAll:  () => team.autoAssignAll(),
     analytics,
     settings,
     crm,

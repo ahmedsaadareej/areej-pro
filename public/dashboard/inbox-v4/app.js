@@ -193,6 +193,12 @@
     InboxChat.init();  // P1-2 ✅
     InboxReply.init(); // P1-3 ✅
 
+    // Phase 2 — Team Assignment
+    InboxTeam.init();  // P2-1 ✅
+
+    // expose showInboxToast globally (for team.js + other modules)
+    window.showInboxToast = toast;
+
     console.log('[Inbox v4] ✅ جاهز');
   }
 

@@ -37,8 +37,8 @@ router.use('/', streamRouter);
 router.use('/', require('./conversations'));
 router.use('/', require('./messages'));
 
-// [Phase 2] Team
-// router.use('/', require('./team'));
+// Phase 2 — Team Assignment
+router.use('/', require('./team'));
 
 // [Phase 3] Labels
 // router.use('/', require('./labels'));

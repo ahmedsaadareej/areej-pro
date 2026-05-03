@@ -1032,3 +1032,186 @@
   from { opacity: 1; transform: scale(1); }
   to   { opacity: 0; transform: scale(.5); }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   P2-1 — Team Assignment CSS
+   آخر تحديث: 2026-05-03
+══════════════════════════════════════════════════════════════ */
+
+/* ─── Agent Status Widget (sidebar footer) ───────────────────── */
+#inbox-agent-status-widget {
+  position: relative;
+  padding: 8px 12px;
+  border-top: 1px solid var(--iv4-border, #e2e8f0);
+  margin-top: auto;
+}
+
+.agent-status-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--iv4-text, #1e293b);
+  transition: background .15s;
+}
+.agent-status-btn:hover { background: var(--iv4-hover, #f1f5f9); }
+
+.agent-status-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background .3s;
+}
+.agent-status-label { flex: 1; text-align: start; }
+.agent-status-chevron { color: var(--iv4-muted, #94a3b8); flex-shrink: 0; }
+
+.agent-status-dropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  inset-inline-start: 8px;
+  width: 160px;
+  background: #fff;
+  border: 1px solid var(--iv4-border, #e2e8f0);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+  padding: 4px;
+  z-index: 200;
+}
+.agent-status-dropdown.hidden { display: none; }
+
+.status-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--iv4-text, #1e293b);
+  transition: background .12s;
+}
+.status-option:hover { background: var(--iv4-hover, #f1f5f9); }
+.status-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ─── Assign Dropdown ────────────────────────────────────────── */
+.assign-dropdown {
+  width: 260px;
+  background: #fff;
+  border: 1px solid var(--iv4-border, #e2e8f0);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.14);
+  overflow: hidden;
+}
+
+.assign-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--iv4-muted, #64748b);
+  border-bottom: 1px solid var(--iv4-border, #e2e8f0);
+}
+
+.assign-auto-btn {
+  padding: 3px 8px;
+  border: 1px solid #6366f1;
+  border-radius: 6px;
+  background: transparent;
+  color: #6366f1;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.assign-auto-btn:hover { background: #6366f1; color: #fff; }
+
+.assign-search-wrap { padding: 8px 10px 4px; }
+.assign-search {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--iv4-border, #e2e8f0);
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color .15s;
+  box-sizing: border-box;
+}
+.assign-search:focus { border-color: #6366f1; }
+
+.assign-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.assign-agent-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--iv4-text, #1e293b);
+  transition: background .12s;
+}
+.assign-agent-item:hover,
+.assign-agent-item.active { background: var(--iv4-hover, #f1f5f9); }
+.assign-agent-item.active { font-weight: 600; }
+
+.assign-agent-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.assign-agent-name { flex: 1; }
+.assign-agent-count {
+  font-size: 11px;
+  color: var(--iv4-muted, #94a3b8);
+  background: var(--iv4-badge-bg, #f1f5f9);
+  border-radius: 10px;
+  padding: 1px 6px;
+}
+.assign-check {
+  color: #22c55e;
+  font-size: 12px;
+}
+.assign-no-results {
+  padding: 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--iv4-muted, #94a3b8);
+}
+
+.assign-footer {
+  padding: 6px 10px 8px;
+  border-top: 1px solid var(--iv4-border, #e2e8f0);
+}
+.assign-unassign-btn {
+  width: 100%;
+  padding: 6px;
+  border: 1px solid var(--iv4-border, #e2e8f0);
+  border-radius: 7px;
+  background: transparent;
+  color: #ef4444;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.assign-unassign-btn:hover:not(:disabled) { background: #fef2f2; }
+.assign-unassign-btn:disabled { opacity: .4; cursor: default; }
