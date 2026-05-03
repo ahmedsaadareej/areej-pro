@@ -421,4 +421,126 @@ router.get('/hourly', (req, res) => {
   }
 });
 
+// ─── GET /api/inbox/analytics/agents/:id ─────────────────────────────────
+// تفاصيل أداء موظف واحد: تطور يومي + توزيع منصات + آخر محادثات
+
+router.get('/agents/:id', (req, res) => {
+  try {
+    const db       = req.db;
+    const agentId  = parseInt(req.params.id, 10);
+    const { fromTs, toTs, fromIso, toIso } = _parseRange(req.query);
+
+    // ─ بيانات الموظف ────────────────────────────────────────────
+    const agent = db.prepare(`
+      SELECT id, name, email, role FROM tenant_users WHERE id = ?
+    `).get(agentId);
+    if (!agent) return res.status(404).json({ ok: false, error: 'agent not found' });
+
+    // ─ ملخص المحادثات ──────────────────────────────────────
+    const summary = db.prepare(`
+      SELECT
+        COUNT(*) AS total_convs,
+        SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) AS closed_convs,
+        AVG(
+          CASE WHEN first_response_at IS NOT NULL
+                AND first_message_at IS NOT NULL
+                AND first_response_at > first_message_at
+               THEN first_response_at - first_message_at END
+        ) AS avg_first_response_sec,
+        AVG(
+          CASE WHEN resolved_at IS NOT NULL
+                AND first_message_at IS NOT NULL
+                AND resolved_at > first_message_at
+               THEN resolved_at - first_message_at END
+        ) AS avg_resolution_sec
+      FROM inbox_conversations_v4
+      WHERE assigned_to_id = ?
+        AND created_at BETWEEN ? AND ?
+    `).get(agentId, fromTs, toTs);
+
+    // ─ عدد الرسائل الصادرة ────────────────────────────────
+    const msgCount = db.prepare(`
+      SELECT COUNT(*) AS n FROM inbox_messages_v4
+      WHERE agent_id = ? AND direction = 'outbound'
+        AND sent_at BETWEEN ? AND ?
+    `).get(agentId, fromTs, toTs).n;
+
+    // ─ تطور يومي (محادثات + مغلقة كل يوم) ────────────────────
+    const daily = db.prepare(`
+      SELECT
+        date(created_at, 'unixepoch') AS day,
+        COUNT(*) AS total,
+        SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) AS closed
+      FROM inbox_conversations_v4
+      WHERE assigned_to_id = ?
+        AND created_at BETWEEN ? AND ?
+      GROUP BY day
+      ORDER BY day ASC
+    `).all(agentId, fromTs, toTs);
+
+    // ─ توزيع المنصات ───────────────────────────────────────────
+    const platforms = db.prepare(`
+      SELECT platform, COUNT(*) AS n
+      FROM inbox_conversations_v4
+      WHERE assigned_to_id = ?
+        AND created_at BETWEEN ? AND ?
+      GROUP BY platform
+      ORDER BY n DESC
+    `).all(agentId, fromTs, toTs);
+
+    // ─ توزيع الأولوية ──────────────────────────────────────────
+    const priorities = db.prepare(`
+      SELECT priority, COUNT(*) AS n
+      FROM inbox_conversations_v4
+      WHERE assigned_to_id = ?
+        AND created_at BETWEEN ? AND ?
+      GROUP BY priority
+      ORDER BY n DESC
+    `).all(agentId, fromTs, toTs);
+
+    // ─ آخر 10 محادثات ─────────────────────────────────────────────
+    const recentConvs = db.prepare(`
+      SELECT id, contact_name, platform, status, priority,
+             first_message_at, resolved_at, created_at
+      FROM inbox_conversations_v4
+      WHERE assigned_to_id = ?
+        AND created_at BETWEEN ? AND ?
+      ORDER BY created_at DESC
+      LIMIT 10
+    `).all(agentId, fromTs, toTs);
+
+    res.json({
+      ok: true,
+      period: { from: fromIso, to: toIso },
+      agent: {
+        id:   agent.id,
+        name: agent.name,
+        role: agent.role,
+      },
+      summary: {
+        total_convs:            summary.total_convs || 0,
+        closed_convs:           summary.closed_convs || 0,
+        resolution_rate:        summary.total_convs > 0
+          ? Math.round((summary.closed_convs / summary.total_convs) * 100) : 0,
+        messages_sent:          msgCount,
+        avg_first_response_sec: summary.avg_first_response_sec
+          ? Math.round(summary.avg_first_response_sec) : null,
+        avg_first_response_fmt: _fmtSec(summary.avg_first_response_sec
+          ? Math.round(summary.avg_first_response_sec) : null),
+        avg_resolution_sec:     summary.avg_resolution_sec
+          ? Math.round(summary.avg_resolution_sec) : null,
+        avg_resolution_fmt:     _fmtSec(summary.avg_resolution_sec
+          ? Math.round(summary.avg_resolution_sec) : null),
+      },
+      daily,
+      platforms,
+      priorities,
+      recent_convs: recentConvs,
+    });
+  } catch (e) {
+    console.error('[inbox/analytics/agents/:id]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 module.exports = router;

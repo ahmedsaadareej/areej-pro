@@ -445,8 +445,8 @@ const InboxAnalytics = (() => {
     _lastAgentsData = agentsData;
 
     tbody.innerHTML = agentsData.map(a => `
-      <tr>
-        <td class="iv4-an-agent-name">👤 ${a.agent_name}</td>
+      <tr data-agent-id="${a.agent_id}" data-agent-name="${a.agent_name}" class="iv4-an-agent-row">
+        <td class="iv4-an-agent-name iv4-an-agent-link">👤 ${a.agent_name}</td>
         <td>${_fmt(a.total_convs)}</td>
         <td>${_fmt(a.closed_convs)}</td>
         <td>
@@ -463,9 +463,149 @@ const InboxAnalytics = (() => {
         <td>${a.avg_resolution_fmt || '—'}</td>
       </tr>
     `).join('');
+
+    // نقرة على اسم الموظف → drill-down
+    tbody.querySelectorAll('.iv4-an-agent-row').forEach(row => {
+      row.querySelector('.iv4-an-agent-link').addEventListener('click', () => {
+        _openAgentDetail(
+          parseInt(row.dataset.agentId, 10),
+          row.dataset.agentName
+        );
+      });
+    });
   }
 
   // ─── Export CSV ───────────────────────────────────────────────────────────
+
+  // ─── Agent Detail Modal ───────────────────────────────────────────────────
+
+  async function _openAgentDetail(agentId, agentName) {
+    const existing = document.getElementById('iv4-an-agent-detail');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'iv4-an-agent-detail';
+    modal.className = 'iv4-an-agent-detail-wrap';
+    modal.innerHTML = `
+      <div class="iv4-an-agent-detail-modal">
+        <div class="iv4-an-ad-header">
+          <span class="iv4-an-ad-title">👤 ${agentName}</span>
+          <button class="iv4-an-ad-close" id="iv4-an-ad-close">✕</button>
+        </div>
+        <div class="iv4-an-ad-loading" id="iv4-an-ad-body">جارٍ تحميل بيانات الموظف...</div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.querySelector('#iv4-an-ad-close').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+    const { data, error } = await InboxAPI.analytics.agentDetail(agentId, { from: _from, to: _to });
+    const body = document.getElementById('iv4-an-ad-body');
+    if (!body) return;
+
+    if (error || !data) {
+      body.innerHTML = `<p class="iv4-an-empty">خطأ: ${error || 'فشل التحميل'}</p>`;
+      return;
+    }
+
+    const s = data.summary;
+    const PRIO_LABELS    = { urgent: '🔴 عاجل', high: '🟠 عالي', normal: '🟡 عادي', low: '🔵 منخفض' };
+    const PLATFORM_ICON2 = { whatsapp: '🟢', telegram: '🔵', instagram: '🟣', messenger: '🔷' };
+    const STATUS_LABELS  = { open: 'مفتوحة', closed: 'مغلقة', waiting: 'انتظار', snoozed: 'مؤجلة' };
+
+    const totalPlatforms = data.platforms.reduce((a, p) => a + p.n, 0) || 1;
+    const maxDaily = Math.max(...(data.daily.map(d => d.total)), 1);
+    const dailyBars = data.daily.map(d => {
+      const h = Math.max(4, Math.round((d.total / maxDaily) * 60));
+      return `<div class="iv4-an-ad-bar" style="height:${h}px"
+                   title="${d.day}: ${d.total} محادثة"></div>`;
+    }).join('');
+
+    const recentRows = (data.recent_convs || []).map(c => `
+      <tr>
+        <td>${c.contact_name || '—'}</td>
+        <td>${PLATFORM_ICON2[c.platform] || '📱'} ${c.platform || ''}</td>
+        <td><span class="iv4-an-ad-status iv4-an-ad-status--${c.status}">${STATUS_LABELS[c.status] || c.status}</span></td>
+        <td>${PRIO_LABELS[c.priority] || c.priority || '—'}</td>
+      </tr>
+    `).join('');
+
+    body.className = 'iv4-an-ad-body-loaded';
+    body.innerHTML = `
+      <div class="iv4-an-ad-kpi-row">
+        <div class="iv4-an-ad-kpi">
+          <div class="iv4-an-ad-kpi-val">${_fmt(s.total_convs)}</div>
+          <div class="iv4-an-ad-kpi-lbl">محادثات</div>
+        </div>
+        <div class="iv4-an-ad-kpi">
+          <div class="iv4-an-ad-kpi-val"
+               style="color:${s.resolution_rate >= 70 ? '#10b981' : '#f59e0b'}">${s.resolution_rate}%</div>
+          <div class="iv4-an-ad-kpi-lbl">إغلاق</div>
+        </div>
+        <div class="iv4-an-ad-kpi">
+          <div class="iv4-an-ad-kpi-val">${_fmt(s.messages_sent)}</div>
+          <div class="iv4-an-ad-kpi-lbl">رسائل</div>
+        </div>
+        <div class="iv4-an-ad-kpi">
+          <div class="iv4-an-ad-kpi-val" style="color:#8b5cf6">${s.avg_first_response_fmt || '—'}</div>
+          <div class="iv4-an-ad-kpi-lbl">أول رد</div>
+        </div>
+        <div class="iv4-an-ad-kpi">
+          <div class="iv4-an-ad-kpi-val" style="color:#06b6d4">${s.avg_resolution_fmt || '—'}</div>
+          <div class="iv4-an-ad-kpi-lbl">وقت إغلاق</div>
+        </div>
+      </div>
+
+      <div class="iv4-an-ad-section">
+        <div class="iv4-an-ad-section-title">📈 تطور يومي</div>
+        ${data.daily.length ? `
+          <div class="iv4-an-ad-bars">${dailyBars}</div>
+          <div class="iv4-an-ad-bars-labels">
+            <span>${data.daily[0]?.day?.slice(5) || ''}</span>
+            <span>${data.daily[Math.floor(data.daily.length / 2)]?.day?.slice(5) || ''}</span>
+            <span>${data.daily[data.daily.length - 1]?.day?.slice(5) || ''}</span>
+          </div>` :
+          '<p class="iv4-an-empty">لا توجد بيانات</p>'}
+      </div>
+
+      <div class="iv4-an-ad-two-col">
+        <div class="iv4-an-ad-section">
+          <div class="iv4-an-ad-section-title">📡 المنصات</div>
+          ${data.platforms.map(p => `
+            <div class="iv4-an-ad-plat-row">
+              <span>${PLATFORM_ICON2[p.platform] || '📱'} ${p.platform || 'غير محدد'}</span>
+              <div class="iv4-an-platform-bar-wrap" style="flex:1;margin:0 8px">
+                <div class="iv4-an-platform-bar"
+                     style="width:${Math.round((p.n / totalPlatforms) * 100)}%"></div>
+              </div>
+              <span>${p.n}</span>
+            </div>`).join('') || '<p class="iv4-an-empty">—</p>'}
+        </div>
+        <div class="iv4-an-ad-section">
+          <div class="iv4-an-ad-section-title">⚡ الأولوية</div>
+          ${data.priorities.map(p => `
+            <div class="iv4-an-ad-plat-row">
+              <span>${PRIO_LABELS[p.priority] || p.priority}</span>
+              <span style="margin-right:auto;font-weight:700">${p.n}</span>
+            </div>`).join('') || '<p class="iv4-an-empty">—</p>'}
+        </div>
+      </div>
+
+      <div class="iv4-an-ad-section">
+        <div class="iv4-an-ad-section-title">💬 آخر المحادثات</div>
+        ${recentRows ? `
+          <div class="iv4-an-table-wrap">
+            <table class="iv4-an-table">
+              <thead><tr><th>العميل</th><th>المنصة</th><th>الحالة</th><th>الأولوية</th></tr></thead>
+              <tbody>${recentRows}</tbody>
+            </table>
+          </div>` :
+          '<p class="iv4-an-empty">لا توجد محادثات</p>'}
+      </div>
+    `;
+  }
+
 
   let _lastAgentsData = [];
 

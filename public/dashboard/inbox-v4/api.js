@@ -339,6 +339,9 @@ const InboxAPI = (() => {
     hourly({ from, to } = {}) {
       return _get('/inbox/analytics/hourly', { from, to });
     },
+    agentDetail(agentId, { from, to } = {}) {
+      return _get(`/inbox/analytics/agents/${agentId}`, { from, to });
+    },
     csatStats() {
       return _get('/inbox/csat-stats');
     },

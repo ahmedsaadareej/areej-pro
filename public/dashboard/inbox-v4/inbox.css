@@ -3571,3 +3571,141 @@
   .iv4-an-sla-bar-wrap{ background: #334155; }
   .iv4-an-mini-bar    { background: #334155; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   P6-2 — Agent Detail Modal
+   آخر تحديث: 2026-05-03
+════════════════════════════════════════════════════════════════════ */
+
+/* ── Clickable agent name ────────────────────────────────────────── */
+.iv4-an-agent-link {
+  cursor: pointer; color: #3b82f6; text-decoration: underline dotted;
+}
+.iv4-an-agent-link:hover { color: #2563eb; }
+
+/* ── Outer wrap (sits above the analytics overlay) ───────────────── */
+.iv4-an-agent-detail-wrap {
+  position: fixed; inset: 0; z-index: 9200;
+  background: rgba(0,0,0,.6); display: flex;
+  align-items: center; justify-content: center;
+  padding: 24px 16px;
+}
+
+.iv4-an-agent-detail-modal {
+  background: var(--iv4-surface, #fff);
+  border-radius: 16px; width: 100%; max-width: 680px;
+  max-height: 85vh; overflow-y: auto;
+  box-shadow: 0 32px 80px rgba(0,0,0,.3);
+  display: flex; flex-direction: column;
+  animation: iv4-an-fade-in .18s ease;
+}
+
+/* ── Header ──────────────────────────────────────────────────────── */
+.iv4-an-ad-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; border-bottom: 1px solid var(--iv4-border, #e2e8f0);
+  position: sticky; top: 0;
+  background: var(--iv4-surface, #fff); z-index: 1;
+}
+.iv4-an-ad-title {
+  font-size: 1rem; font-weight: 700; color: var(--iv4-text, #1e293b);
+}
+.iv4-an-ad-close {
+  background: none; border: 1px solid var(--iv4-border, #e2e8f0);
+  border-radius: 8px; padding: 4px 10px; cursor: pointer;
+  color: var(--iv4-text-muted, #64748b); font-size: .9rem; transition: all .15s;
+}
+.iv4-an-ad-close:hover { background: #fef2f2; color: #ef4444; border-color: #ef4444; }
+
+/* ── Loading ─────────────────────────────────────────────────────── */
+.iv4-an-ad-loading {
+  padding: 40px; text-align: center;
+  color: var(--iv4-text-muted, #94a3b8); font-size: .9rem;
+}
+.iv4-an-ad-body-loaded { padding: 16px 20px; display: flex; flex-direction: column; gap: 20px; }
+
+/* ── KPI Row ─────────────────────────────────────────────────────── */
+.iv4-an-ad-kpi-row {
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+.iv4-an-ad-kpi {
+  flex: 1; min-width: 90px;
+  padding: 12px 14px; border-radius: 10px;
+  background: var(--iv4-bg, #f8fafc); border: 1px solid var(--iv4-border, #e2e8f0);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.iv4-an-ad-kpi-val { font-size: 1.3rem; font-weight: 800; line-height: 1; }
+.iv4-an-ad-kpi-lbl { font-size: .72rem; color: var(--iv4-text-muted, #64748b); font-weight: 500; }
+
+/* ── Sections inside modal ───────────────────────────────────────── */
+.iv4-an-ad-section {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.iv4-an-ad-section-title {
+  font-size: .85rem; font-weight: 700; color: var(--iv4-text, #1e293b);
+}
+
+/* ── Daily Bars ──────────────────────────────────────────────────── */
+.iv4-an-ad-bars {
+  display: flex; align-items: flex-end; gap: 3px;
+  height: 68px; padding: 4px 0;
+  background: var(--iv4-bg, #f8fafc);
+  border-radius: 8px; padding: 6px 8px;
+  border: 1px solid var(--iv4-border, #e2e8f0);
+}
+.iv4-an-ad-bar {
+  flex: 1; min-width: 3px; border-radius: 3px 3px 0 0;
+  background: #3b82f6; opacity: .8; cursor: default; transition: opacity .1s;
+}
+.iv4-an-ad-bar:hover { opacity: 1; }
+
+.iv4-an-ad-bars-labels {
+  display: flex; justify-content: space-between;
+  font-size: .68rem; color: var(--iv4-text-muted, #94a3b8);
+  padding: 0 4px;
+}
+
+/* ── Two-column layout ───────────────────────────────────────────── */
+.iv4-an-ad-two-col {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+}
+@media (max-width: 520px) {
+  .iv4-an-ad-two-col { grid-template-columns: 1fr; }
+}
+
+/* ── Platform rows ───────────────────────────────────────────────── */
+.iv4-an-ad-plat-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: .82rem; padding: 5px 0;
+  border-bottom: 1px solid var(--iv4-border, #f1f5f9);
+}
+.iv4-an-ad-plat-row:last-child { border-bottom: none; }
+
+/* ── Status badges ───────────────────────────────────────────────── */
+.iv4-an-ad-status {
+  display: inline-block; padding: 2px 8px; border-radius: 9999px;
+  font-size: .72rem; font-weight: 600;
+}
+.iv4-an-ad-status--open    { background: #dbeafe; color: #1d4ed8; }
+.iv4-an-ad-status--closed  { background: #d1fae5; color: #065f46; }
+.iv4-an-ad-status--waiting { background: #fef3c7; color: #92400e; }
+.iv4-an-ad-status--snoozed { background: #ede9fe; color: #5b21b6; }
+
+/* ── Fade animation ──────────────────────────────────────────────── */
+@keyframes iv4-an-fade-in {
+  from { opacity: 0; transform: scale(.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── Dark Mode ───────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .iv4-an-agent-detail-modal { background: #0f172a; }
+  .iv4-an-ad-header   { background: #0f172a; border-color: #1e293b; }
+  .iv4-an-ad-kpi      { background: #1e293b; border-color: #334155; }
+  .iv4-an-ad-bars     { background: #1e293b; border-color: #334155; }
+  .iv4-an-ad-plat-row { border-color: #1e293b; }
+  .iv4-an-ad-status--open    { background: #1e3a5f; color: #93c5fd; }
+  .iv4-an-ad-status--closed  { background: #064e3b; color: #6ee7b7; }
+  .iv4-an-ad-status--waiting { background: #451a03; color: #fcd34d; }
+  .iv4-an-ad-status--snoozed { background: #2e1065; color: #c4b5fd; }
+}
