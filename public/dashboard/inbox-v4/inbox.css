@@ -3729,3 +3729,53 @@
 @media (prefers-color-scheme: dark) {
   .iv4-an-platform-clickable:hover { background: #1e293b !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   P6-4 — CSAT Analytics + P6-6 Export Excel
+   آخر تحديث: 2026-05-03
+════════════════════════════════════════════════════════════════════ */
+
+/* ── CSAT KPIs ───────────────────────────────────────────────────── */
+.iv4-an-csat-wrap { display: flex; flex-direction: column; gap: 16px; }
+
+.iv4-an-csat-kpis {
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+
+/* ── Star Distribution + Daily split ────────────────────────────── */
+.iv4-an-csat-split {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+}
+@media (max-width: 540px) {
+  .iv4-an-csat-split { grid-template-columns: 1fr; }
+}
+
+.iv4-an-csat-stars { display: flex; flex-direction: column; gap: 6px; }
+.iv4-an-csat-trend { display: flex; flex-direction: column; gap: 6px; }
+
+.iv4-an-csat-bar-row {
+  display: flex; align-items: center; gap: 8px;
+}
+.iv4-an-csat-star-lbl { font-size: .82rem; min-width: 60px; text-align: right; }
+.iv4-an-csat-bar-wrap {
+  flex: 1; height: 10px; background: var(--iv4-border, #e2e8f0);
+  border-radius: 9999px; overflow: hidden;
+}
+.iv4-an-csat-bar { height: 100%; border-radius: 9999px; transition: width .4s ease; }
+.iv4-an-csat-bar-n { font-size: .78rem; font-weight: 700; min-width: 28px; text-align: center; }
+
+/* ── Export group ────────────────────────────────────────────────── */
+.iv4-an-export-group { display: flex; gap: 6px; }
+
+.iv4-an-export-btn--primary {
+  background: #3b82f6 !important; color: #fff !important;
+  border-color: #3b82f6 !important;
+}
+.iv4-an-export-btn--primary:hover {
+  background: #2563eb !important; border-color: #2563eb !important;
+}
+
+/* ── Dark Mode ───────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .iv4-an-csat-bar-wrap { background: #334155; }
+}

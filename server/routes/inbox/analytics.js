@@ -716,4 +716,102 @@ router.get('/sla/detail', (req, res) => {
   }
 });
 
+// ─── GET /api/inbox/analytics/csat ──────────────────────────────────────────────
+// تحليل CSAT: توزيع التقييمات + تطور يومي + تفصيل بالموظف
+
+router.get('/csat', (req, res) => {
+  try {
+    const db = req.db;
+    const { fromTs, toTs, fromIso, toIso } = _parseRange(req.query);
+
+    // ─ ملخص عام ─────────────────────────────────────────────────────────
+    const summary = db.prepare(`
+      SELECT
+        COUNT(*)                                     AS rated,
+        AVG(csat_score)                              AS avg_score,
+        SUM(CASE WHEN csat_score >= 4 THEN 1 ELSE 0 END) AS positive,
+        SUM(CASE WHEN csat_score = 3  THEN 1 ELSE 0 END) AS neutral,
+        SUM(CASE WHEN csat_score <= 2 THEN 1 ELSE 0 END) AS negative
+      FROM inbox_conversations_v4
+      WHERE csat_score IS NOT NULL
+        AND created_at BETWEEN ? AND ?
+    `).get(fromTs, toTs);
+
+    // ─ توزيع النجوم (1☓5) ────────────────────────────────────────────────
+    const distribution = db.prepare(`
+      SELECT csat_score AS score, COUNT(*) AS n
+      FROM inbox_conversations_v4
+      WHERE csat_score IS NOT NULL
+        AND created_at BETWEEN ? AND ?
+      GROUP BY csat_score
+      ORDER BY csat_score DESC
+    `).all(fromTs, toTs);
+
+    // ─ تطور يومي ──────────────────────────────────────────────────────────
+    const daily = db.prepare(`
+      SELECT
+        date(created_at, 'unixepoch') AS day,
+        COUNT(*)         AS rated,
+        AVG(csat_score)  AS avg_score,
+        SUM(CASE WHEN csat_score >= 4 THEN 1 ELSE 0 END) AS positive
+      FROM inbox_conversations_v4
+      WHERE csat_score IS NOT NULL
+        AND created_at BETWEEN ? AND ?
+      GROUP BY day
+      ORDER BY day ASC
+    `).all(fromTs, toTs).map(r => ({
+      day:       r.day,
+      rated:     r.rated,
+      avg_score: r.avg_score ? Math.round(r.avg_score * 10) / 10 : null,
+      positive:  r.positive,
+      positive_pct: r.rated > 0 ? Math.round((r.positive / r.rated) * 100) : 0,
+    }));
+
+    // ─ تفصيل بالموظف ─────────────────────────────────────────────────────────
+    const byAgent = db.prepare(`
+      SELECT
+        c.assigned_to_id AS agent_id,
+        tu.name          AS agent_name,
+        COUNT(*)         AS rated,
+        AVG(c.csat_score) AS avg_score,
+        SUM(CASE WHEN c.csat_score >= 4 THEN 1 ELSE 0 END) AS positive
+      FROM inbox_conversations_v4 c
+      LEFT JOIN tenant_users tu ON tu.id = c.assigned_to_id
+      WHERE c.csat_score IS NOT NULL
+        AND c.created_at BETWEEN ? AND ?
+        AND c.assigned_to_id IS NOT NULL
+      GROUP BY c.assigned_to_id
+      ORDER BY avg_score DESC
+    `).all(fromTs, toTs).map(r => ({
+      agent_id:     r.agent_id,
+      agent_name:   r.agent_name || `موظف #${r.agent_id}`,
+      rated:        r.rated,
+      avg_score:    r.avg_score ? Math.round(r.avg_score * 10) / 10 : null,
+      positive:     r.positive,
+      positive_pct: r.rated > 0 ? Math.round((r.positive / r.rated) * 100) : 0,
+    }));
+
+    const rated = summary.rated || 0;
+    res.json({
+      ok: true,
+      period: { from: fromIso, to: toIso },
+      summary: {
+        rated,
+        avg_score:    summary.avg_score ? Math.round(summary.avg_score * 10) / 10 : null,
+        positive:     summary.positive  || 0,
+        neutral:      summary.neutral   || 0,
+        negative:     summary.negative  || 0,
+        positive_pct: rated > 0 ? Math.round(((summary.positive || 0) / rated) * 100) : null,
+        negative_pct: rated > 0 ? Math.round(((summary.negative || 0) / rated) * 100) : null,
+      },
+      distribution,
+      daily,
+      by_agent: byAgent,
+    });
+  } catch (e) {
+    console.error('[inbox/analytics/csat]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 module.exports = router;

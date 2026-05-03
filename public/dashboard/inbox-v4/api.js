@@ -348,6 +348,9 @@ const InboxAPI = (() => {
     slaDetail({ from, to } = {}) {
       return _get('/inbox/analytics/sla/detail', { from, to });
     },
+    csat({ from, to } = {}) {
+      return _get('/inbox/analytics/csat', { from, to });
+    },
     csatStats() {
       return _get('/inbox/csat-stats');
     },

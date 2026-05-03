@@ -160,11 +160,22 @@ const InboxAnalytics = (() => {
             </div>
           </section>
 
-          <!-- ── Section 6: Agents Table ── -->
+          <!-- ── Section 6: CSAT ── -->
+          <section class="iv4-an-section" id="iv4-an-csat-section">
+            <h3 class="iv4-an-section-title">⭐ رضا العملاء (CSAT)</h3>
+            <div id="iv4-an-csat" class="iv4-an-csat-wrap">
+              <!-- تُحمَّل ديناميكياً -->
+            </div>
+          </section>
+
+          <!-- ── Section 7: Agents Table ── -->
           <section class="iv4-an-section">
             <div class="iv4-an-section-header-row">
               <h3 class="iv4-an-section-title">👥 أداء الموظفين</h3>
-              <button id="iv4-an-export-agents" class="iv4-an-export-btn" title="تصدير CSV">⬇ CSV</button>
+              <div class="iv4-an-export-group">
+                <button id="iv4-an-export-agents" class="iv4-an-export-btn" title="تصدير بيانات الموظفين">⬇ موظفين</button>
+                <button id="iv4-an-export-full" class="iv4-an-export-btn iv4-an-export-btn--primary" title="تصدير التقرير كاملاً">📅 Excel كامل</button>
+              </div>
             </div>
             <div class="iv4-an-table-wrap">
               <table class="iv4-an-table" id="iv4-an-agents-table">
@@ -845,6 +856,184 @@ const InboxAnalytics = (() => {
   }
 
 
+  // ─── CSAT Section ─────────────────────────────────────────────────────────
+
+  let _lastCSATData = null;
+
+  function _renderCSAT(csatData) {
+    const el = document.getElementById('iv4-an-csat');
+    if (!el || !csatData) return;
+
+    _lastCSATData = csatData;
+    const s = csatData.summary;
+
+    if (!s || !s.rated) {
+      el.innerHTML = '<p class="iv4-an-empty">لا توجد تقييمات في هذه الفترة</p>';
+      return;
+    }
+
+    // توزيع النجوم
+    const allScores = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    (csatData.distribution || []).forEach(d => { allScores[d.score] = d.n; });
+    const maxScore = Math.max(...Object.values(allScores), 1);
+
+    const starBars = [5, 4, 3, 2, 1].map(star => {
+      const n    = allScores[star] || 0;
+      const pct  = Math.round((n / maxScore) * 100);
+      const color = star >= 4 ? '#10b981' : star === 3 ? '#f59e0b' : '#ef4444';
+      const stars = '⭐'.repeat(star);
+      return `
+        <div class="iv4-an-csat-bar-row">
+          <span class="iv4-an-csat-star-lbl">${stars}</span>
+          <div class="iv4-an-csat-bar-wrap">
+            <div class="iv4-an-csat-bar" style="width:${pct}%;background:${color}"></div>
+          </div>
+          <span class="iv4-an-csat-bar-n">${n}</span>
+        </div>`;
+    }).join('');
+
+    // تطور يومي (mini bars ملونة بـ avg_score)
+    const maxRated = Math.max(...(csatData.daily.map(d => d.rated)), 1);
+    const dailyBars = csatData.daily.map(d => {
+      const h     = Math.max(4, Math.round((d.rated / maxRated) * 48));
+      const color = d.avg_score >= 4 ? '#10b981'
+                  : d.avg_score >= 3 ? '#f59e0b' : '#ef4444';
+      return `<div class="iv4-an-ad-bar" style="height:${h}px;background:${color}"
+                   title="${d.day}: متوسط ${d.avg_score || '—'} — ${d.rated} تقييم"></div>`;
+    }).join('');
+
+    // جدول CSAT بالموظف
+    const agentRows = (csatData.by_agent || []).map(a => {
+      const stars = Math.round(a.avg_score || 0);
+      const color = a.avg_score >= 4 ? '#10b981'
+                  : a.avg_score >= 3 ? '#f59e0b' : '#ef4444';
+      return `
+        <tr>
+          <td>👤 ${a.agent_name}</td>
+          <td style="font-weight:700;color:${color}">${a.avg_score || '—'} ${'⭐'.repeat(stars)}</td>
+          <td>${a.rated}</td>
+          <td style="color:#10b981">${a.positive_pct}%</td>
+        </tr>`;
+    }).join('');
+
+    const posColor = s.positive_pct >= 75 ? '#10b981' : s.positive_pct >= 50 ? '#f59e0b' : '#ef4444';
+    const avgColor = s.avg_score  >= 4   ? '#10b981' : s.avg_score  >= 3   ? '#f59e0b' : '#ef4444';
+
+    el.innerHTML = `
+      <!-- Summary KPIs -->
+      <div class="iv4-an-csat-kpis">
+        <div class="iv4-an-ad-kpi">
+          <div class="iv4-an-ad-kpi-val" style="color:${avgColor}">${s.avg_score || '—'} ⭐</div>
+          <div class="iv4-an-ad-kpi-lbl">متوسط التقييم</div>
+        </div>
+        <div class="iv4-an-ad-kpi">
+          <div class="iv4-an-ad-kpi-val">${_fmt(s.rated)}</div>
+          <div class="iv4-an-ad-kpi-lbl">إجمالي التقييمات</div>
+        </div>
+        <div class="iv4-an-ad-kpi">
+          <div class="iv4-an-ad-kpi-val" style="color:${posColor}">${s.positive_pct != null ? s.positive_pct + '%' : '—'}</div>
+          <div class="iv4-an-ad-kpi-lbl">إيجابية (4-5⭐)</div>
+        </div>
+        <div class="iv4-an-ad-kpi">
+          <div class="iv4-an-ad-kpi-val" style="color:#ef4444">${s.negative_pct != null ? s.negative_pct + '%' : '—'}</div>
+          <div class="iv4-an-ad-kpi-lbl">سلبية (1-2⭐)</div>
+        </div>
+      </div>
+
+      <!-- Star Distribution + Daily Trend -->
+      <div class="iv4-an-csat-split">
+        <div class="iv4-an-csat-stars">
+          <div class="iv4-an-ad-section-title" style="margin-bottom:8px">توزيع التقييمات</div>
+          ${starBars}
+        </div>
+
+        <div class="iv4-an-csat-trend">
+          <div class="iv4-an-ad-section-title" style="margin-bottom:8px">📅 تطور يومي</div>
+          ${csatData.daily.length ? `
+            <div class="iv4-an-ad-bars" style="height:56px">${dailyBars}</div>
+            <div class="iv4-an-ad-bars-labels">
+              <span>${csatData.daily[0]?.day?.slice(5) || ''}</span>
+              <span>${csatData.daily[csatData.daily.length - 1]?.day?.slice(5) || ''}</span>
+            </div>` :
+            '<p class="iv4-an-empty">لا توجد بيانات</p>'}
+        </div>
+      </div>
+
+      <!-- By Agent Table -->
+      ${agentRows ? `
+        <div class="iv4-an-ad-section-title" style="margin-top:4px">تقييمات الموظفين</div>
+        <div class="iv4-an-table-wrap">
+          <table class="iv4-an-table">
+            <thead><tr><th>الموظف</th><th>التقييم</th><th>عدد</th><th>إيجابية</th></tr></thead>
+            <tbody>${agentRows}</tbody>
+          </table>
+        </div>` : ''}
+    `;
+  }
+
+  // ─── Export Full Excel (multi-sheet CSV) ──────────────────────────────────
+
+  function _exportFullExcel() {
+    // نصدّر 3 sheets كـ CSV منفصلة في ملف واحد مضغوط بـ section headers
+    const BOM = '﻿';
+    const sections = [];
+
+    // Sheet 1: Overview KPIs — من آخر load
+    sections.push('=== نظرة عامة ===');
+    sections.push(`الفترة,${_from} → ${_to}`);
+    sections.push('');
+
+    // Sheet 2: Agents
+    if (_lastAgentsData.length) {
+      sections.push('=== أداء الموظفين ===');
+      sections.push('الموظف,محادثات,مغلقة,معدل الإغلاق%,رسائل,أول رد(ث),وقت الإغلاق(ث)');
+      _lastAgentsData.forEach(a => {
+        sections.push([
+          a.agent_name, a.total_convs, a.closed_convs,
+          a.resolution_rate, a.messages_sent,
+          a.avg_first_response_sec || '',
+          a.avg_resolution_sec || '',
+        ].join(','));
+      });
+      sections.push('');
+    }
+
+    // Sheet 3: CSAT by Agent
+    if (_lastCSATData && _lastCSATData.by_agent && _lastCSATData.by_agent.length) {
+      sections.push('=== تقييمات CSAT ===');
+      sections.push(`إجمالي التقييمات,${_lastCSATData.summary.rated}`);
+      sections.push(`متوسط التقييم,${_lastCSATData.summary.avg_score || '—'}`);
+      sections.push(`إيجابية%,${_lastCSATData.summary.positive_pct || 0}%`);
+      sections.push('');
+      sections.push('الموظف,متوسط التقييم,عدد التقييمات,إيجابية%');
+      _lastCSATData.by_agent.forEach(a => {
+        sections.push([a.agent_name, a.avg_score || '', a.rated, a.positive_pct + '%'].join(','));
+      });
+      sections.push('');
+    }
+
+    // Sheet 4: CSAT Distribution
+    if (_lastCSATData && _lastCSATData.distribution && _lastCSATData.distribution.length) {
+      sections.push('=== توزيع النجوم ===');
+      sections.push('التقييم,العدد');
+      _lastCSATData.distribution.forEach(d => {
+        sections.push(`${d.score} نجوم,${d.n}`);
+      });
+    }
+
+    const blob = new Blob(
+      [BOM + sections.join('\n')],
+      { type: 'text/csv;charset=utf-8;' }
+    );
+    const url = URL.createObjectURL(blob);
+    const a   = document.createElement('a');
+    a.href     = url;
+    a.download = `inbox-report-${_from}-${_to}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+
   let _lastAgentsData = [];
 
   function _exportAgentsCSV() {
@@ -897,13 +1086,14 @@ const InboxAnalytics = (() => {
 
     try {
       // نجلب كل الـ endpoints بالتوازي
-      const [overviewRes, slaRes, agentsRes, platformsRes, volumeRes, hourlyRes] = await Promise.all([
+      const [overviewRes, slaRes, agentsRes, platformsRes, volumeRes, hourlyRes, csatRes] = await Promise.all([
         InboxAPI.analytics.overview({ from: _from, to: _to }),
         InboxAPI.analytics.sla({ from: _from, to: _to }),
         InboxAPI.analytics.agentStats({ from: _from, to: _to }),
         InboxAPI.analytics.platforms({ from: _from, to: _to }),
         InboxAPI.analytics.volume({ from: _from, to: _to }),
         InboxAPI.analytics.hourly({ from: _from, to: _to }),
+        InboxAPI.analytics.csat({ from: _from, to: _to }),
       ]);
 
       // رسم كل قسم
@@ -912,10 +1102,11 @@ const InboxAnalytics = (() => {
       if (!hourlyRes.error)    _renderHourly(hourlyRes.data?.hourly || []);
       if (!platformsRes.error) _renderPlatforms(platformsRes.data?.platforms || []);
       if (!slaRes.error)       _renderSLA(slaRes.data);
+      if (!csatRes.error)      _renderCSAT(csatRes.data);
       if (!agentsRes.error)    _renderAgents(agentsRes.data?.agents || []);
 
       // لو في أخطاء — اعرض toast
-      const errors = [overviewRes, slaRes, agentsRes, platformsRes, volumeRes, hourlyRes]
+      const errors = [overviewRes, slaRes, agentsRes, platformsRes, volumeRes, hourlyRes, csatRes]
         .filter(r => r.error).map(r => r.error);
       if (errors.length && window.showInboxToast) {
         window.showInboxToast('خطأ في تحميل بعض البيانات: ' + errors[0], 'error');
@@ -983,6 +1174,12 @@ const InboxAnalytics = (() => {
     const slaDetailBtn = document.getElementById('iv4-an-sla-detail-btn');
     if (slaDetailBtn) {
       slaDetailBtn.addEventListener('click', _openSLADetail);
+    }
+
+    // زر Export Full Excel
+    const exportFullBtn = document.getElementById('iv4-an-export-full');
+    if (exportFullBtn) {
+      exportFullBtn.addEventListener('click', _exportFullExcel);
     }
 
     // إغلاق بالنقر على الـ overlay خارج الـ modal
