@@ -3,6 +3,31 @@
 
 ---
 
+## جلسة 2026-05-03 20:31 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P3-2: `public/dashboard/inbox-v4/conv-list.js` — Priority UI كامل
+    - `PRIORITY_META` map: icon + label لكل مستوى (urgent/high/normal/low)
+    - `_renderConvItem`: badge ملون يظهر في `.iv4-conv-bottom-badges` (normal مخفي)
+    - `data-priority` attribute على كل كارد للتتبع السريع
+    - `_openPriorityMenu`: dropdown مُتموضع fixed عند الكليك على الـ badge
+    - `_closePriorityMenu`: إغلاق عند الكليك خارجها (once listener)
+    - `_setPriority`: Optimistic UI + API call + rollback عند الفشل
+    - `_updatePriorityDOM`: تحديث badge + border الكارد بدون re-render كامل
+    - `_renderPriorityFilters`: قسم فلتر في الـ sidebar (الكل/عاجل/عالي/عادي/منخفض)
+  - `public/dashboard/inbox-v4/index.html`: إضافة `#iv4-priority-filters` في الـ sidebar
+  - `public/dashboard/inbox-v4/inbox.css`: ~120 سطر CSS جديد
+    - `.iv4-priority-badge` + 4 variants (urgent/high/normal/low)
+    - `.iv4-conv-item.iv4-priority-*` border-right ملون
+    - `.iv4-priority-menu` + `.iv4-priority-option` + `.iv4-priority-opt-check`
+    - `@keyframes iv4-fade-in` للـ dropdown
+    - Dark mode كامل
+- قرارات: لا جديد
+- آخر commit: 4c58034
+- المهمة القادمة: **P3-3 Snooze** — `conv-list.js` + backend `conversations.js`
+
+---
+
 ## جلسة 2026-05-03 20:22 UTC
 - الحالة: مكتملة
 - ما تم:
