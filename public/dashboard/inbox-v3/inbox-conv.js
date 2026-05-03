@@ -379,6 +379,104 @@ function iv3UpdateBulkBar() {
 
 // ── تنفيذ الإجراءات الجماعية ──────────────────────────────
 
+// إرسال رسالة جماعية
+async function iv3BulkMessage() {
+  const ids = [...IV3.selectedIds];
+  if (!ids.length) return;
+
+  // معرفة المنصات المحددة
+  const platforms = [...new Set(
+    ids.map(id => IV3.convs.find(c => c.id === id)?.platform).filter(Boolean)
+  )];
+  const platLabel = platforms.length
+    ? platforms.map(p => ({
+        'telegram': '✈️ تيليجرام',
+        'whatsapp-qr': '📱 واتساب QR',
+        'whatsapp': '💬 واتساب API'
+      }[p] || p)).join(' ، ')
+    : '';
+
+  let modal = document.getElementById('iv3-bulk-msg-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'iv3-bulk-msg-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:14px;padding:22px;width:100%;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,.18)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <span style="font-size:22px">📤</span>
+        <div>
+          <div style="font-weight:700;font-size:15px;color:#111">إرسال رسالة جماعية</div>
+          <div style="font-size:12px;color:#6b7280">لـ ${ids.length} محادثة — ${iv3EscHtml(platLabel)}</div>
+        </div>
+        <button onclick="iv3CloseBulkMsgModal()" style="margin-right:auto;background:none;border:none;font-size:18px;color:#9ca3af;cursor:pointer">✕</button>
+      </div>
+
+      <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:#854d0e">
+        ⚠️ <strong>تنبيه:</strong> سيتم إرسال الرسالة لجميع المحادثات المحددة. للواتساب API تأكد من وجود نافذة محادثة مفتوحة (24h).
+      </div>
+
+      <textarea id="iv3-bulk-msg-text"
+        placeholder="اكتب الرسالة هنا..."
+        rows="4"
+        style="width:100%;box-sizing:border-box;border:1.5px solid #d1d5db;border-radius:8px;padding:10px 12px;
+               font-size:14px;font-family:Cairo,sans-serif;outline:none;resize:vertical;min-height:90px"
+        onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#d1d5db'"
+        oninput="document.getElementById('iv3-bulk-msg-charcount').textContent=this.value.length"
+      ></textarea>
+      <div style="text-align:left;font-size:11px;color:#9ca3af;margin-top:3px">
+        <span id="iv3-bulk-msg-charcount">0</span> حرف
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button onclick="iv3CloseBulkMsgModal()" style="padding:8px 16px;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff;color:#374151;font-family:Cairo,sans-serif;font-size:13px;cursor:pointer">إلغاء</button>
+        <button id="iv3-bulk-msg-send-btn" onclick="iv3ConfirmBulkMessage(${ids.length})" style="padding:8px 18px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-family:Cairo,sans-serif;font-size:13px;font-weight:600;cursor:pointer">📤 إرسال لـ ${ids.length}</button>
+      </div>
+    </div>`;
+
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('iv3-bulk-msg-text')?.focus(), 100);
+}
+
+function iv3CloseBulkMsgModal() {
+  const modal = document.getElementById('iv3-bulk-msg-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function iv3ConfirmBulkMessage(count) {
+  const textarea = document.getElementById('iv3-bulk-msg-text');
+  const message  = textarea?.value?.trim();
+  if (!message) { iv3Toast('الرسالة فارغة', 'warning'); return; }
+
+  const ids  = [...IV3.selectedIds];
+  const btn  = document.getElementById('iv3-bulk-msg-send-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'جاري الإرسال...'; }
+
+  iv3CloseBulkMsgModal();
+  iv3Toast(`جاري إرسال الرسالة لـ ${count} محادثة...`, 'info');
+
+  try {
+    const res = await IV3_API.bulkMessage(ids, message);
+    const msg = res.failed
+      ? `✅ أرسل لـ ${res.sent} ، فشل ${res.failed}`
+      : `✅ تم الإرسال لـ ${res.sent} محادثة`;
+    iv3Toast(msg, res.failed ? 'warning' : 'success');
+  } catch(e) {
+    iv3Toast('فشل الإرسال: ' + e.message, 'error');
+  }
+
+  // خروج من bulk mode
+  IV3.bulkMode = false;
+  IV3.selectedIds.clear();
+  iv3HideBulkBar();
+  iv3RenderConvs();
+  const toggleBtn = document.getElementById('iv3-bulk-toggle');
+  if (toggleBtn) toggleBtn.classList.remove('active');
+}
+
 async function iv3BulkClose() {
   const ids = [...IV3.selectedIds];
   if (!ids.length) return;

@@ -1599,6 +1599,11 @@
   padding: 2px 7px;
 }
 .iv3-bulk-action-btn.cancel:hover { background: #FEE2E2; }
+.iv3-bulk-action-btn.msg {
+  color: #6366f1;
+  border-color: #6366f1;
+}
+.iv3-bulk-action-btn.msg:hover:not(:disabled) { background: #eef2ff; }
 
 /* Checkbox في conv item */
 .iv3-conv-check {

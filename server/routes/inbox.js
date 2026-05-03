@@ -2148,6 +2148,80 @@ router.post('/inbox/conversations/bulk-action', requireAuth, (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
+// POST /api/system/inbox/conversations/bulk-message
+// body: { ids: [1,2,3], message: 'نص الرسالة' }
+router.post('/inbox/conversations/bulk-message', requireAuth, async (req, res) => {
+  const db = req.db;
+  try {
+    const { ids, message } = req.body;
+    if (!Array.isArray(ids) || !ids.length) return res.json({ ok: false, error: 'لا توجد IDs' });
+    if (!message || !message.trim()) return res.json({ ok: false, error: 'الرسالة فارغة' });
+
+    const safeIds  = ids.map(Number).filter(n => n > 0);
+    const content  = message.trim();
+    const settings = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get();
+    const results  = { sent: 0, failed: 0, errors: [] };
+
+    for (const convId of safeIds) {
+      const conv = db.prepare('SELECT id, sender_id, platform FROM inbox_conversations WHERE id=?').get(convId);
+      if (!conv) { results.failed++; results.errors.push(`conv ${convId}: غير موجود`); continue; }
+
+      // حفظ في DB
+      db.prepare(`INSERT INTO inbox_messages (conversation_id, platform, direction, content, sent_at) VALUES (?,?,?,?,datetime('now'))`)
+        .run(convId, conv.platform, 'out', content);
+      db.prepare(`UPDATE inbox_conversations SET last_message=?, last_message_at=datetime('now') WHERE id=?`)
+        .run(content, convId);
+
+      // إرسال حسب المنصة
+      let sent = false;
+      try {
+        if (conv.platform === 'telegram' && settings?.telegram_token && settings?.telegram_active) {
+          const https = require('https');
+          const payload = JSON.stringify({ chat_id: conv.sender_id, text: content });
+          await new Promise((resolve) => {
+            const options = {
+              hostname: 'api.telegram.org',
+              path: `/bot${settings.telegram_token}/sendMessage`,
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+            };
+            const r = require('https').request(options, (res2) => { res2.resume(); sent = true; resolve(); });
+            r.on('error', () => resolve());
+            r.write(payload); r.end();
+          });
+        } else if (conv.platform === 'whatsapp-qr') {
+          const waQRService = require('../whatsapp-qr-service');
+          await waQRService.sendMessage(req.user.id, conv.sender_id, content);
+          sent = true;
+        } else if (conv.platform === 'whatsapp') {
+          // WhatsApp API — رسائل نصية عادية (24h window مطلوبة)
+          const { wa_token, wa_phone_id } = getWaCredentials(db);
+          if (wa_token && wa_phone_id) {
+            const r = await fetch(`https://graph.facebook.com/v19.0/${wa_phone_id}/messages`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${wa_token}` },
+              body: JSON.stringify({ messaging_product: 'whatsapp', to: conv.sender_id, type: 'text', text: { body: content } })
+            });
+            const d = await r.json();
+            if (!d.error) sent = true;
+            else results.errors.push(`conv ${convId}: ${d.error.message}`);
+          }
+        }
+        if (sent) results.sent++;
+        else results.failed++;
+      } catch(e) {
+        results.failed++;
+        results.errors.push(`conv ${convId}: ${e.message}`);
+      }
+
+      // تأخير بسيط لتجنب الحظر (rate-limit)
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    res.json({ ok: true, sent: results.sent, failed: results.failed, errors: results.errors });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
 // GET /api/system/inbox/search?q=xxx
 router.get('/inbox/search', requireAuth, (req, res) => {
   const db = req.db;

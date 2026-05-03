@@ -213,6 +213,12 @@ const IV3_API = {
     return data;
   },
 
+  async bulkMessage(ids, message) {
+    const data = await this._post('/api/system/inbox/conversations/bulk-message', { ids, message });
+    if (!data?.ok) throw new Error(data?.error || 'فشل الإرسال');
+    return data;
+  },
+
   async setTypingState(convId, typing) {
     // نستخدم fetch مباشرة (fire-and-forget, لا ننتظر النتيجة)
     try {
