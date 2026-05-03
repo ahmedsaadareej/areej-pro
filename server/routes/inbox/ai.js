@@ -1,12 +1,13 @@
 /**
  * inbox/ai.js — AI Features لـ Inbox v4
- * آخر تحديث: 2026-05-03 (P7-1 AI Suggestions)
+ * آخر تحديث: 2026-05-03 (P7-3 Auto-Label Suggestion)
  *
  * Endpoints:
  *   POST /api/inbox/conversations/:id/ai/suggest   — اقتراح رد ذكي
  *   POST /api/inbox/conversations/:id/ai/summary   — ملخص المحادثة
  *   POST /api/inbox/conversations/:id/ai/translate — ترجمة رسالة
  *   POST /api/inbox/conversations/:id/ai/improve   — تحسين نص مكتوب
+ *   POST /api/inbox/conversations/:id/ai/labels    — اقتراح labels مناسبة (P7-3)
  *
  * يعتمد على:
  *   - OPENAI_API_KEY + OPENAI_BASE_URL + OPENAI_MODEL في .env
@@ -307,6 +308,100 @@ router.post('/conversations/:id/ai/improve', async (req, res) => {
 
   } catch (err) {
     console.error('[ai] improve error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── P7-3: Auto-Label Suggestion ────────────────────────────────────────────
+
+/**
+ * POST /api/inbox/conversations/:id/ai/labels
+ * يقترح labels مناسبة للمحادثة بناءً على محتواها
+ * Response: { suggestions: Array<{ name: string, reason: string }> }
+ */
+router.post('/conversations/:id/ai/labels', async (req, res) => {
+  const convId = req.params.id;
+
+  try {
+    // 1) جلب بيانات المحادثة + الرسائل
+    const [msgs, conv] = await Promise.all([
+      _getMessages(req.db, convId, 20),
+      _getConv(req.db, convId),
+    ]);
+
+    if (msgs.length === 0) {
+      return res.json({ suggestions: [] });
+    }
+
+    // 2) جلب الـ labels المتاحة للـ tenant
+    const availableLabels = req.db.prepare(
+      'SELECT id, name FROM inbox_labels_v4 WHERE tenant_id = ? ORDER BY name ASC'
+    ).all(req.user.id);
+
+    // لو مفيش labels أصلاً، ارجع فاضي
+    if (!availableLabels || availableLabels.length === 0) {
+      return res.json({ suggestions: [], message: 'لا توجد labels محددة بعد' });
+    }
+
+    // 3) بناء prompt يعرف الـ AI الـ labels المتاحة ويطلب منه الاختيار
+    const history   = _formatHistory(msgs, conv.contact_name);
+    const labelList = availableLabels.map(l => `- ${l.name}`).join('\n');
+
+    const systemPrompt = `أنت نظام تصنيف محادثات خدمة العملاء لشركة أريج لماكينات وخدمات الطباعة في مصر.
+مهمتك: اقرأ المحادثة وحدد أي من الـ labels المتاحة تنطبق عليها.
+
+الـ labels المتاحة:
+${labelList}
+
+قواعد مهمة:
+- اختر فقط labels من القائمة أعلاه (لا تخترع labels جديدة)
+- يمكنك اختيار صفر إلى 3 labels كحد أقصى
+- أجب بـ JSON array فقط بهذا الشكل:
+[
+  { "name": "اسم اللابل", "reason": "سبب الاختيار في جملة قصيرة" }
+]
+- لو مفيش labels مناسبة، أرجع: []
+- لا تضف أي نص خارج الـ JSON`;
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: `المحادثة:\n${history}\n\nما هي الـ labels المناسبة؟` },
+    ];
+
+    // temperature منخفضة لضمان الالتزام بالـ JSON
+    const rawText = await _callAI(messages, 300);
+
+    // 4) تحليل الـ JSON مع fallback آمن
+    let suggestions = [];
+    try {
+      // استخراج JSON من الرد حتى لو فيه نص زيادة
+      const jsonMatch = rawText.match(/\[.*?\]/s);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (Array.isArray(parsed)) {
+          // تحقق أن الـ labels المقترحة موجودة فعلاً في القائمة المتاحة
+          const validNames = new Set(availableLabels.map(l => l.name.toLowerCase()));
+          suggestions = parsed
+            .filter(s => s && typeof s.name === 'string' && validNames.has(s.name.toLowerCase()))
+            .slice(0, 3) // حد أقصى 3 labels
+            .map(s => ({
+              // نعيد الاسم بالضبط كما هو في القائمة (للتطابق مع الـ id)
+              name:   availableLabels.find(l => l.name.toLowerCase() === s.name.toLowerCase())?.name || s.name,
+              id:     availableLabels.find(l => l.name.toLowerCase() === s.name.toLowerCase())?.id,
+              reason: s.reason || '',
+            }))
+            .filter(s => s.id); // فقط labels لها id صالح
+        }
+      }
+    } catch (parseErr) {
+      console.warn('[ai/labels] JSON parse warning:', parseErr.message, '| raw:', rawText.slice(0, 200));
+      suggestions = [];
+    }
+
+    res.json({ suggestions });
+
+  } catch (err) {
+    console.error('[ai] labels error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

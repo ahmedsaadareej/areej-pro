@@ -493,6 +493,11 @@ const InboxLabels = (() => {
           `).join('')}
         </div>
         <div class="iv4-label-dropdown-footer">
+          <button
+            class="iv4-btn iv4-btn--ai iv4-btn--sm iv4-label-ai-suggest-btn"
+            data-action="ai-suggest-labels"
+            title="اقتراح labels تلقائي بالذكاء الاصطناعي"
+          >✨ اقتراح تلقائي</button>
           <button class="iv4-btn iv4-btn--ghost iv4-btn--sm" data-action="open-label-manager">
             ⚙️ إدارة Labels
           </button>
@@ -528,6 +533,15 @@ const InboxLabels = (() => {
       };
     });
 
+    // زر AI Suggest
+    const aiBtn = dropdown.querySelector('[data-action="ai-suggest-labels"]');
+    if (aiBtn) {
+      aiBtn.onclick = (e) => {
+        e.stopPropagation();
+        _aiSuggestLabels(dropdown);
+      };
+    }
+
     // إغلاق عند النقر خارجه
     setTimeout(() => {
       document.addEventListener('click', _closeDropdownOnOutsideClick, { once: true });
@@ -539,6 +553,122 @@ const InboxLabels = (() => {
     if (dropdown && !dropdown.contains(e.target)) {
       dropdown.remove();
     }
+  }
+
+  /**
+   * P7-3: يطلب من الـ AI اقتراح labels مناسبة ويعرضها للمستخدم
+   * @param {HTMLElement} dropdown - عنصر الـ dropdown المفتوح
+   */
+  async function _aiSuggestLabels(dropdown) {
+    if (!_currentConvId) return;
+
+    // عرض حالة التحميل
+    const aiBtn = dropdown.querySelector('[data-action="ai-suggest-labels"]');
+    if (aiBtn) {
+      aiBtn.disabled = true;
+      aiBtn.textContent = '⏳ جاري التحليل...';
+    }
+
+    const { data, error } = await InboxAPI.ai.suggestLabels(_currentConvId);
+
+    if (aiBtn) {
+      aiBtn.disabled = false;
+      aiBtn.textContent = '✨ اقتراح تلقائي';
+    }
+
+    if (error) {
+      _showAISuggestError(dropdown, error);
+      return;
+    }
+
+    const suggestions = data?.suggestions || [];
+
+    if (!suggestions.length) {
+      _showAISuggestError(dropdown, 'لا توجد labels مناسبة أو المحادثة قصيرة جداً');
+      return;
+    }
+
+    // عرض الاقتراحات في الـ dropdown
+    _renderAISuggestions(dropdown, suggestions);
+  }
+
+  /**
+   * رسم قائمة اقتراحات الـ AI في الـ dropdown
+   */
+  function _renderAISuggestions(dropdown, suggestions) {
+    // إزالة أي اقتراحات قديمة
+    dropdown.querySelector('.iv4-ai-suggestions-wrap')?.remove();
+
+    // بناء section الاقتراحات
+    const wrap = document.createElement('div');
+    wrap.className = 'iv4-ai-suggestions-wrap';
+    wrap.innerHTML = `
+      <div class="iv4-ai-suggestions-header">✨ اقتراحات الذكاء الاصطناعي</div>
+      ${suggestions.map(s => `
+        <button
+          class="iv4-label-dropdown-item iv4-ai-suggestion-item"
+          data-label-id="${s.id}"
+          title="${_esc(s.reason)}"
+        >
+          <span class="iv4-label-dot" style="background:${_esc(
+            _labels.find(l => l.id === s.id)?.color || '#888'
+          )}"></span>
+          <span class="iv4-ai-suggestion-name">${_esc(s.name)}</span>
+          <span class="iv4-ai-suggestion-reason">${_esc(s.reason)}</span>
+          <span class="iv4-ai-badge">AI</span>
+        </button>
+      `).join('')}
+      <button class="iv4-btn iv4-btn--ai iv4-btn--sm iv4-ai-apply-all-btn" data-action="ai-apply-all">
+        ✅ إضافة الكل
+      </button>
+    `;
+
+    // الإدراج فوق footer
+    const footer = dropdown.querySelector('.iv4-label-dropdown-footer');
+    if (footer) {
+      dropdown.insertBefore(wrap, footer);
+    } else {
+      dropdown.appendChild(wrap);
+    }
+
+    // حدث النقر على اقتراح فردي
+    wrap.querySelectorAll('.iv4-ai-suggestion-item').forEach(item => {
+      item.onclick = () => {
+        const labelId = Number(item.dataset.labelId);
+        dropdown.remove();
+        _addConvLabel(labelId);
+      };
+    });
+
+    // حدث "إضافة الكل"
+    const applyAllBtn = wrap.querySelector('[data-action="ai-apply-all"]');
+    if (applyAllBtn) {
+      applyAllBtn.onclick = async () => {
+        dropdown.remove();
+        // إضافة labels واحداً تلو الآخر (لتجنب race conditions)
+        for (const s of suggestions) {
+          // لا تضيف لو موجود بالفعل
+          if (!_currentConvLabels.some(l => l.id === s.id)) {
+            await _addConvLabel(s.id);
+          }
+        }
+      };
+    }
+  }
+
+  /**
+   * عرض رسالة خطأ مؤقتة في الـ dropdown
+   */
+  function _showAISuggestError(dropdown, msg) {
+    dropdown.querySelector('.iv4-ai-error-msg')?.remove();
+    const el = document.createElement('div');
+    el.className = 'iv4-ai-error-msg';
+    el.textContent = msg;
+    const footer = dropdown.querySelector('.iv4-label-dropdown-footer');
+    if (footer) dropdown.insertBefore(el, footer);
+    else dropdown.appendChild(el);
+    // اختفاء تلقائي بعد 4 ثوانٍ
+    setTimeout(() => el.remove(), 4000);
   }
 
   async function _addConvLabel(labelId) {

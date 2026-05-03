@@ -1939,8 +1939,91 @@
   padding: 6px 8px;
   border-top: 1px solid var(--iv4-border);
   display: flex;
+  gap: 6px;
   justify-content: center;
+  flex-wrap: wrap;
 }
+
+/* ── P7-3: AI Label Suggestions ─────────────────────────────────────────── */
+.iv4-btn--ai {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.iv4-btn--ai:hover:not(:disabled) { opacity: 0.85; }
+.iv4-btn--ai:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.iv4-label-ai-suggest-btn { font-size: 11px; }
+
+.iv4-ai-suggestions-wrap {
+  border-top: 1px solid var(--iv4-border);
+  padding: 6px 0 2px;
+}
+
+.iv4-ai-suggestions-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: #7c3aed;
+  padding: 2px 12px 6px;
+  letter-spacing: 0.02em;
+}
+
+/* اقتراح فردي — يرث style الـ dropdown-item العادي */
+.iv4-ai-suggestion-item {
+  flex-direction: column;
+  align-items: flex-start !important;
+  gap: 2px !important;
+  padding: 6px 12px !important;
+  position: relative;
+}
+
+.iv4-ai-suggestion-name {
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.iv4-ai-suggestion-reason {
+  font-size: 11px;
+  color: var(--iv4-text-muted, #888);
+  white-space: normal;
+  line-height: 1.3;
+}
+
+.iv4-ai-badge {
+  position: absolute;
+  top: 6px;
+  left: 10px;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.iv4-ai-apply-all-btn {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 6px 12px 4px;
+  text-align: center;
+}
+
+.iv4-ai-error-msg {
+  font-size: 12px;
+  color: #e53935;
+  padding: 6px 12px;
+  text-align: center;
+}
+
+/* dark mode */
+.iv4-dark .iv4-ai-suggestions-header { color: #a78bfa; }
+.iv4-dark .iv4-ai-suggestion-reason  { color: #9ca3af; }
 
 /* ── Label Manager Modal ─────────────────────────────────────────────────── */
 .iv4-label-manager-modal {

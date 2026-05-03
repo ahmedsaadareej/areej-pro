@@ -541,16 +541,18 @@ const InboxAPI = (() => {
     test       : (id, text)  => _post(`/inbox/chatbot/flows/${id}/test`, { input_text: text }),
   };
 
-  // ─── AI Features (P7-1) ──────────────────────────────────────────────────
+  // ─── AI Features (P7-1, P7-3) ──────────────────────────────────────────────────
   const ai = {
     /** اقتراح رد ذكي — tone: 'formal'|'friendly'|'brief' */
-    suggest  : (convId, tone = 'friendly')           => _post(`/inbox/conversations/${convId}/ai/suggest`,   { tone }),
+    suggest      : (convId, tone = 'friendly')           => _post(`/inbox/conversations/${convId}/ai/suggest`,   { tone }),
     /** ملخص المحادثة */
-    summary  : (convId)                              => _post(`/inbox/conversations/${convId}/ai/summary`,   {}),
+    summary      : (convId)                              => _post(`/inbox/conversations/${convId}/ai/summary`,   {}),
     /** ترجمة نص — targetLang: 'ar'|'en' */
-    translate: (convId, text, targetLang = 'ar')     => _post(`/inbox/conversations/${convId}/ai/translate`, { text, targetLang }),
+    translate    : (convId, text, targetLang = 'ar')     => _post(`/inbox/conversations/${convId}/ai/translate`, { text, targetLang }),
     /** تحسين نص — goal: 'formal'|'shorter'|'friendlier'|'fix' */
-    improve  : (convId, text, goal = 'formal')       => _post(`/inbox/conversations/${convId}/ai/improve`,   { text, goal }),
+    improve      : (convId, text, goal = 'formal')       => _post(`/inbox/conversations/${convId}/ai/improve`,   { text, goal }),
+    /** P7-3: اقتراح labels مناسبة للمحادثة */
+    suggestLabels: (convId)                              => _post(`/inbox/conversations/${convId}/ai/labels`,    {}),
   };
 
   // ─── Public API ───────────────────────────────────────────────────────
