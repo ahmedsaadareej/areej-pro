@@ -393,6 +393,27 @@ const InboxAPI = (() => {
     },
   };
 
+  // ─── Search ──────────────────────────────────────────────────────────────
+
+  const search = {
+    /**
+     * بحث في المحادثات والرسائل
+     * @param {Object} opts - { q, mode, status, platform, limit, offset }
+     */
+    search({ q, mode = 'quick', status = 'all', platform = '', limit = 20, offset = 0 } = {}) {
+      return _get('/inbox/search', { q, mode, status, platform, limit, offset });
+    },
+
+    /**
+     * اقتراحات autocomplete للبحث السريع
+     * @param {string} q
+     * @param {number} limit
+     */
+    suggest(q, limit = 8) {
+      return _get('/inbox/search/suggest', { q, limit });
+    },
+  };
+
   // ─── New Conversation ─────────────────────────────────────────────────
 
   const newConversation = {
@@ -423,6 +444,7 @@ const InboxAPI = (() => {
     settings,
     crm,
     broadcast,
+    search,
     newConversation,
     // expose للـ debugging
     _fetch,

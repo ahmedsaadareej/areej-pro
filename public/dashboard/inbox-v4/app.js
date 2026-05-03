@@ -97,11 +97,28 @@
     InboxStore.setFilter({ search: '' });
   });
 
+  // فتح Deep Search من الأزرار المخصصة
+  if ($('iv4-deep-search-btn')) {
+    $('iv4-deep-search-btn').addEventListener('click', () => {
+      if (typeof InboxSearch !== 'undefined') InboxSearch.openDeepSearch();
+    });
+  }
+  if ($('iv4-search-deep-trigger')) {
+    $('iv4-search-deep-trigger').addEventListener('click', () => {
+      if (typeof InboxSearch !== 'undefined') InboxSearch.openDeepSearch();
+    });
+  }
+
+  // Quick search — الإدخال تتحكم فيه search.js بعد init()
+  // احتفظنا بالفال back من setFilter لو search.js لم يكن محملاً
   let _searchDebounce = null;
   $('iv4-search-input').addEventListener('input', e => {
     clearTimeout(_searchDebounce);
     _searchDebounce = setTimeout(() => {
-      InboxStore.setFilter({ search: e.target.value.trim() });
+      // search.js يتحكم في هذا بعد init — الفال لو search.js لم يكن محملاً
+      if (typeof InboxSearch === 'undefined') {
+        InboxStore.setFilter({ search: e.target.value.trim() });
+      }
     }, 350);
   });
 
