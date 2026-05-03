@@ -259,6 +259,15 @@ const InboxAPI = (() => {
     autoAssignAll() {
       return _post('/inbox/conversations/auto-assign-all');
     },
+
+    /**
+     * بث typing indicator عبر SSE (P2-2)
+     * @param {number} convId
+     * @param {boolean} [typing=true]
+     */
+    sendTyping(convId, typing = true) {
+      return _post(`/inbox/conversations/${convId}/typing`, { typing });
+    },
   };
 
   // ─── Analytics ────────────────────────────────────────────────────────

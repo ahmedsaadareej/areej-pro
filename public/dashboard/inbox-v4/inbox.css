@@ -1215,3 +1215,77 @@
 }
 .assign-unassign-btn:hover:not(:disabled) { background: #fef2f2; }
 .assign-unassign-btn:disabled { opacity: .4; cursor: default; }
+
+/* ══════════════════════════════════════════════════════════════
+   P2-2 — Agent Status UX Improvements
+   آخر تحديث: 2026-05-03
+══════════════════════════════════════════════════════════════ */
+
+/* ─── Typing Indicator ───────────────────────────────────────── */
+.iv4-typing-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--iv4-muted, #64748b);
+  animation: iv4-fade-in .2s ease;
+}
+
+.iv4-typing-name {
+  font-weight: 600;
+  color: var(--iv4-text, #1e293b);
+}
+
+.iv4-typing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-inline-start: 4px;
+}
+.iv4-typing-dots span {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--iv4-muted, #94a3b8);
+  animation: iv4-typing-bounce .8s infinite ease-in-out;
+}
+.iv4-typing-dots span:nth-child(2) { animation-delay: .15s; }
+.iv4-typing-dots span:nth-child(3) { animation-delay: .30s; }
+
+@keyframes iv4-typing-bounce {
+  0%, 100% { transform: translateY(0); opacity: .5; }
+  50%       { transform: translateY(-4px); opacity: 1; }
+}
+
+/* ─── Assign button in chat header ──────────────────────────── */
+.iv4-header-assign-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border: 1px solid var(--iv4-border, #e2e8f0);
+  border-radius: 20px;
+  background: var(--iv4-surface, #f8fafc);
+  font-size: 12px;
+  color: var(--iv4-text, #334155);
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  vertical-align: middle;
+}
+.iv4-header-assign-btn:hover {
+  background: var(--iv4-hover, #f1f5f9);
+  border-color: #6366f1;
+  color: #6366f1;
+}
+.iv4-header-unassigned {
+  color: var(--iv4-muted, #94a3b8);
+  border-style: dashed;
+}
+
+/* agent status dot في chat header */
+.iv4-agent-status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background .3s;
+}

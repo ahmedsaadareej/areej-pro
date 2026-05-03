@@ -537,9 +537,22 @@ const InboxChat = (() => {
     const status       = conv.status || 'open';
     const statusLabel  = STATUS_LABEL[status] || status;
     const phone        = conv.sender_phone ? `<span class="iv4-header-phone">${_escHtml(conv.sender_phone)}</span>` : '';
-    const assigned     = conv.assigned_to_name
-      ? `<span class="iv4-header-assigned">👤 ${_escHtml(conv.assigned_to_name)}</span>`
-      : '<span class="iv4-header-assigned iv4-header-unassigned">غير معيّن</span>';
+    // حالة الموظف المعيّن (P2-2)
+    const assignedAgent  = conv.assigned_to_id
+      ? (typeof InboxTeam !== 'undefined' ? InboxTeam.agents.find(a => a.id === conv.assigned_to_id) : null)
+      : null;
+    const agentStatus    = assignedAgent?.inbox_status || 'offline';
+    const agentStatusColors = { online:'#22c55e', busy:'#f59e0b', away:'#94a3b8', offline:'#64748b' };
+    const agentDotColor  = agentStatusColors[agentStatus] || '#64748b';
+    const agentDisplayName = conv.agent_name || conv.assigned_to_name || null;
+    const assigned = agentDisplayName
+      ? `<button class="iv4-header-assigned iv4-header-assign-btn" id="iv4-assign-agent-btn" title="تغيير الموظف المعيّن">
+           <span class="iv4-agent-status-dot" style="background:${agentDotColor}" title="${agentStatus}"></span>
+           👤 ${_escHtml(agentDisplayName)}
+         </button>`
+      : `<button class="iv4-header-assigned iv4-header-unassigned iv4-header-assign-btn" id="iv4-assign-agent-btn" title="تعيين موظف">
+           👤 تعيين
+         </button>`;
 
     header.innerHTML = `
 <div class="iv4-header-main">
@@ -567,6 +580,15 @@ const InboxChat = (() => {
     🔄 إعادة فتح
   </button>
 </div>`.trim();
+
+    // ربط زر التعيين (P2-2)
+    const assignBtn = header.querySelector('#iv4-assign-agent-btn');
+    if (assignBtn && typeof InboxTeam !== 'undefined') {
+      assignBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        InboxTeam.openAssignDropdown(conv.id, assignBtn, conv.assigned_to_id || null);
+      });
+    }
 
     // ربط أزرار الـ header
     _bindHeaderActions(header, conv);
@@ -641,6 +663,18 @@ const InboxChat = (() => {
     InboxStore.on('sse:conv_update', conv => {
       if (conv.id !== InboxStore.state.activeConvId) return;
       _renderHeader();
+    });
+
+    // (P2-2) تحديث الهيدر عند تغيير التعيين
+    InboxStore.on('conv_assigned', ({ conv_id }) => {
+      if (conv_id !== InboxStore.state.activeConvId) return;
+      _renderHeader();
+    });
+
+    // (P2-2) Typing Indicator
+    InboxStore.on('sse:agent_typing', ({ conv_id, agent_name, typing }) => {
+      if (conv_id !== InboxStore.state.activeConvId) return;
+      _showTypingIndicator(agent_name, typing);
     });
   }
 
@@ -956,6 +990,49 @@ const InboxChat = (() => {
     } else if (!show && existing) {
       container.querySelectorAll('.iv4-msg-skeleton').forEach(el => el.remove());
     }
+  }
+
+  // ─── Typing Indicator (P2-2) ────────────────────────────────────────────
+
+  /** timer لإخفاء الـ typing indicator تلقائياً بعد 4 ثوانٍ (لو ما جاء "typing:false") */
+  let _typingTimer = null;
+
+  /**
+   * عرض / إخفاء typing indicator في الـ chat
+   * @param {string} agentName - اسم الموظف الذي يكتب
+   * @param {boolean} typing   - true = يكتب | false = توقف
+   */
+  function _showTypingIndicator(agentName, typing) {
+    // ابحث عن الـ typing bar أو أنشئه
+    let bar = document.getElementById('iv4-typing-bar');
+    const container = $messages();
+    if (!container) return;
+
+    if (!typing) {
+      bar?.remove();
+      clearTimeout(_typingTimer);
+      return;
+    }
+
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id        = 'iv4-typing-bar';
+      bar.className = 'iv4-typing-bar';
+      container.appendChild(bar);
+    }
+
+    bar.innerHTML = `
+      <span class="iv4-typing-name">${_escHtml(agentName || 'موظف')}</span>
+      <span class="iv4-typing-text"> يكتب</span>
+      <span class="iv4-typing-dots"><span></span><span></span><span></span></span>
+    `;
+
+    // scroll للأسفل لو المستخدم في الأسفل
+    if (_isAtBottom(container)) container.scrollTop = container.scrollHeight;
+
+    // auto-hide بعد 4 ثوانٍ لو ما جاء توقف صريح
+    clearTimeout(_typingTimer);
+    _typingTimer = setTimeout(() => bar?.remove(), 4000);
   }
 
   function _showError(msg) {

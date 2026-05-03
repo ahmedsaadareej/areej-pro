@@ -322,11 +322,36 @@ const InboxReply = (() => {
       return;
     }
 
+    // ── Typing Indicator (P2-2) ──────────────────────────────────────────
+    let _typingActive  = false;
+    let _typingTimeout = null;
+
+    function _sendTypingStart() {
+      const convId = InboxStore.state.activeConvId;
+      if (!convId || _typingActive) return;
+      _typingActive = true;
+      InboxAPI.team.sendTyping(convId, true).catch(() => {});
+    }
+
+    function _sendTypingStop() {
+      const convId = InboxStore.state.activeConvId;
+      _typingActive = false;
+      clearTimeout(_typingTimeout);
+      if (!convId) return;
+      InboxAPI.team.sendTyping(convId, false).catch(() => {});
+    }
+
     // ── Textarea events ───────────────────────────────────────────────────
     textarea.addEventListener('input', () => {
       _updateCharCount();
       _updateSendBtn();
       _autoGrow(textarea);
+
+      // أرسل typing:start واحدة فقط لكل جلسة كتابة
+      _sendTypingStart();
+      // أوقف تلقائياً بعد 3.5 ث بلا كتابة
+      clearTimeout(_typingTimeout);
+      _typingTimeout = setTimeout(_sendTypingStop, 3500);
     });
 
     // Ctrl+Enter أو Enter للإرسال (Shift+Enter = سطر جديد)

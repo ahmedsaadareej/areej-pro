@@ -394,4 +394,35 @@ router.post('/conversations/auto-assign-all', (req, res) => {
   }
 });
 
+/**
+ * POST /api/inbox/conversations/:id/typing
+ * بث typing indicator عبر SSE للمحادثة المحددة
+ * Body: { typing: boolean }
+ * منخفض التكلفة — لا يحتاج كتابة DB
+ */
+router.post('/conversations/:id/typing', (req, res) => {
+  try {
+    const id     = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ ok: false, error: 'id غير صالح' });
+
+    const typing = req.body.typing !== false; // default: true
+
+    // بث لكل المتصلين بالـ SSE
+    try {
+      const { broadcastToUser } = require('./stream');
+      broadcastToUser(req.user.id, 'agent_typing', {
+        conv_id:    id,
+        agent_id:   req.user.id,
+        agent_name: req.user.name || 'موظف',
+        typing,
+      });
+    } catch (_) {}
+
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('[team] POST /typing error:', e.message);
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 module.exports = router;
