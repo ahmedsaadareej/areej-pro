@@ -3,6 +3,24 @@
 
 ---
 
+## جلسة 2026-05-03 20:39 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P3-4: `public/dashboard/inbox-v4/conv-list.js` — Bulk Actions UI كامل
+    - `_selectedIds` Set لتتبع التحديد
+    - `_syncBulkUI`: مزامنة toolbar + checked state + bulk-selected class
+    - `_executeBulkAction`: Optimistic UI + API call + rollback + confirm للحذف
+    - `_bindBulkToolbar`: ربط أحداث الـ toolbar + صندوق تحديد الكل
+    - صندوق تحديد على كل كارد (hover → ظاهر)
+    - أكشن جاهزة: إغلاق / إعادة فتح / حذف
+  - `public/dashboard/inbox-v4/index.html`: إضافة `#iv4-bulk-toolbar` بأزرار الاكشن
+  - `public/dashboard/inbox-v4/inbox.css`: ~70 سطر CSS (toolbar + bulk-check + bulk-selected + dark mode)
+- قرارات: لا جديد
+- آخر commit: 017c9b9
+- المهمة القادمة: **P3-5 Search (Quick + Deep)** — `search.js` + backend
+
+---
+
 ## جلسة 2026-05-03 20:35 UTC
 - الحالة: مكتملة
 - ما تم:
