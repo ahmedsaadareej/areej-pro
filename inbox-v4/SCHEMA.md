@@ -1,0 +1,211 @@
+# SCHEMA.md — تصميم قاعدة البيانات v4
+> آخر تحديث: 2026-05-03
+
+---
+
+## جداول Inbox v4 (tenant DB — كل عميل منفصل)
+
+---
+
+### inbox_conversations_v4
+
+```sql
+CREATE TABLE IF NOT EXISTS inbox_conversations_v4 (
+  id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+  platform             TEXT NOT NULL,               -- telegram | whatsapp | whatsapp_api | instagram | messenger | email
+  sender_id            TEXT NOT NULL,               -- معرّف المرسل على المنصة
+  sender_name          TEXT,
+  sender_phone         TEXT,
+  sender_avatar        TEXT,
+
+  status               TEXT NOT NULL DEFAULT 'open', -- open | waiting | closed | snoozed
+  priority             TEXT NOT NULL DEFAULT 'normal', -- low | normal | high | urgent
+
+  assigned_to_id       INTEGER,                     -- FK → sys_users.id
+  assigned_team_id     INTEGER,                     -- للمستقبل (Teams feature)
+
+  master_contact_id    INTEGER,                     -- FK → sys_contacts.id (ربط بـ CRM)
+
+  label_id             INTEGER,                     -- FK → inbox_labels.id (primary label)
+
+  unread_count         INTEGER NOT NULL DEFAULT 0,  -- رسائل العميل غير المقروءة
+  unread_agent_count   INTEGER NOT NULL DEFAULT 0,  -- رسائل الفريق غير المقروءة
+
+  snooze_until         INTEGER,                     -- Unix timestamp
+
+  first_message_at     INTEGER,                     -- Unix timestamp (SLA: وقت أول رسالة)
+  first_response_at    INTEGER,                     -- Unix timestamp (SLA: وقت أول رد)
+  last_message_at      INTEGER,                     -- Unix timestamp
+  last_message_text    TEXT,                        -- preview
+  last_message_dir     TEXT,                        -- in | out
+  resolved_at          INTEGER,                     -- Unix timestamp
+
+  csat_sent            INTEGER NOT NULL DEFAULT 0,
+  csat_token           TEXT,
+  csat_score           INTEGER,
+  csat_sent_at         INTEGER,
+
+  source_platform      TEXT,                        -- المنصة الأصلية (لو مختلفة عن platform)
+  channel_override     TEXT,                        -- منصة الرد المختارة يدوياً
+
+  metadata             TEXT,                        -- JSON للبيانات الإضافية
+
+  created_at           INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at           INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+CREATE INDEX IF NOT EXISTS idx_conv_v4_status    ON inbox_conversations_v4(status);
+CREATE INDEX IF NOT EXISTS idx_conv_v4_platform  ON inbox_conversations_v4(platform);
+CREATE INDEX IF NOT EXISTS idx_conv_v4_assigned  ON inbox_conversations_v4(assigned_to_id);
+CREATE INDEX IF NOT EXISTS idx_conv_v4_label     ON inbox_conversations_v4(label_id);
+CREATE INDEX IF NOT EXISTS idx_conv_v4_snooze    ON inbox_conversations_v4(snooze_until) WHERE snooze_until IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_conv_v4_last_msg  ON inbox_conversations_v4(last_message_at DESC);
+```
+
+---
+
+### inbox_messages_v4
+
+```sql
+CREATE TABLE IF NOT EXISTS inbox_messages_v4 (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  conversation_id  INTEGER NOT NULL REFERENCES inbox_conversations_v4(id) ON DELETE CASCADE,
+
+  platform         TEXT NOT NULL,
+  direction        TEXT NOT NULL,         -- in | out | note
+  content          TEXT,
+  content_type     TEXT NOT NULL DEFAULT 'text', -- text | image | video | audio | file | template | interactive | sticker
+
+  media_url        TEXT,
+  media_type       TEXT,
+  media_size       INTEGER,
+  media_filename   TEXT,
+
+  platform_msg_id  TEXT,                  -- معرّف الرسالة على المنصة (للـ dedup)
+  quoted_msg_id    INTEGER REFERENCES inbox_messages_v4(id),  -- quote/reply
+
+  sender_id        TEXT,                  -- من أرسل (العميل أو الموظف)
+  sender_name      TEXT,
+  agent_id         INTEGER,               -- FK → sys_users.id (لو الموظف هو من أرسل)
+
+  is_read          INTEGER NOT NULL DEFAULT 0,
+  delivered_at     INTEGER,
+  read_at          INTEGER,
+  status           TEXT NOT NULL DEFAULT 'sent', -- pending | sent | delivered | read | failed
+
+  metadata         TEXT,                  -- JSON (WA message types, IG story_reply, etc.)
+
+  sent_at          INTEGER NOT NULL DEFAULT (unixepoch()),
+  created_at       INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+CREATE INDEX IF NOT EXISTS idx_msg_v4_conv     ON inbox_messages_v4(conversation_id, sent_at DESC);
+CREATE INDEX IF NOT EXISTS idx_msg_v4_platform_id ON inbox_messages_v4(platform, platform_msg_id);
+CREATE INDEX IF NOT EXISTS idx_msg_v4_unread   ON inbox_messages_v4(conversation_id, is_read) WHERE is_read = 0;
+```
+
+---
+
+### inbox_labels (يُبقى كما هو — متوافق مع v3)
+
+```sql
+-- موجود بالفعل في tenant DB
+-- id, name, color, conv_count, created_at
+```
+
+---
+
+### inbox_conversation_labels (many-to-many — جديد في v4)
+
+```sql
+CREATE TABLE IF NOT EXISTS inbox_conversation_labels (
+  conversation_id  INTEGER NOT NULL REFERENCES inbox_conversations_v4(id) ON DELETE CASCADE,
+  label_id         INTEGER NOT NULL REFERENCES inbox_labels(id) ON DELETE CASCADE,
+  added_at         INTEGER NOT NULL DEFAULT (unixepoch()),
+  PRIMARY KEY (conversation_id, label_id)
+);
+```
+
+---
+
+### inbox_timeline_v4 (أحداث المحادثة)
+
+```sql
+CREATE TABLE IF NOT EXISTS inbox_timeline_v4 (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  conversation_id  INTEGER NOT NULL REFERENCES inbox_conversations_v4(id) ON DELETE CASCADE,
+  event_type       TEXT NOT NULL, -- status_change | assigned | unassigned | label_added | label_removed | snoozed | unsnoozed | note | csat_sent
+  actor_id         INTEGER,       -- FK → sys_users.id (من فعل الحدث)
+  actor_name       TEXT,
+  data             TEXT,          -- JSON (old_status, new_status, label_name, etc.)
+  created_at       INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+CREATE INDEX IF NOT EXISTS idx_timeline_v4_conv ON inbox_timeline_v4(conversation_id, created_at DESC);
+```
+
+---
+
+### inbox_agent_status (حالة الموظف في الـ inbox)
+
+```sql
+CREATE TABLE IF NOT EXISTS inbox_agent_status (
+  agent_id     INTEGER PRIMARY KEY REFERENCES sys_users(id) ON DELETE CASCADE,
+  status       TEXT NOT NULL DEFAULT 'offline', -- online | busy | away | offline
+  updated_at   INTEGER NOT NULL DEFAULT (unixepoch())
+);
+```
+
+---
+
+### inbox_channel_settings_v4 (بدل جدول inbox_settings الضخم)
+
+```sql
+CREATE TABLE IF NOT EXISTS inbox_channel_settings_v4 (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  channel     TEXT NOT NULL UNIQUE, -- telegram | whatsapp_qr | whatsapp_api | instagram | messenger | email
+  config      TEXT NOT NULL DEFAULT '{}', -- JSON
+  active      INTEGER NOT NULL DEFAULT 0,
+  updated_at  INTEGER NOT NULL DEFAULT (unixepoch())
+);
+```
+
+---
+
+### inbox_automation_v4
+
+```sql
+CREATE TABLE IF NOT EXISTS inbox_automation_v4 (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  type        TEXT NOT NULL, -- keyword_reply | welcome | away | auto_close | chatbot_flow
+  name        TEXT,
+  config      TEXT NOT NULL DEFAULT '{}', -- JSON
+  active      INTEGER NOT NULL DEFAULT 1,
+  priority    INTEGER NOT NULL DEFAULT 0,
+  created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at  INTEGER NOT NULL DEFAULT (unixepoch())
+);
+```
+
+---
+
+## ملاحظات التوافق
+
+- `inbox_conversations_v4` منفصلة عن `inbox_conversations` الحالية (v3) — يعملان معاً
+- Migration strategy: بناء الجداول الجديدة أولاً + قراءة v4 في الكود الجديد بينما v3 لا يتغير
+- لما v4 يكتمل → migration script ينقل البيانات من v3 → v4 ثم يُحذف v3
+- `master_contact_id` يُملأ تدريجياً (nullable) — لا يُكسر الـ existing data
+
+---
+
+## Migration Files المخططة
+
+| # | الملف | الجداول |
+|---|-------|---------|
+| 001 | `001_init_conversations_v4.sql` | inbox_conversations_v4 |
+| 002 | `002_init_messages_v4.sql` | inbox_messages_v4 |
+| 003 | `003_init_timeline_v4.sql` | inbox_timeline_v4 |
+| 004 | `004_init_agent_status.sql` | inbox_agent_status |
+| 005 | `005_init_conv_labels.sql` | inbox_conversation_labels |
+| 006 | `006_init_channel_settings_v4.sql` | inbox_channel_settings_v4 |
+| 007 | `007_init_automation_v4.sql` | inbox_automation_v4 |
