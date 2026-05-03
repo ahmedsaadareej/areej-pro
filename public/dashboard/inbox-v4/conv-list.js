@@ -1,6 +1,6 @@
 /**
  * conv-list.js — Conversations List لـ Inbox v4
- * آخر تحديث: 2026-05-03
+ * آخر تحديث: 2026-05-03 (P3-2 Priority)
  *
  * المسؤوليات:
  *   - جلب المحادثات من backend وعرضها
@@ -31,13 +31,22 @@ const InboxConvList = (() => {
   const PRIORITY_CLASS = {
     urgent: 'iv4-priority-urgent',
     high:   'iv4-priority-high',
-    normal: '',
+    normal: 'iv4-priority-normal',
     low:    'iv4-priority-low',
   };
 
+  // أيقونات وتسميات الأولوية
+  const PRIORITY_META = {
+    urgent: { icon: '🔴', label: 'عاجل',  short: 'عاجل'  },
+    high:   { icon: '🟠', label: 'عالي',  short: 'عالي'  },
+    normal: { icon: '🔵', label: 'عادي',  short: 'عادي'  },
+    low:    { icon: '⚪', label: 'منخفض', short: 'منخفض' },
+  };
+
   // ─── State محلي ──────────────────────────────────────────────────────────
-  let _loading   = false;   // منع الطلبات المتزامنة
-  let _labelUnsub = null;   // إلغاء الاستماع للـ label filter
+  let _loading      = false;   // منع الطلبات المتزامنة
+  let _labelUnsub   = null;    // إلغاء الاستماع للـ label filter
+  let _priorityMenu = null;    // القائمة المنسدلة للأولوية الحالية (مرجع DOM)
 
   // ─── الدالة الرئيسية: جلب المحادثات ─────────────────────────────────────
 
@@ -167,10 +176,18 @@ const InboxConvList = (() => {
     const initial = (conv.contact_name || conv.sender_name || '?')[0].toUpperCase();
     const avatarColor = _nameToColor(conv.contact_name || conv.sender_name || '');
 
+    // Priority badge (لا يُعرض للـ normal)
+    const pri     = conv.priority || 'normal';
+    const priMeta = PRIORITY_META[pri] || PRIORITY_META.normal;
+    const priBadge = pri !== 'normal'
+      ? `<span class="iv4-priority-badge iv4-priority-badge--${pri}" title="أولوية: ${priMeta.label}">${priMeta.icon} ${priMeta.short}</span>`
+      : '';
+
     return `
 <div
   class="iv4-conv-item ${isActive ? 'active' : ''} ${unread ? 'unread' : ''} ${priClass}"
   data-conv-id="${conv.id}"
+  data-priority="${_escHtml(pri)}"
   role="button"
   tabindex="0"
   aria-label="محادثة مع ${name}"
@@ -186,7 +203,10 @@ const InboxConvList = (() => {
     </div>
     <div class="iv4-conv-bottom">
       <span class="iv4-conv-preview">${preview}</span>
-      ${unread ? `<span class="iv4-conv-badge">${conv.unread_count > 9 ? '9+' : conv.unread_count}</span>` : ''}
+      <div class="iv4-conv-bottom-badges">
+        ${priBadge}
+        ${unread ? `<span class="iv4-conv-badge">${conv.unread_count > 9 ? '9+' : conv.unread_count}</span>` : ''}
+      </div>
     </div>
     ${conv.labels && conv.labels.length ? _renderLabels(conv.labels) : ''}
   </div>
@@ -215,6 +235,16 @@ const InboxConvList = (() => {
     listEl.replaceWith(newListEl);
 
     newListEl.addEventListener('click', e => {
+      // كليك على زر Priority داخل الكارد
+      const priBtn = e.target.closest('.iv4-priority-badge');
+      if (priBtn) {
+        e.stopPropagation();
+        const item   = priBtn.closest('.iv4-conv-item');
+        const convId = Number(item?.dataset.convId);
+        if (convId) _openPriorityMenu(priBtn, convId, item.dataset.priority);
+        return;
+      }
+
       const item = e.target.closest('.iv4-conv-item');
       if (!item) return;
       const convId = Number(item.dataset.convId);
@@ -293,6 +323,171 @@ const InboxConvList = (() => {
     if (itemsEl && existing.parentElement === itemsEl && itemsEl.firstElementChild !== existing) {
       itemsEl.prepend(existing);
     }
+  }
+
+  // ─── Priority Menu (dropdown في الكارد) ───────────────────────────────────
+
+  /**
+   * فتح القائمة المنسدلة لتغيير الأولوية
+   * @param {Element} anchor  - العنصر الذي يُفتح بجواره
+   * @param {number}  convId
+   * @param {string}  current - الأولوية الحالية
+   */
+  function _openPriorityMenu(anchor, convId, current) {
+    // أغلق أي قائمة مفتوحة
+    _closePriorityMenu();
+
+    const menu = document.createElement('div');
+    menu.className = 'iv4-priority-menu';
+    menu.setAttribute('role', 'listbox');
+    menu.setAttribute('aria-label', 'اختر الأولوية');
+
+    const options = ['urgent', 'high', 'normal', 'low'];
+    menu.innerHTML = options.map(p => {
+      const m = PRIORITY_META[p];
+      return `
+        <button
+          class="iv4-priority-option ${p === current ? 'selected' : ''}"
+          data-priority="${p}"
+          role="option"
+          aria-selected="${p === current}"
+        >
+          <span class="iv4-priority-opt-icon">${m.icon}</span>
+          <span>${m.label}</span>
+          ${p === current ? '<span class="iv4-priority-opt-check">✓</span>' : ''}
+        </button>`.trim();
+    }).join('');
+
+    // تموضع القائمة
+    const rect = anchor.getBoundingClientRect();
+    menu.style.position  = 'fixed';
+    menu.style.top       = `${rect.bottom + 4}px`;
+    menu.style.left      = `${rect.left}px`;
+    menu.style.zIndex    = '1000';
+    document.body.appendChild(menu);
+    _priorityMenu = menu;
+
+    // كليك على خيار
+    menu.addEventListener('click', async e => {
+      const btn = e.target.closest('.iv4-priority-option');
+      if (!btn) return;
+      const newPriority = btn.dataset.priority;
+      _closePriorityMenu();
+      await _setPriority(convId, newPriority);
+    });
+
+    // إغلاق عند الكليك خارجها
+    setTimeout(() => {
+      document.addEventListener('click', _closePriorityMenu, { once: true });
+    }, 0);
+  }
+
+  /** إغلاق القائمة المنسدلة */
+  function _closePriorityMenu() {
+    if (_priorityMenu) {
+      _priorityMenu.remove();
+      _priorityMenu = null;
+    }
+  }
+
+  /**
+   * تغيير أولوية محادثة عبر API + تحديث UI فوراً (optimistic)
+   * @param {number} convId
+   * @param {string} priority
+   */
+  async function _setPriority(convId, priority) {
+    // Optimistic: حدّث الـ store والـ DOM فوراً
+    const conv = InboxStore.state.conversations.find(c => c.id === convId);
+    if (conv) {
+      const updated = { ...conv, priority };
+      InboxStore.upsertConversation(updated);
+      _updatePriorityDOM(convId, priority);
+    }
+
+    // API call
+    const { error } = await InboxAPI.conversations.setPriority(convId, priority);
+    if (error) {
+      console.error('[Priority] فشل تغيير الأولوية:', error);
+      // rollback
+      if (conv) {
+        InboxStore.upsertConversation(conv);
+        _updatePriorityDOM(convId, conv.priority || 'normal');
+      }
+    }
+  }
+
+  /**
+   * تحديث الـ DOM لكارد محادثة واحدة بعد تغيير الأولوية
+   * @param {number} convId
+   * @param {string} priority
+   */
+  function _updatePriorityDOM(convId, priority) {
+    const container = $list();
+    if (!container) return;
+
+    const item = container.querySelector(`[data-conv-id="${convId}"]`);
+    if (!item) return;
+
+    // حدّث الـ data attribute
+    item.dataset.priority = priority;
+
+    // حدّث الـ priority class على الكارد
+    Object.values(PRIORITY_CLASS).forEach(c => { if (c) item.classList.remove(c); });
+    const newClass = PRIORITY_CLASS[priority];
+    if (newClass) item.classList.add(newClass);
+
+    // حدّث الـ badge
+    const bottomBadges = item.querySelector('.iv4-conv-bottom-badges');
+    if (!bottomBadges) return;
+
+    const existingBadge = bottomBadges.querySelector('.iv4-priority-badge');
+    if (priority !== 'normal') {
+      const m = PRIORITY_META[priority] || PRIORITY_META.normal;
+      const html = `<span class="iv4-priority-badge iv4-priority-badge--${priority}" title="أولوية: ${m.label}">${m.icon} ${m.short}</span>`;
+      if (existingBadge) {
+        existingBadge.outerHTML = html;
+      } else {
+        bottomBadges.insertAdjacentHTML('afterbegin', html);
+      }
+    } else if (existingBadge) {
+      existingBadge.remove();
+    }
+  }
+
+  // ─── Priority Filter في الـ Sidebar ──────────────────────────────────────
+
+  /**
+   * رسم فلاتر الأولوية في الـ sidebar
+   * يُستدعى من init()
+   */
+  function _renderPriorityFilters() {
+    const container = document.getElementById('iv4-priority-filters');
+    if (!container) return;
+
+    const priorities = [
+      { value: '',       icon: '📋', label: 'كل الأولويات' },
+      { value: 'urgent', icon: '🔴', label: 'عاجل'  },
+      { value: 'high',   icon: '🟠', label: 'عالي'  },
+      { value: 'normal', icon: '🔵', label: 'عادي'  },
+      { value: 'low',    icon: '⚪', label: 'منخفض' },
+    ];
+
+    container.innerHTML = priorities.map(p => `
+      <button class="iv4-nav-btn ${p.value === '' ? 'active' : ''}" data-priority-filter="${p.value}">
+        <span class="iv4-nav-icon">${p.icon}</span>
+        <span class="iv4-nav-label">${p.label}</span>
+      </button>`.trim()).join('');
+
+    container.addEventListener('click', e => {
+      const btn = e.target.closest('[data-priority-filter]');
+      if (!btn) return;
+
+      container.querySelectorAll('[data-priority-filter]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const val = btn.dataset.priorityFilter;
+      InboxStore.setFilter({ priority: val || null });
+    });
   }
 
   // ─── Labels في الـ Sidebar ───────────────────────────────────────────────
@@ -591,6 +786,9 @@ const InboxConvList = (() => {
     // Load More button
     const btn = $loadBtn();
     if (btn) btn.addEventListener('click', _onLoadMoreClick);
+
+    // Priority filters في الـ sidebar
+    _renderPriorityFilters();
 
     // جلب البيانات الأولية
     fetchConversations(true);
