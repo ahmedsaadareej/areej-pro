@@ -13,7 +13,7 @@
 | P0-4 | SSE endpoint في backend | `server/routes/inbox/stream.js` | ✅ مكتملة |
 | P0-5 | SSE receiver في frontend | `public/dashboard/inbox-v4/stream.js` | ✅ مكتملة |
 | P0-6 | Layout الأساسي (3 columns + shell) | `public/dashboard/inbox-v4/index.html` + `inbox.css` | ✅ مكتملة |
-| P0-7 | Migrations جديدة (inbox tables v4) | `server/migrations/inbox-v4/001_*.js` … | ⬜ |
+| P0-7 | Migrations جديدة (inbox tables v4) | `server/migrations.js` v18–v24 | ✅ مكتملة |
 
 ---
 
@@ -21,11 +21,11 @@
 
 | # | المهمة | الملفات | الحالة |
 |---|--------|---------|--------|
-| P1-1 | Conversations List + Real-time updates | `conv-list.js` | ⬜ |
-| P1-2 | Chat Window + Message Rendering | `chat.js` | ⬜ |
-| P1-3 | Send Text + Media | `reply.js` + backend `messages.js` | ⬜ |
-| P1-4 | Reply Mode + Note Mode | `reply.js` | ⬜ |
-| P1-5 | Read/Unread tracking | `chat.js` + backend `conversations.js` | ⬜ |
+| P1-1 | Conversations List + Real-time updates | `conv-list.js` | ✅ مكتملة |
+| P1-2 | Chat Window + Message Rendering | `chat.js` | ✅ مكتملة |
+| P1-3 | Send Text + Media | `reply.js` + backend `messages.js` | ✅ مكتملة |
+| P1-4 | Reply Mode + Note Mode | `reply.js` + `chat.js` | ✅ مكتملة |
+| P1-5 | Read/Unread tracking | `chat.js` + `conv-list.js` | ✅ مكتملة |
 
 ---
 
@@ -33,7 +33,7 @@
 
 | # | المهمة | الملفات | الحالة |
 |---|--------|---------|--------|
-| P2-1 | Assignment + Auto-assign | `team.js` + backend `team.js` | ⬜ |
+| P2-1 | Assignment + Auto-assign | `team.js` + backend `team.js` | ✅ مكتملة |
 | P2-2 | Agent Status (Online/Busy/Away/Offline) | `team.js` | ⬜ |
 | P2-3 | Collision Detection | `chat.js` + SSE | ⬜ |
 | P2-4 | @Mentions في الـ Notes | `reply.js` | ⬜ |
@@ -116,4 +116,4 @@
 ---
 
 ## 🔴 المهمة القادمة
-**P0-7: Migrations** — `server/migrations/inbox-v4/001_init.js` … `007_*.js`
+**P2-2: Agent Status** — `public/dashboard/inbox-v4/team.js`
