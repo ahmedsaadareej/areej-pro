@@ -35,7 +35,7 @@
 |---|--------|---------|--------|
 | P2-1 | Assignment + Auto-assign | `team.js` + backend `team.js` | ✅ مكتملة |
 | P2-2 | Agent Status (Online/Busy/Away/Offline) | `team.js` | ✅ مكتملة |
-| P2-3 | Collision Detection | `chat.js` + SSE | ⬜ |
+| P2-3 | Collision Detection | `chat.js` + SSE | ✅ مكتملة |
 | P2-4 | @Mentions في الـ Notes | `reply.js` | ⬜ |
 | P2-5 | Conversation Transfer مع context | `team.js` | ⬜ |
 

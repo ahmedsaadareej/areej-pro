@@ -3,6 +3,32 @@
 
 ---
 
+## جلسة 2026-05-03 18:50 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P2-3: `server/routes/inbox/stream.js` — Collision Detection backend
+    - `_viewing` Map: tenantId → convId → userId → agentName
+    - POST /stream/viewing: تسجيل بدء مشاهدة + broadcast `conv:viewing` لباقي الموظفين + إرجاع viewers
+    - DELETE /stream/viewing/:convId: إلغاء مشاهدة + broadcast `conv:viewing:stop`
+    - `_cleanupViewingForUser` عند قطع SSE connection تلقائياً
+  - P2-3: `public/dashboard/inbox-v4/stream.js` — استقبال `conv:viewing` و `conv:viewing:stop`
+    - حفظ في `InboxStore.state.convViewers`
+    - emit لـ InboxStore
+  - P2-3: `public/dashboard/inbox-v4/api.js` — `InboxAPI.stream.startViewing()` + `stopViewing()`
+  - P2-3: `public/dashboard/inbox-v4/chat.js` — Collision UI
+    - `_currentViewingConvId` لتتبع المحادثة الفعالة
+    - `_onConvOpen`: stopViewing للسابقة + startViewing للجديدة
+    - `_showCollisionBanner` / `_hideCollisionBanner` / `_addCollisionViewer` / `_removeCollisionViewer`
+    - Banner يظهر بين header و messages بتحذير أصفر مع animation
+    - `beforeunload` → sendBeacon لضمان إرسال stopViewing عند إغلاق الـ tab
+  - `inbox.css`: `.iv4-collision-banner` + animation slide-in/out + dark mode
+  - Smoke test: HTTP 200 health ✔️
+- قرارات: لا جديد
+- آخر commit: cec54e2
+- المهمة القادمة: **P2-4** @Mentions في الـ Notes — `reply.js`
+
+---
+
 ## جلسة 2026-05-03 18:45 UTC
 - الحالة: مكتملة
 - ما تم:
