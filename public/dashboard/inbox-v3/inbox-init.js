@@ -37,6 +37,9 @@ async function iv3Init() {
   // 4b. بدء Relative Time Ticker (FEAT-3)
   iv3StartRelativeTimeTicker();
 
+  // 4c. بدء Labels Panel auto-refresh (TASK-13)
+  iv3StartLabelsRefresh();
+
   // 5. تحميل الـ Sound
   iv3InitSound();
 
@@ -407,13 +410,27 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // يُستدعى من نظام التنقل بين الصفحات
+// تحديث الـ Labels Panel كل 60 ثانية
+let _iv3LabelsRefreshTimer = null;
+function iv3StartLabelsRefresh() {
+  if (_iv3LabelsRefreshTimer) return;
+  _iv3LabelsRefreshTimer = setInterval(() => {
+    if (!document.hidden) iv3LoadLabelsPanel();
+  }, 60000);
+}
+function iv3StopLabelsRefresh() {
+  if (_iv3LabelsRefreshTimer) { clearInterval(_iv3LabelsRefreshTimer); _iv3LabelsRefreshTimer = null; }
+}
+
 function iv3OnPageShow() {
   if (!IV3._initialized) {
     IV3._initialized = true;
     iv3Init();
   } else {
-    // الـ page تظهر مجدداً — فقط أعد تشغيل الـ polling
+    // الـ page تظهر مجدداً — أعد تشغيل الـ polling
     if (!IV3.pollTimer) iv3StartPolling();
+    // أعد تشغيل labels refresh
+    iv3StartLabelsRefresh();
     // لو فيه محادثة مفتوحة، حدّث الرسائل
     if (IV3.activeConvId) iv3PollActiveConvMessages();
   }
@@ -421,6 +438,10 @@ function iv3OnPageShow() {
 
 function iv3OnPageHide() {
   iv3StopPolling();
+  // إيقاف analytics auto-refresh عند مغادرة صفحة الـ Inbox (TASK-13)
+  if (typeof iv3StopAnalyticsAutoRefresh === 'function') iv3StopAnalyticsAutoRefresh();
+  // إيقاف Labels Panel refresh
+  if (typeof iv3StopLabelsRefresh === 'function') iv3StopLabelsRefresh();
 }
 
 // ── Keyboard Shortcuts ───────────────────────────────────────
