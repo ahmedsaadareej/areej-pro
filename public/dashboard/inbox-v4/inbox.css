@@ -2195,3 +2195,150 @@
   .iv4-priority-badge--normal { background: #1e3a5f; color: #93c5fd; border-color: #1d4ed8; }
   .iv4-priority-badge--low    { background: #1e293b; color: #94a3b8; border-color: #334155; }
 }
+
+/* ── Snooze UI ─────────────────────────────────────────────────────────────── */
+
+/* زر الـ Snooze على كارد المحادثة (يظهر عند hover) */
+.iv4-snooze-trigger {
+  position: absolute;
+  top: 8px;
+  left: 8px;                /* RTL: يسار = بداية العكس */
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px; height: 26px;
+  border: none;
+  background: var(--iv4-surface-2);
+  border-radius: 50%;
+  font-size: 13px;
+  cursor: pointer;
+  opacity: .8;
+  transition: opacity .15s, background .15s;
+  z-index: 2;
+}
+.iv4-conv-item:hover .iv4-snooze-trigger { display: flex; }
+.iv4-snooze-trigger:hover { opacity: 1; background: var(--iv4-accent-light); }
+
+/* الكارد يحتاج position: relative للـ absolute trigger */
+.iv4-conv-item { position: relative; }
+
+/* Badge: المحادثة مؤجلة */
+.iv4-snooze-badge--active {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #fef9c3;
+  color: #854d0e;
+  border: 1px solid #fde68a;
+  white-space: nowrap;
+  user-select: none;
+  transition: transform .1s ease;
+}
+.iv4-snooze-badge--active:hover { transform: scale(1.06); }
+
+/* الكارد المؤجل شفاف قليلاً */
+.iv4-conv-item.iv4-conv-snoozed { opacity: .75; }
+.iv4-conv-item.iv4-conv-snoozed:hover { opacity: 1; }
+
+/* ── Snooze Modal ──────────────────────────────────────────────────────────── */
+.iv4-snooze-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+  animation: iv4-fade-in .15s ease;
+}
+
+.iv4-snooze-modal {
+  background: var(--iv4-surface);
+  border-radius: var(--iv4-radius);
+  box-shadow: var(--iv4-shadow-md);
+  width: 300px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.iv4-snooze-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--iv4-border);
+}
+.iv4-snooze-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--iv4-text);
+}
+
+.iv4-snooze-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+}
+.iv4-snooze-preset {
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: var(--iv4-radius-sm);
+  font-size: 13px;
+  color: var(--iv4-text);
+  text-align: right;
+  transition: background var(--iv4-transition);
+}
+.iv4-snooze-preset:hover  { background: var(--iv4-surface-2); }
+.iv4-snooze-preset.active { background: var(--iv4-accent-light); color: var(--iv4-accent); font-weight: 600; }
+
+.iv4-snooze-custom {
+  padding: 6px 16px 10px;
+  border-top: 1px solid var(--iv4-border);
+}
+.iv4-snooze-label {
+  display: block;
+  font-size: 11px;
+  color: var(--iv4-text-3);
+  margin-bottom: 4px;
+}
+.iv4-snooze-input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--iv4-border);
+  border-radius: var(--iv4-radius-sm);
+  font-size: 13px;
+  color: var(--iv4-text);
+  background: var(--iv4-surface);
+  direction: ltr;
+}
+.iv4-snooze-input:focus { outline: none; border-color: var(--iv4-accent); }
+
+.iv4-snooze-actions {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px 14px;
+  justify-content: flex-end;
+}
+.iv4-btn-ghost {
+  background: transparent;
+  border: 1px solid var(--iv4-border);
+  color: var(--iv4-text-2);
+}
+.iv4-btn-ghost:hover { background: var(--iv4-surface-2); }
+
+/* ── Snooze Dark Mode ──────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .iv4-snooze-modal   { background: #1e293b; }
+  .iv4-snooze-input   { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+  .iv4-snooze-preset:hover  { background: #0f172a; }
+  .iv4-snooze-badge--active { background: #422006; color: #fde68a; border-color: #78350f; }
+}

@@ -1,6 +1,6 @@
 /**
  * conv-list.js — Conversations List لـ Inbox v4
- * آخر تحديث: 2026-05-03 (P3-2 Priority)
+ * آخر تحديث: 2026-05-03 (P3-3 Snooze)
  *
  * المسؤوليات:
  *   - جلب المحادثات من backend وعرضها
@@ -47,6 +47,7 @@ const InboxConvList = (() => {
   let _loading      = false;   // منع الطلبات المتزامنة
   let _labelUnsub   = null;    // إلغاء الاستماع للـ label filter
   let _priorityMenu = null;    // القائمة المنسدلة للأولوية الحالية (مرجع DOM)
+  let _snoozeModal  = null;    // مودال الـ Snooze الحالي (مرجع DOM)
 
   // ─── الدالة الرئيسية: جلب المحادثات ─────────────────────────────────────
 
@@ -183,9 +184,16 @@ const InboxConvList = (() => {
       ? `<span class="iv4-priority-badge iv4-priority-badge--${pri}" title="أولوية: ${priMeta.label}">${priMeta.icon} ${priMeta.short}</span>`
       : '';
 
+    // Snooze badge (لو المحادثة مؤجلة تظهر badge قابل للنقر لإلغاء التأجيل)
+    const isSnoozed   = conv.status === 'snoozed' && conv.snooze_until;
+    const snoozeLabel = isSnoozed ? _formatSnoozedUntil(conv.snooze_until) : '';
+    const snoozeBadge = isSnoozed
+      ? `<span class="iv4-snooze-badge--active" title="مؤجل حتى ${snoozeLabel} — انقر لإلغاء">⏰ ${snoozeLabel}</span>`
+      : '';
+
     return `
 <div
-  class="iv4-conv-item ${isActive ? 'active' : ''} ${unread ? 'unread' : ''} ${priClass}"
+  class="iv4-conv-item ${isActive ? 'active' : ''} ${unread ? 'unread' : ''} ${priClass} ${isSnoozed ? 'iv4-conv-snoozed' : ''}"
   data-conv-id="${conv.id}"
   data-priority="${_escHtml(pri)}"
   role="button"
@@ -204,12 +212,14 @@ const InboxConvList = (() => {
     <div class="iv4-conv-bottom">
       <span class="iv4-conv-preview">${preview}</span>
       <div class="iv4-conv-bottom-badges">
+        ${snoozeBadge}
         ${priBadge}
         ${unread ? `<span class="iv4-conv-badge">${conv.unread_count > 9 ? '9+' : conv.unread_count}</span>` : ''}
       </div>
     </div>
     ${conv.labels && conv.labels.length ? _renderLabels(conv.labels) : ''}
   </div>
+  <button class="iv4-snooze-trigger" title="تأجيل">⏰</button>
 </div>`.trim();
   }
 
@@ -235,13 +245,33 @@ const InboxConvList = (() => {
     listEl.replaceWith(newListEl);
 
     newListEl.addEventListener('click', e => {
-      // كليك على زر Priority داخل الكارد
+      // كليك على زر Priority
       const priBtn = e.target.closest('.iv4-priority-badge');
       if (priBtn) {
         e.stopPropagation();
         const item   = priBtn.closest('.iv4-conv-item');
         const convId = Number(item?.dataset.convId);
         if (convId) _openPriorityMenu(priBtn, convId, item.dataset.priority);
+        return;
+      }
+
+      // كليك على بادج الـ Snooze (إلغاء مباشر)
+      const unsnoozeBtn = e.target.closest('.iv4-snooze-badge--active');
+      if (unsnoozeBtn) {
+        e.stopPropagation();
+        const item   = unsnoozeBtn.closest('.iv4-conv-item');
+        const convId = Number(item?.dataset.convId);
+        if (convId) _unsnooze(convId);
+        return;
+      }
+
+      // كليك على زر الـ Snooze (snooze جديد)
+      const snoozeBtn = e.target.closest('.iv4-snooze-trigger');
+      if (snoozeBtn) {
+        e.stopPropagation();
+        const item   = snoozeBtn.closest('.iv4-conv-item');
+        const convId = Number(item?.dataset.convId);
+        if (convId) _openSnoozeModal(convId);
         return;
       }
 
@@ -323,6 +353,165 @@ const InboxConvList = (() => {
     if (itemsEl && existing.parentElement === itemsEl && itemsEl.firstElementChild !== existing) {
       itemsEl.prepend(existing);
     }
+  }
+
+  // ─── Snooze Modal ───────────────────────────────────────────────────────
+
+  /**
+   * فتح مودال الـ Snooze بخيارات جاهزة + تاريخ مخصص
+   * @param {number} convId
+   */
+  function _openSnoozeModal(convId) {
+    _closeSnoozeModal();
+
+    // خيارات جاهزة
+    const now   = new Date();
+    const opts  = [
+      { label: 'بعد ساعة',       ms: 3600_000 },
+      { label: 'بعد 3 ساعات',    ms: 10_800_000 },
+      { label: 'بعد 24 ساعة',    ms: 86_400_000 },
+      { label: 'غداً صباحاً',  ms: _msUntilTomorrow9am(now) },
+      { label: 'بعد أسبوع',    ms: 7 * 86_400_000 },
+    ];
+
+    // تاريخ افتراضي للحقل الحر (غداً 09:00)
+    const defDate = new Date(now.getTime() + _msUntilTomorrow9am(now));
+    const defStr  = _toLocalDatetimeInput(defDate);
+
+    const modal = document.createElement('div');
+    modal.className   = 'iv4-snooze-overlay';
+    modal.innerHTML   = `
+      <div class="iv4-snooze-modal" role="dialog" aria-modal="true" aria-label="تأجيل المحادثة">
+        <div class="iv4-snooze-header">
+          <span class="iv4-snooze-title">⏰ تأجيل المحادثة</span>
+          <button class="iv4-icon-btn iv4-snooze-close" title="إغلاق">✕</button>
+        </div>
+        <div class="iv4-snooze-presets">
+          ${opts.map((o, i) => `
+            <button class="iv4-snooze-preset" data-ms="${o.ms}">${o.label}</button>
+          `).join('')}
+        </div>
+        <div class="iv4-snooze-custom">
+          <label class="iv4-snooze-label">تاريخ مخصص:</label>
+          <input
+            type="datetime-local"
+            class="iv4-snooze-input"
+            id="iv4-snooze-datetime"
+            value="${defStr}"
+          />
+        </div>
+        <div class="iv4-snooze-actions">
+          <button class="iv4-btn iv4-snooze-confirm">تأجيل</button>
+          <button class="iv4-btn iv4-btn-ghost iv4-snooze-cancel">إلغاء</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    _snoozeModal = modal;
+
+    // كليك على preset → حدّث الحقل
+    modal.querySelectorAll('.iv4-snooze-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const ms      = Number(btn.dataset.ms);
+        const target  = new Date(Date.now() + ms);
+        modal.querySelector('#iv4-snooze-datetime').value = _toLocalDatetimeInput(target);
+        // active highlight
+        modal.querySelectorAll('.iv4-snooze-preset').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    // تأكيد
+    modal.querySelector('.iv4-snooze-confirm').addEventListener('click', async () => {
+      const val = modal.querySelector('#iv4-snooze-datetime').value;
+      if (!val) return;
+      const until = new Date(val).toISOString();
+      _closeSnoozeModal();
+      await _snooze(convId, until);
+    });
+
+    // إلغاء
+    modal.querySelector('.iv4-snooze-cancel').addEventListener('click', _closeSnoozeModal);
+    modal.querySelector('.iv4-snooze-close').addEventListener('click',  _closeSnoozeModal);
+    modal.addEventListener('click', e => { if (e.target === modal) _closeSnoozeModal(); });
+  }
+
+  /** إغلاق مودال الـ Snooze */
+  function _closeSnoozeModal() {
+    if (_snoozeModal) { _snoozeModal.remove(); _snoozeModal = null; }
+  }
+
+  /**
+   * تنفيذ Snooze عبر API + Optimistic UI
+   * @param {number} convId
+   * @param {string} until  ISO string
+   */
+  async function _snooze(convId, until) {
+    const conv = InboxStore.state.conversations.find(c => c.id === convId);
+    if (!conv) return;
+
+    // Optimistic: حدّث الـ store
+    const updated = { ...conv, status: 'snoozed', snooze_until: until };
+    InboxStore.upsertConversation(updated);
+
+    // لو الفلتر الحالي لا يشمل snoozed → أزل من القائمة
+    const { filters } = InboxStore.state;
+    if (filters.status !== 'snoozed' && filters.status !== 'all') {
+      InboxStore.removeConversation(convId);
+      renderList();
+    } else {
+      renderList();
+    }
+
+    const { error } = await InboxAPI.conversations.snooze(convId, until);
+    if (error) {
+      console.error('[Snooze] فشل:', error);
+      // rollback
+      InboxStore.upsertConversation(conv);
+      renderList();
+    }
+  }
+
+  /**
+   * إلغاء التأجيل (Unsnooze) عبر API
+   * @param {number} convId
+   */
+  async function _unsnooze(convId) {
+    const conv = InboxStore.state.conversations.find(c => c.id === convId);
+
+    // Optimistic
+    if (conv) {
+      InboxStore.upsertConversation({ ...conv, status: 'open', snooze_until: null });
+      const { filters } = InboxStore.state;
+      if (filters.status === 'snoozed') {
+        InboxStore.removeConversation(convId);
+        renderList();
+      } else {
+        renderList();
+      }
+    }
+
+    const { error } = await InboxAPI.conversations.unsnooze(convId);
+    if (error) {
+      console.error('[Unsnooze] فشل:', error);
+      if (conv) { InboxStore.upsertConversation(conv); renderList(); }
+    }
+  }
+
+  // ─── Snooze Helpers ──────────────────────────────────────────────────────
+
+  /** مليثانية حتى غداً الساعة 9 صباحاً (بتوقيت المتصفح) */
+  function _msUntilTomorrow9am(from) {
+    const tom = new Date(from);
+    tom.setDate(tom.getDate() + 1);
+    tom.setHours(9, 0, 0, 0);
+    return tom.getTime() - from.getTime();
+  }
+
+  /** تحويل Date لـ datetime-local value */
+  function _toLocalDatetimeInput(date) {
+    const pad = n => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   }
 
   // ─── Priority Menu (dropdown في الكارد) ───────────────────────────────────
@@ -740,6 +929,32 @@ const InboxConvList = (() => {
     } catch {
       return '';
     }
+  }
+
+  /**
+   * تنسيق وقت الـ snooze للعرض في الـ badge
+   * @param {string|number} snoozeUntil - ISO string أو Unix timestamp
+   */
+  function _formatSnoozedUntil(snoozeUntil) {
+    if (!snoozeUntil) return '';
+    try {
+      // لو unix timestamp (int)
+      const d = typeof snoozeUntil === 'number'
+        ? new Date(snoozeUntil * 1000)
+        : new Date(snoozeUntil);
+      const now = new Date();
+      const diffMs  = d - now;
+      const diffMin = Math.round(diffMs / 60000);
+      const diffHr  = Math.round(diffMs / 3600000);
+      const diffDay = Math.round(diffMs / 86400000);
+
+      if (diffMin < 0)  return 'منتهي';
+      if (diffMin < 60) return `${diffMin}د`;
+      if (diffHr  < 24) return `${diffHr}س`;
+      if (diffDay < 7)  return `${diffDay}ي`;
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getDate()}/${pad(d.getMonth()+1)}`;
+    } catch { return ''; }
   }
 
   /**
