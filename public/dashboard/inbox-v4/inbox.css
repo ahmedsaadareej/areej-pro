@@ -807,3 +807,151 @@
   .iv4-sidebar, .iv4-conv-col { display: none; }
   .iv4-chat-col { display: flex; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   P1-3 — Reply Box: Media Preview + Quoted + Char Count + Drag-Over
+   آخر تحديث: 2026-05-03
+════════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Media Preview ────────────────────────────────────────────────────── */
+.iv4-media-preview {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--iv4-bg-2);
+  border-top: 1px solid var(--iv4-border);
+  border-bottom: 1px solid var(--iv4-border);
+}
+
+.iv4-preview-img {
+  max-height: 80px;
+  max-width: 120px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--iv4-border);
+}
+
+.iv4-preview-video {
+  max-height: 80px;
+  max-width: 160px;
+  border-radius: 6px;
+  border: 1px solid var(--iv4-border);
+}
+
+.iv4-preview-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--iv4-text-2);
+}
+
+.iv4-preview-file-icon { font-size: 22px; }
+.iv4-preview-file-name { font-weight: 600; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.iv4-preview-file-size { font-size: 11px; color: var(--iv4-text-3); }
+
+.iv4-preview-remove {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,.45);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background .15s;
+}
+.iv4-preview-remove:hover { background: rgba(0,0,0,.7); }
+
+/* ─── Quoted Message Preview ─────────────────────────────────────────── */
+.iv4-quoted-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--iv4-bg-2);
+  border-top: 1px solid var(--iv4-border);
+  font-size: 13px;
+  min-height: 38px;
+}
+
+.iv4-quoted-bar {
+  width: 3px;
+  min-height: 28px;
+  background: var(--iv4-accent);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.iv4-quoted-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+
+.iv4-quoted-sender {
+  font-weight: 700;
+  color: var(--iv4-accent);
+  font-size: 12px;
+}
+
+.iv4-quoted-text {
+  color: var(--iv4-text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+
+.iv4-quoted-cancel {
+  background: none;
+  border: none;
+  color: var(--iv4-text-3);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color .15s;
+  flex-shrink: 0;
+}
+.iv4-quoted-cancel:hover { color: var(--iv4-danger, #e53e3e); }
+
+/* ─── Char Count ─────────────────────────────────────────────────────── */
+.iv4-char-count {
+  font-size: 11px;
+  color: var(--iv4-text-3);
+  margin-left: 6px;
+  min-width: 28px;
+  text-align: center;
+  transition: color .2s;
+}
+.iv4-char-count.warn  { color: #ed8936; }
+.iv4-char-count.error { color: var(--iv4-danger, #e53e3e); font-weight: 700; }
+
+/* ─── Send Button Active ─────────────────────────────────────────────── */
+.iv4-send-btn.active {
+  background: var(--iv4-accent);
+  opacity: 1;
+}
+.iv4-send-btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+/* ─── Drag-Over State ────────────────────────────────────────────────── */
+.iv4-reply-box.drag-over {
+  outline: 2px dashed var(--iv4-accent);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--iv4-accent) 8%, var(--iv4-bg));
+}

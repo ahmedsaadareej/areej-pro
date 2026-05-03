@@ -191,6 +191,7 @@
     // Phase 1 — Conversations List + Chat Window
     InboxConvList.init();
     InboxChat.init();  // P1-2 ✅
+    InboxReply.init(); // P1-3 ✅
 
     console.log('[Inbox v4] ✅ جاهز');
   }

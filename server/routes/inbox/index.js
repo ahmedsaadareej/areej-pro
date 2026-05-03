@@ -35,6 +35,7 @@ router.use('/', streamRouter);
 
 // Phase 1 — Conversations, Messages, Labels, Counts
 router.use('/', require('./conversations'));
+router.use('/', require('./messages'));
 
 // [Phase 2] Team
 // router.use('/', require('./team'));
