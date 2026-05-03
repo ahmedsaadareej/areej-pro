@@ -169,8 +169,53 @@ function iv3SetStatusFilter(status, btn) {
 
 function iv3SwitchPlatform(plat, btn) {
   IV3.platform = plat;
+  // legacy tab support
   document.querySelectorAll('.iv3-tab').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
+  iv3LoadConvs(true);
+}
+
+// ── Platform Dropdown (جديد) ───────────────────────────────────
+
+const IV3_PLAT_MAP = {
+  '':             { icon: '💬', label: 'الكل' },
+  'whatsapp-qr':  { icon: '📱', label: 'واتساب QR' },
+  'whatsapp':     { icon: '💬', label: 'واتساب API' },
+  'telegram':     { icon: '✈️',  label: 'تيليجرام' },
+  'messenger':    { icon: '💙', label: 'ماسنجر' },
+  'instagram':    { icon: '📸', label: 'إنستجرام' },
+};
+
+function iv3TogglePlatDropdown() {
+  const dd = document.getElementById('iv3-plat-dropdown');
+  const btn = document.getElementById('iv3-plat-sel-btn');
+  if (!dd) return;
+  const isOpen = dd.style.display !== 'none';
+  dd.style.display = isOpen ? 'none' : 'block';
+  if (btn) btn.classList.toggle('open', !isOpen);
+  if (!isOpen) {
+    setTimeout(() => document.addEventListener('click', iv3ClosePlatDropdown, { once: true }), 10);
+  }
+}
+
+function iv3ClosePlatDropdown() {
+  const dd = document.getElementById('iv3-plat-dropdown');
+  const btn = document.getElementById('iv3-plat-sel-btn');
+  if (dd) dd.style.display = 'none';
+  if (btn) btn.classList.remove('open');
+}
+
+function iv3PickPlatform(plat, icon, label, el) {
+  IV3.platform = plat;
+  // تحديث الزر
+  const iconEl  = document.getElementById('iv3-plat-sel-icon');
+  const labelEl = document.getElementById('iv3-plat-sel-label');
+  if (iconEl)  iconEl.textContent  = icon;
+  if (labelEl) labelEl.textContent = label;
+  // تحديث active
+  document.querySelectorAll('.iv3-plat-opt').forEach(o => o.classList.remove('active'));
+  if (el) el.classList.add('active');
+  iv3ClosePlatDropdown();
   iv3LoadConvs(true);
 }
 
@@ -375,9 +420,20 @@ function iv3JidToPhone(jid) {
 }
 
 function iv3Initials(name) {
-  const parts = String(name).trim().split(' ');
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return String(name).trim().substring(0, 2).toUpperCase();
+  const str = String(name || '').trim();
+  if (!str || str === '?' || str === 'مجهول') return '?';
+  // لو رقم تليفون خذ آخر رقمين
+  if (/^\+?\d+$/.test(str.replace(/\s/g,''))) {
+    const digits = str.replace(/\D/g,'');
+    return digits.slice(-2);
+  }
+  // Array.from يدعم Unicode / عربي
+  const chars = Array.from(str);
+  const parts = str.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return (Array.from(parts[0])[0] + Array.from(parts[1])[0]).toUpperCase();
+  }
+  return (Array.from(parts[0] || str)[0] || '?').toUpperCase();
 }
 
 function iv3AvatarColor(seed) {

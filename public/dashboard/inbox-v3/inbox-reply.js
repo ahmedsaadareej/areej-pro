@@ -58,7 +58,7 @@ async function iv3Send() {
   if (typeof iv3ClearTypingBeacon === 'function') iv3ClearTypingBeacon();
 
   try {
-    const result = await IV3_API.sendMessage(IV3.activeConvId, text, IV3.replyMode, quoted);
+    const result = await IV3_API.sendMessage(IV3.activeConvId, text, IV3.replyMode, quoted, IV3._replyChannel);
 
     // استبدل الرسالة المؤقتة بالحقيقية
     const idx = IV3.messages.findIndex(m => m.id === tmpMsg.id);
@@ -802,9 +802,99 @@ async function iv3SendWaTemplate(name, lang, varCount) {
 
 // ── Helper: إظهار/إخفاء زر WA Template حسب المنصة ──────────────
 function iv3UpdateWaTemplateBtnVisibility() {
+  // الزر القديم (backward compat)
   const btn = document.getElementById('iv3-wa-tmpl-btn');
-  if (!btn) return;
-  btn.style.display = iv3IsWaApiConv() ? 'flex' : 'none';
+  if (btn) btn.style.display = iv3IsWaApiConv() ? 'flex' : 'none';
+  // زر toolbar الجديد
+  const tbBtn = document.getElementById('iv3-wa-tmpl-toolbar-btn');
+  if (tbBtn) tbBtn.style.display = iv3IsWaApiConv() ? 'flex' : 'none';
+  // تحديث Channel Selector
+  iv3UpdateChannelSelector();
+}
+
+// ── Channel Selector ────────────────────────────────────────────
+
+const IV3_CHANNEL_INFO = {
+  'whatsapp-qr': { icon: '📱', label: 'واتساب QR' },
+  'whatsapp':    { icon: '💬', label: 'واتساب API' },
+  'telegram':    { icon: '✈️',  label: 'تيليجرام' },
+  'messenger':   { icon: '💙', label: 'ماسنجر' },
+  'instagram':   { icon: '📸', label: 'إنستجرام' },
+};
+
+// المنصة المختارة حالياً لإرسال الرد (null = افتراضي من المحادثة)
+IV3._replyChannel = null;
+
+function iv3UpdateChannelSelector() {
+  const conv = IV3.activeConv;
+  const btn  = document.getElementById('iv3-channel-btn');
+  const iconEl  = document.getElementById('iv3-channel-icon');
+  const labelEl = document.getElementById('iv3-channel-label');
+  if (!btn || !conv) return;
+
+  const ch = IV3._replyChannel || conv.platform;
+  const info = IV3_CHANNEL_INFO[ch] || { icon: '💬', label: ch || '—' };
+  if (iconEl)  iconEl.textContent  = info.icon;
+  if (labelEl) labelEl.textContent = info.label;
+}
+
+function iv3ToggleChannelPicker() {
+  const conv = IV3.activeConv;
+  if (!conv) return;
+
+  const dd = document.getElementById('iv3-channel-dropdown');
+  if (!dd) return;
+
+  if (dd.style.display !== 'none') {
+    dd.style.display = 'none';
+    return;
+  }
+
+  // اجمع كل المنصات المتاحة لهذا العميل (distinct platforms من محادثاته)
+  const clientPlatforms = [...new Set(
+    IV3.convs.filter(c => {
+      const p1 = iv3ExtractPhone(c.sender_id);
+      const p2 = iv3ExtractPhone(conv.sender_id);
+      return p1 && p2 && p1 === p2;
+    }).map(c => c.platform)
+  )];
+  // لو محادثة واحدة بس أضف منصتها
+  if (!clientPlatforms.includes(conv.platform)) clientPlatforms.unshift(conv.platform);
+  if (!clientPlatforms.length) clientPlatforms.push(conv.platform);
+
+  const current = IV3._replyChannel || conv.platform;
+
+  dd.innerHTML = clientPlatforms.map(plat => {
+    const info = IV3_CHANNEL_INFO[plat] || { icon: '💬', label: plat };
+    const isActive = plat === current;
+    return `<div class="iv3-channel-opt ${isActive ? 'active' : ''}" onclick="iv3SelectChannel('${plat}')">
+      <span>${info.icon}</span>
+      <span>${info.label}</span>
+      ${isActive ? '<span class="iv3-ch-check">✓</span>' : ''}
+    </div>`;
+  }).join('');
+
+  dd.style.display = 'block';
+  setTimeout(() => document.addEventListener('click', iv3CloseChannelPicker, { once: true }), 10);
+}
+
+function iv3CloseChannelPicker() {
+  const dd = document.getElementById('iv3-channel-dropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+function iv3SelectChannel(plat) {
+  IV3._replyChannel = plat;
+  iv3CloseChannelPicker();
+  iv3UpdateChannelSelector();
+  const info = IV3_CHANNEL_INFO[plat] || { icon: '', label: plat };
+  iv3Toast(`قناة الإرسال: ${info.icon} ${info.label}`, 'info');
+}
+
+// عند فتح محادثة جديدة: صفّر الاختيار للمنصة الافتراضية
+function iv3ResetReplyChannel() {
+  IV3._replyChannel = null;
+  iv3UpdateChannelSelector();
 }
 
 // ────────────────────────────────────────────────────────────────────────────

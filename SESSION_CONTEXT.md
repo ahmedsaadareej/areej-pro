@@ -1,3 +1,28 @@
+## Session 2026-05-03 (13:09 UTC) — جارية
+- الحالة: في التنفيذ
+- ما تم الاتفاق عليه (14 مهمة):
+  1. Platform Tabs → Dropdown (موفّر مساحة)
+  2. Reply Toolbar → أفقي تحت الـ textarea
+  3. إصلاح Avatar (دايرة ملونة صحيحة)
+  4. Channel Selector في Reply Box (يتذكر آخر منصة)
+  5. تعديل بيانات العميل inline في Context Panel
+  6. إصلاح "إضافة للـ CRM" مع prefill تلقائي (modal في نفس الصفحة)
+  7. إصلاح "بروفايل العميل" من Context Panel
+  8. أوردرات العميل في Context Panel (API call ناقص)
+  9. CLV Badge — إضافة total_paid/total_invoiced للـ API
+  10. فاتورة جديدة من Inbox بـ prefill
+  11. تنسيق النص في Reply Box (Bold/Italic)
+  12. New Conversation Modal — Instagram/Meta
+  13. Auto-refresh الإحصائيات — cleanup عند الخروج
+  14. New Conversation Modal — Smart Default للمنصة
+- خطة الجلسة (max 5 مهام):
+  - مهمة 1: Platform Dropdown + Toolbar أفقي + Avatar fix
+  - مهمة 2: Channel Selector
+  - مهمة 3: Inline Edit بيانات العميل + CRM Add fix
+  - مهمة 4: أوردرات + CLV كامل
+  - مهمة 5: فاتورة جديدة prefill + بروفايل fix
+- نقطة البداية القادمة: مهمة 1 — Platform Dropdown + Toolbar أفقي + Avatar fix
+
 ## Session 2026-05-03 (09:02 → 09:25 UTC) — مكتملة
 - الحالة: تم الإكمال (2 مهام رئيسية)
 - ما تم إنجازه:

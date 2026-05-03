@@ -552,3 +552,171 @@ async function tsLoadReports(period = 'today') {
     </tr>
   `).join('') || `<tr><td colspan="6" style="text-align:center;padding:30px;color:#9ca3af">لا توجد بيانات</td></tr>`;
 }
+
+// ══════════════════════════════════════════════════════════════
+// INBOX PERMISSIONS — إدارة صلاحيات موظفي الـ Inbox
+// ══════════════════════════════════════════════════════════════
+
+let _ipSelectedUserId = null;
+
+// تحميل قائمة المستخدمين + صلاحياتهم
+async function ipLoadUsers() {
+  const tbody = document.getElementById('ip-users-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:#9ca3af">جاري التحميل...</td></tr>';
+
+  const d = await apiFetch('/api/system/inbox/agents');
+  if (!d.ok) { tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:20px;color:#ef4444">${d.error||'خطأ'}</td></tr>`; return; }
+
+  const agents = d.agents || [];
+  if (!agents.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:#9ca3af">لا توجد مستخدمين — أضف موظفين من إعدادات الفريق</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = agents.map(a => {
+    const perms = a.perms || {};
+    const isOwner = a.is_owner;
+    const rowId = 'ipr-' + a.id;
+
+    if (isOwner) {
+      return `<tr id="${rowId}" style="background:#f0fdf4">
+        <td style="padding:10px 16px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--brand,#1B5E30);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800">${(a.name||'؟')[0]}</div>
+            <div>
+              <div style="font-weight:700;font-size:13px">${esc(a.name||'')}</div>
+              <div style="font-size:11px;color:#9ca3af">${esc(a.email||'')}</div>
+            </div>
+          </div>
+        </td>
+        <td colspan="7" style="text-align:center;padding:10px">
+          <span style="background:#dcfce7;color:#16a34a;font-size:11px;font-weight:800;padding:3px 12px;border-radius:20px">👑 المالك — صلاحيات كاملة</span>
+        </td>
+        <td style="padding:10px 12px;text-align:center">—</td>
+      </tr>`;
+    }
+
+    const chk = (perm, label, clr='#16a34a') => {
+      const checked = perms[perm] || perms['full_access'] ? 'checked' : '';
+      const bgChk = checked ? `background:${clr}20;border-color:${clr}` : '';
+      return `<td style="text-align:center;padding:8px">
+        <label style="cursor:pointer;display:flex;justify-content:center">
+          <input type="checkbox" ${checked} data-uid="${a.id}" data-perm="${perm}"
+            class="ip-perm-chk"
+            style="width:16px;height:16px;accent-color:${clr};cursor:pointer"
+            onchange="ipTogglePerm(${a.id},'${perm}',this.checked)">
+        </label>
+      </td>`;
+    };
+
+    return `<tr id="${rowId}" class="${_ipSelectedUserId===a.id?'ip-row-selected':''}" onclick="ipSelectRow(${a.id},this)" style="cursor:pointer;border-bottom:1px solid #f3f4f6">
+      <td style="padding:10px 16px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:32px;height:32px;border-radius:50%;background:#6b7280;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800">${(a.name||'؟')[0]}</div>
+          <div>
+            <div style="font-weight:700;font-size:13px">${esc(a.name||'')}</div>
+            <div style="font-size:11px;color:#9ca3af">${esc(a.email||'')} • ${a.active_convs||0} محادثة</div>
+          </div>
+        </div>
+      </td>
+      <td style="text-align:center;padding:8px">
+        <label style="cursor:pointer;display:flex;justify-content:center">
+          <input type="checkbox" ${a.inbox_active?'checked':''} style="width:16px;height:16px;accent-color:var(--brand,#1B5E30);cursor:pointer"
+            onchange="ipToggleActive(${a.id},this.checked)">
+        </label>
+      </td>
+      ${chk('inbox.view_all','عرض الكل','#16a34a')}
+      ${chk('inbox.assign','تعيين','#1d4ed8')}
+      ${chk('inbox.delete','حذف','#92400e')}
+      ${chk('inbox.export','تصدير','#be185d')}
+      ${chk('inbox.admin','أدمن','#6d28d9')}
+      <td style="text-align:center;padding:8px">
+        <input type="number" value="${a.max_concurrent||10}" min="1" max="99" style="width:50px;text-align:center;border:1px solid #e5e7eb;border-radius:6px;padding:4px;font-family:Cairo,sans-serif;font-size:12px"
+          onchange="ipSaveMaxConcurrent(${a.id},this.value)">
+      </td>
+      <td style="text-align:center;padding:8px">
+        <button onclick="event.stopPropagation();ipRemoveUser(${a.id},'${esc(a.name||'')}')" style="background:none;border:1px solid #fca5a5;color:#ef4444;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;font-family:Cairo,sans-serif">
+          حذف
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// تحديد صف
+function ipSelectRow(uid, row) {
+  _ipSelectedUserId = uid;
+  document.querySelectorAll('#ip-users-tbody tr').forEach(r => r.classList.remove('ip-row-selected'));
+  if (row) row.closest('tr').classList.add('ip-row-selected');
+}
+
+// تغيير صلاحية واحدة فوراً
+async function ipTogglePerm(uid, perm, val) {
+  const d = await apiFetch('/api/system/inbox/user-perms', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: uid, perm, value: val })
+  });
+  if (!d.ok) { showToast('❌ ' + (d.error||'خطأ'), 'error'); return; }
+  showToast(val ? `✅ صلاحية "${perm}" مفعّلة` : `🔒 صلاحية "${perm}" مُلغاة`);
+}
+
+// تفعيل/إيقاف المستخدم في الـ Inbox
+async function ipToggleActive(uid, val) {
+  const d = await apiFetch('/api/system/inbox/user-perms', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: uid, perm: 'inbox_active', value: val })
+  });
+  if (!d.ok) showToast('❌ ' + (d.error||'خطأ'), 'error');
+  else showToast(val ? '✅ مفعّل في الـ Inbox' : '⏸️ موقوف من الـ Inbox');
+}
+
+// حفظ الحد الأقصى للمحادثات
+async function ipSaveMaxConcurrent(uid, val) {
+  const d = await apiFetch('/api/system/inbox/user-perms', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: uid, perm: 'max_concurrent', value: parseInt(val)||10 })
+  });
+  if (!d.ok) showToast('❌ ' + (d.error||'خطأ'), 'error');
+  else showToast('✅ تم الحفظ');
+}
+
+// حذف مستخدم من الـ Inbox (إيقاف فقط)
+async function ipRemoveUser(uid, name) {
+  if (!confirm(`هتوقف "${name}" من الـ Inbox؟`)) return;
+  await ipToggleActive(uid, false);
+  ipLoadUsers();
+}
+
+// فتح modal إضافة مستخدم
+function ipOpenAddUserModal() {
+  showToast('💡 أضف الموظف من صفحة الفريق أولاً، ثم عدّل صلاحياته هنا');
+  itShowTab('it-teams');
+}
+
+// تطبيق preset على المستخدم المحدد
+async function ipApplyPreset(preset) {
+  if (!_ipSelectedUserId) { showToast('⚠️ اختار موظف من الجدول أولاً', 'error'); return; }
+  const presets = {
+    agent:      { 'inbox.view_all': false, 'inbox.assign': false, 'inbox.delete': false, 'inbox.export': false, 'inbox.admin': false },
+    supervisor: { 'inbox.view_all': true,  'inbox.assign': true,  'inbox.delete': false, 'inbox.export': false, 'inbox.admin': false },
+    manager:    { 'inbox.view_all': true,  'inbox.assign': true,  'inbox.delete': true,  'inbox.export': true,  'inbox.admin': true  }
+  };
+  const p = presets[preset];
+  if (!p) return;
+  for (const [perm, val] of Object.entries(p)) {
+    await apiFetch('/api/system/inbox/user-perms', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: _ipSelectedUserId, perm, value: val })
+    });
+  }
+  showToast(`✅ تم تطبيق صلاحيات "${preset==='agent'?'موظف رد عادي':preset==='supervisor'?'مشرف':'مدير'}"`, 'success');
+  ipLoadUsers();
+}
+
+// تحميل عند فتح التاب
+const _origItShowTab = itShowTab;
+itShowTab = function(tab) {
+  _origItShowTab(tab);
+  if (tab === 'it-permissions') ipLoadUsers();
+};

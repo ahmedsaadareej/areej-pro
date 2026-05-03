@@ -184,15 +184,18 @@ router.post('/inbox/send', requireAuth, async (req, res) => {
     const conv = db.prepare(`SELECT * FROM inbox_conversations WHERE id=?`).get(conversation_id);
     if (!conv) return res.json({ ok: false, error: 'conversation not found' });
 
+    // channel_override: المستخدم اختار منصة مختلفة من Channel Selector
+    const effectivePlatform = req.body.channel_override || conv.platform;
+
     // Save outgoing message
-    db.prepare(`INSERT INTO inbox_messages (conversation_id, platform, direction, content) VALUES (?,?,?,?)`).run(conversation_id, conv.platform, 'out', content);
+    db.prepare(`INSERT INTO inbox_messages (conversation_id, platform, direction, content) VALUES (?,?,?,?)`).run(conversation_id, effectivePlatform, 'out', content);
     db.prepare(`UPDATE inbox_conversations SET last_message=?, last_message_at=datetime('now') WHERE id=?`).run(content, conversation_id);
 
     // Actually send via platform
     let sendResult = { sent: false, error: null };
     const settings = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get();
 
-    if (conv.platform === 'telegram' && settings && settings.telegram_token && settings.telegram_active) {
+    if (effectivePlatform === 'telegram' && settings && settings.telegram_token && settings.telegram_active) {
       try {
         const https = require('https');
         const chatId = conv.sender_id;
@@ -228,7 +231,7 @@ router.post('/inbox/send', requireAuth, async (req, res) => {
     }
 
     // WhatsApp QR send
-    if (conv.platform === 'whatsapp-qr') {
+    if (effectivePlatform === 'whatsapp-qr') {
       try {
         const waQRService = require('../whatsapp-qr-service');
         await waQRService.sendMessage(req.user.id, conv.sender_id, content);
@@ -239,7 +242,7 @@ router.post('/inbox/send', requireAuth, async (req, res) => {
     }
 
     // WhatsApp API send
-    if (conv.platform === 'whatsapp' && settings && settings.wa_active && settings.wa_token && settings.wa_phone_id) {
+    if (effectivePlatform === 'whatsapp' && settings && settings.wa_active && settings.wa_token && settings.wa_phone_id) {
       try {
         const r = await fetch(`https://graph.facebook.com/v19.0/${settings.wa_phone_id}/messages`, {
           method: 'POST',

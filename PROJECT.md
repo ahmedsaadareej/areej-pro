@@ -48,8 +48,32 @@
 
 ---
 
-## 📋 التالي
-- FEAT-5: New Conversation Modal — Instagram/Meta support
+## 📋 المهام القادمة (متفق عليها — 2026-05-03)
+
+### 🔴 أولوية عالية — UX / مساحة
+1. Platform Tabs → Dropdown موفّر للمساحة
+2. Reply Toolbar → أفقي تحت الـ textarea
+3. إصلاح Avatar (دايرة ملونة صحيحة)
+4. Channel Selector في Reply Box (يتذكر آخر منصة)
+
+### 🟠 أولوية عالية — Context Panel
+5. تعديل بيانات العميل inline
+6. إصلاح "إضافة للـ CRM" — modal في نفس الصفحة مع prefill
+7. إصلاح "بروفايل العميل" من Context Panel
+
+### 🟡 أولوية متوسطة
+8. أوردرات العميل في Context Panel (API call ناقص)
+9. CLV Badge — total_paid/total_invoiced من الـ API
+10. فاتورة جديدة من Inbox بـ prefill
+11. تنسيق النص في Reply Box (Bold/Italic)
+12. New Conversation Modal — Instagram/Meta
+
+### 🟢 أولوية منخفضة
+13. Auto-refresh cleanup عند الخروج من صفحة الـ Inbox
+14. New Conversation Modal — Smart Default للمنصة
+
+---
+
 - اختبار Payment Gateways sandbox (محتاج credentials)
 - Live Mode للتطبيق على Meta Developers (لما يتطلب)
 
