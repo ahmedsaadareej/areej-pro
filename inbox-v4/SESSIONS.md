@@ -3,6 +3,24 @@
 
 ---
 
+## جلسة 2026-05-03 20:35 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P3-3: `public/dashboard/inbox-v4/conv-list.js` — Snooze UI كامل
+    - `_openSnoozeModal`: modal ب 5 خيارات جاهزة (ساعة / 3س / 24س / غداً 9صباحاً / أسبوع) + datetime-local
+    - `_closeSnoozeModal`, `_snooze`, `_unsnooze`: optimistic UI + rollback
+    - `_formatSnoozedUntil`: تنسيق الوقت للـ badge
+    - `_msUntilTomorrow9am` + `_toLocalDatetimeInput`: helpers
+    - `.iv4-snooze-trigger`: زر hover على كل كارد
+    - `.iv4-snooze-badge--active`: badge قابل للنقر لإلغاء التأجيل
+    - `.iv4-conv-snoozed`: شفافية خفيفة للكارد المؤجل
+  - `public/dashboard/inbox-v4/inbox.css`: ~110 سطر CSS جديد (Snooze modal + badges + dark mode)
+- قرارات: لا جديد
+- آخر commit: 5dc61ba
+- المهمة القادمة: **P3-4 Bulk Actions** — `conv-list.js`
+
+---
+
 ## جلسة 2026-05-03 20:31 UTC
 - الحالة: مكتملة
 - ما تم:

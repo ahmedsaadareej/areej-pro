@@ -47,7 +47,7 @@
 |---|--------|---------|--------|
 | P3-1 | Labels + Tags | `labels.js` + backend `labels.js` | ✅ مكتملة |
 | P3-2 | Priority (Low/Normal/High/Urgent) | `conv-list.js` + backend | ✅ مكتملة |
-| P3-3 | Snooze | `conv-list.js` + backend | ⬜ |
+| P3-3 | Snooze | `conv-list.js` + backend | ✅ مكتملة |
 | P3-4 | Bulk Actions | `conv-list.js` | ⬜ |
 | P3-5 | Search (Quick + Deep) | `search.js` + backend | ⬜ |
 | P3-6 | SLA Tracking | backend `conversations.js` + analytics | ⬜ |
