@@ -9,6 +9,15 @@
 <link rel="stylesheet" href="/dashboard/css/inbox-v2.css?v=20260501">
 <link rel="stylesheet" href="/dashboard/inbox-v3/inbox.css?v=1777752845">
 <script>document.documentElement.style.setProperty("--brand","#1B5E30");</script>
+<script>
+  // تسجيل Service Worker لـ Push Notifications
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/dashboard/sw-inbox.js', { scope: '/dashboard/' })
+        .catch(e => console.warn('[SW] فشل التسجيل:', e));
+    });
+  }
+</script>
 </head>
 <body>
 

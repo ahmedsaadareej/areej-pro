@@ -1,7 +1,7 @@
 /**
  * inbox-init.js — Areej Pro Inbox v3
- * التهيئة الكاملة + Polling + Toast + Sound + Settings
- * آخر تحديث: 2026-05-02
+ * التهيئة الكاملة + Polling + Toast + Sound + Push Notifications + Settings
+ * آخر تحديث: 2026-05-03
  */
 
 // ── Init الرئيسي ────────────────────────────────────────────
@@ -34,7 +34,13 @@ async function iv3Init() {
   // 5. تحميل الـ Sound
   iv3InitSound();
 
-  // 6. إخفاء agent filter لو مش owner
+  // 6. تهيئة Push Notifications
+  iv3InitPushNotifications();
+
+  // 7. استقبال رسائل من الـ Service Worker
+  iv3BindServiceWorkerMessages();
+
+  // 8. إخفاء agent filter لو مش owner
   const agentWrap = document.getElementById('iv3-agent-filter-wrap');
   if (agentWrap) {
     agentWrap.style.display = (IV3.me?.role === 'owner' || IV3.me?.inbox_role === 'owner') ? '' : 'none';
@@ -122,6 +128,17 @@ async function iv3PollUpdate() {
       iv3RenderConvs();
       if (IV3.soundEnabled) iv3PlayNotifSound();
       iv3UpdateUnreadBadge();
+      // Browser Push Notification عند رسالة جديدة والتبويب مخفي
+      if (IV3._pushEnabled && document.hidden) {
+        const newestConv = newList.find(c => {
+          const ex = IV3.convs.find(x => x.id === c.id);
+          return !ex || (ex && ex.unread_count > 0);
+        });
+        if (newestConv) {
+          const preview = newestConv.last_message || 'رسالة جديدة';
+          iv3SendBrowserNotification(newestConv, preview);
+        }
+      }
     }
 
     // تحديث الرسائل لو في محادثة مفتوحة
@@ -601,6 +618,190 @@ function iv3ShowShortcutsHelp() {
     </div>`;
 
   document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// ── Push Notifications ─────────────────────────────────────────
+
+/**
+ * iv3InitPushNotifications
+ * تسجيل Service Worker + طلب إذن الإشعارات
+ * يعمل بهدوء — لا يزعج المستخدم إذا رفض
+ */
+async function iv3InitPushNotifications() {
+  if (!('serviceWorker' in navigator) || !('Notification' in window)) {
+    console.log('[IV3-Push] المتصفح لا يدعم الإشعارات');
+    return;
+  }
+
+  // تسجيل الـ Service Worker
+  try {
+    const reg = await navigator.serviceWorker.register('/dashboard/sw-inbox.js', {
+      scope: '/dashboard/'
+    });
+    IV3._swRegistration = reg;
+    console.log('[IV3-Push] Service Worker مسجّل ✓');
+  } catch (e) {
+    console.warn('[IV3-Push] فشل تسجيل Service Worker:', e.message);
+    return;
+  }
+
+  // تحقق من إذن الإشعارات الحالي
+  const permission = Notification.permission;
+  if (permission === 'granted') {
+    iv3EnablePushReceiver();
+  } else if (permission === 'default') {
+    // اطلب الإذن بعد أول تفاعل من المستخدم (لا نسألها فوراً)
+    if (!IV3._pushPermissionAsked) {
+      IV3._pushPermissionAsked = true;
+      iv3ShowPushPrompt();
+    }
+  }
+  // إذا 'denied' → لا نفعل شيئاً
+}
+
+/**
+ * iv3ShowPushPrompt
+ * شريط صغير أسفل الـ inbox يسأل المستخدم تفعيل الإشعارات
+ */
+function iv3ShowPushPrompt() {
+  // لا تعرضه أكثر من مرة في الجلسة
+  if (localStorage.getItem('iv3_push_dismissed') === 'yes') return;
+
+  const bar = document.createElement('div');
+  bar.id = 'iv3-push-prompt';
+  bar.style.cssText = `
+    position:fixed; bottom:0; left:0; right:0; z-index:99998;
+    background:#1B5E30; color:#fff;
+    padding:10px 20px; display:flex; align-items:center;
+    justify-content:space-between; gap:12px;
+    font-size:13px; font-family:inherit; direction:rtl;
+    box-shadow:0 -2px 12px rgba(0,0,0,0.2);
+    animation:iv3ToastIn 0.3s ease;`;
+
+  bar.innerHTML = `
+    <span>🔔 فعّل الإشعارات لتلقّي تنبيهات فورية حتى عندما تكون في تبويب آخر</span>
+    <div style="display:flex;gap:8px;flex-shrink:0">
+      <button id="iv3-push-yes" style="
+        background:#fff; color:#1B5E30; border:none;
+        padding:6px 14px; border-radius:6px; cursor:pointer;
+        font-size:13px; font-weight:600;">
+        تفعيل
+      </button>
+      <button id="iv3-push-no" style="
+        background:transparent; color:rgba(255,255,255,0.8);
+        border:1px solid rgba(255,255,255,0.4);
+        padding:6px 10px; border-radius:6px; cursor:pointer;
+        font-size:12px;">
+        لاحقاً
+      </button>
+    </div>`;
+
+  document.body.appendChild(bar);
+
+  document.getElementById('iv3-push-yes')?.addEventListener('click', async () => {
+    bar.remove();
+    const result = await Notification.requestPermission();
+    if (result === 'granted') {
+      iv3EnablePushReceiver();
+      iv3Toast('🔔 تم تفعيل الإشعارات بنجاح', 'success');
+    } else {
+      iv3Toast('لم يتم منح إذن الإشعارات', 'warning');
+    }
+  });
+
+  document.getElementById('iv3-push-no')?.addEventListener('click', () => {
+    bar.remove();
+    localStorage.setItem('iv3_push_dismissed', 'yes');
+  });
+
+  // يختفي تلقائياً بعد 15 ثانية
+  setTimeout(() => { if (bar.parentNode) bar.remove(); }, 15000);
+}
+
+/**
+ * iv3EnablePushReceiver
+ * بعد منح الإذن — نُفعّل استقبال الإشعارات
+ * نحن لا نستخدم Web Push (يحتاج VAPID + backend)
+ * بدلاً من ذلك: نستخدم Service Worker postMessage عند وجود رسائل جديدة
+ */
+function iv3EnablePushReceiver() {
+  IV3._pushEnabled = true;
+  console.log('[IV3-Push] استقبال الإشعارات مفعّل ✓');
+}
+
+/**
+ * iv3SendBrowserNotification
+ * إرسال إشعار للمتصفح مباشرة (Notification API — بدون Push Server)
+ * يعمل حتى لو التبويب في الخلفية ولكن المتصفح مفتوح
+ */
+function iv3SendBrowserNotification(conv, msgPreview) {
+  if (!IV3._pushEnabled) return;
+  if (Notification.permission !== 'granted') return;
+  if (!document.hidden) return; // فقط لما التبويب مخفي
+
+  const platformEmoji = {
+    'whatsapp-qr': '🟢',
+    'whatsapp':    '🟢',
+    'telegram':    '✈️',
+    'facebook':    '🔵',
+    'instagram':   '📸',
+  };
+  const emoji = platformEmoji[conv.platform] || '💬';
+  const name  = conv.sender_name || conv.sender_id || 'عميل';
+
+  // استخدام Service Worker notification (أفضل دعماً)
+  if (IV3._swRegistration) {
+    IV3._swRegistration.showNotification(`${emoji} ${name}`, {
+      body:      msgPreview || 'رسالة جديدة',
+      icon:      '/dashboard/assets/logo-192.png',
+      badge:     '/dashboard/assets/logo-72.png',
+      tag:       `inbox-conv-${conv.id}`,
+      renotify:  true,
+      data:      { convId: conv.id, url: '/dashboard/' },
+      actions: [
+        { action: 'open',    title: '📂 فتح' },
+        { action: 'dismiss', title: '✕ تجاهل' },
+      ],
+      dir:  'rtl',
+      lang: 'ar',
+    }).catch(() => {
+      // fallback: Notification API المباشر
+      new Notification(`${emoji} ${name}`, {
+        body: msgPreview || 'رسالة جديدة',
+        icon: '/dashboard/assets/logo-192.png',
+        tag:  `inbox-conv-${conv.id}`,
+      });
+    });
+  } else {
+    // fallback: Notification API مباشر
+    const n = new Notification(`${emoji} ${name}`, {
+      body: msgPreview || 'رسالة جديدة',
+      icon: '/dashboard/assets/logo-192.png',
+      tag:  `inbox-conv-${conv.id}`,
+      dir:  'rtl',
+    });
+    n.onclick = () => {
+      window.focus();
+      if (typeof iv3OpenConv === 'function') iv3OpenConv(conv.id);
+      n.close();
+    };
+  }
+}
+
+/**
+ * iv3BindServiceWorkerMessages
+ * استقبال رسائل من sw-inbox.js (مثل: فتح محادثة عند الضغط على الإشعار)
+ */
+function iv3BindServiceWorkerMessages() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data?.type === 'IV3_OPEN_CONV' && event.data.convId) {
+      window.focus();
+      if (typeof iv3OpenConv === 'function') {
+        iv3OpenConv(event.data.convId);
+      }
+    }
+  });
 }
 
 // ── Collision Detection ──────────────────────────────────────
