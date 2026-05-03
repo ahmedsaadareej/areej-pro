@@ -3,6 +3,31 @@
 
 ---
 
+## جلسة 2026-05-03 18:45 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P2-2: `chat.js` — زر تعيين الموظف في الـ chat header
+    - يفتح assign dropdown من InboxTeam.openAssignDropdown
+    - يعرض dot ملوّنة بحالة الموظف المعيّن (online/busy/away/offline)
+    - يستمع لـ `conv_assigned` event ويُعيد رسم الـ header
+  - P2-2: `chat.js` — Typing Indicator
+    - `_showTypingIndicator()` يعرض bar متحرك في أسفل الـ messages
+    - يستمع لـ SSE event `agent_typing` ويعرض اسم الموظف
+    - auto-hide بعد 4 ثوانٍ إن لم يأتِ `typing:false`
+  - P2-2: `server/routes/inbox/team.js` — POST /conversations/:id/typing
+    - broadcast عبر SSE بدون كتابة DB (fire-and-forget)
+  - P2-2: `reply.js` — إرسال typing events
+    - `_sendTypingStart()` مرة واحدة عند البدء بالكتابة
+    - `_sendTypingStop()` تلقائياً بعد 3.5 ث بلا كتابة
+  - P2-2: `api.js` — team.sendTyping(convId, typing)
+  - CSS: `.iv4-typing-bar` + `.iv4-header-assign-btn` + `.iv4-agent-status-dot`
+  - Smoke test: HTTP 200 health ✔️
+- قرارات: لا جديد
+- آخر commit: b9d5118
+- المهمة القادمة: **P2-3** Collision Detection (`chat.js` + SSE)
+
+---
+
 ## جلسة 2026-05-03 17:39 UTC
 - الحالة: مكتملة
 - ما تم:

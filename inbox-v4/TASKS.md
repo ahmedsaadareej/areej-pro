@@ -34,7 +34,7 @@
 | # | المهمة | الملفات | الحالة |
 |---|--------|---------|--------|
 | P2-1 | Assignment + Auto-assign | `team.js` + backend `team.js` | ✅ مكتملة |
-| P2-2 | Agent Status (Online/Busy/Away/Offline) | `team.js` | ⬜ |
+| P2-2 | Agent Status (Online/Busy/Away/Offline) | `team.js` | ✅ مكتملة |
 | P2-3 | Collision Detection | `chat.js` + SSE | ⬜ |
 | P2-4 | @Mentions في الـ Notes | `reply.js` | ⬜ |
 | P2-5 | Conversation Transfer مع context | `team.js` | ⬜ |
@@ -116,4 +116,4 @@
 ---
 
 ## 🔴 المهمة القادمة
-**P2-2: Agent Status** — `public/dashboard/inbox-v4/team.js`
+**P2-3: Collision Detection** — `public/dashboard/inbox-v4/chat.js` + SSE
