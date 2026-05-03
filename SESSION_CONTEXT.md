@@ -1,3 +1,20 @@
+## Session 2026-05-03 (06:08 → 06:30 UTC) — مكتملة
+- الحالة: تم الإكمال (5 مهام — اكتملت الجلسة)
+- ما تم إنجازه:
+  - Catalog → فاتورة: زر إضافة + invoice picker + endpoint add-item (576a9c0)
+  - مراجعة كود بوابات الدفع + إصلاح 4 bugs:
+    Bug#1: webhook/fawaterk + webhook/paymob لم يكونا يستدعيان handlePaymentSuccess الكامل (خزنة+CRM+Inbox مش بتشتغل)
+    Bug#2: /pay/:token/result route مش موجود → redirect من البوابة يرجع 404
+    Bug#3: selectMethod() فيها 3 loops متكررة — الأولتان تُلغيان التحديد
+    Bug#4: الصفحة لا تتعامل مع ?status=paid في URL عند redirect
+- قرارات تقنية:
+  - webhook/fawaterk + paymob الآن يستدعيان handlePaymentSuccess() الكامل
+  - Paymob amount يُستخرج من amount_cents/100 وليس من link.amount فقط
+  - /pay/:token/result route يُسيرف نفس index.html
+  - pay/index.html يتحقق من ?status=paid/error/pending قبل تحميل API
+- آخر Commit: fa8c1a2
+- نقطة البداية القادمة: اختبار حقيقي لبوابات الدفع بـ test credentials (Paymob sandbox أو Fawaterk test) — يحتاج keys من أحمد
+
 ## Session 2026-05-03 (05:54 → 06:15 UTC) — مكتملة
 - الحالة: تم الإكمال (4 مهام من 5)
 - ما تم إنجازه:
