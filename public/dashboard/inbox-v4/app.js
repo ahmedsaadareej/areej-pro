@@ -216,6 +216,9 @@
     // Phase 3 — Labels + Tags
     if (typeof InboxLabels !== 'undefined') InboxLabels.init();  // P3-1 ✅
 
+    // Phase 5 — Context Panel
+    if (typeof InboxContext !== 'undefined') InboxContext.init(); // P5-1 ✅
+
     // expose showInboxToast globally (for team.js + other modules)
     window.showInboxToast = toast;
 

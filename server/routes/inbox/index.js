@@ -1,6 +1,6 @@
 /**
  * Inbox v4 Routes — /api/inbox/*
- * آخر تحديث: 2026-05-03 (P4-1 automation route)
+ * آخر تحديث: 2026-05-03 (P5-1 context route)
  *
  * مسجّل في app.js كـ:
  *   app.use('/api/inbox', require('./routes/inbox/index'))
@@ -46,6 +46,9 @@ router.use('/', require('./search'));
 
 // Phase 4 — Automation (P4-1 Keywords Auto-Reply)
 router.use('/', require('./automation'));
+
+// Phase 5 — Context Panel (P5-1 Customer Info + CRM Link)
+router.use('/', require('./context'));
 
 // Phase 3 cont. — Analytics + SLA (P3-6)
 router.use('/analytics', require('./analytics'));
