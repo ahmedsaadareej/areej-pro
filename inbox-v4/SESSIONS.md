@@ -1,3 +1,26 @@
+## جلسة 2026-05-03 22:52 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P7-4: `server/routes/inbox/analytics.js` — endpoint جديد
+    - `GET /analytics/sentiment` — تحليل مشاعر رسائل العملاء الواردة
+    - Batch processing: 30 رسالة/استدعاء → يوفر tokens
+    - Cache ذكي: يحفظ النتيجة في `metadata` الرسالة لتجنب إعادة الحساب
+    - يُعيد: summary (positive/neutral/negative + نسب) + daily trend + top 5 محادثات سلبية
+  - P7-4: `public/dashboard/inbox-v4/api.js` — `InboxAPI.analytics.sentiment()`
+  - P7-4: `public/dashboard/inbox-v4/analytics.js`
+    - Section "🧠 تحليل المشاعر" جديد في الـ Dashboard
+    - `_renderSentiment()` — KPI pills ثلاثية + شريط توزيع + SVG chart يومي مكدس + top negative list
+    - `_renderSentimentChart()` — Stacked Bar SVG (🟢 إيجابي / 🟡 محايد / 🔴 سلبي)
+    - النقر على محادثة سلبية يفتحها في الـ inbox مباشرة
+    - `_esc()` helper مضاف للـ analytics.js
+    - `sentimentRes` مضاف لـ `_loadAll()` parallel fetch
+  - `inbox.css`: ~120 سطر CSS (pills + stacked bar + chart + neg list + dark mode)
+- قرارات: لا جديد
+- آخر commit: 2bfc107
+- المهمة القادمة: **P7-5 Voice Note Transcript (Whisper)** أو **P8-2 WA Interactive Messages**
+
+---
+
 ## جلسة 2026-05-03 22:46 UTC
 - الحالة: مكتملة
 - ما تم:
