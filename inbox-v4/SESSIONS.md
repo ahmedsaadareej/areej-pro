@@ -3,6 +3,29 @@
 
 ---
 
+## جلسة 2026-05-03 20:22 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P3-1: `server/routes/inbox/labels.js` — backend كامل منفصل
+    - GET/POST/PUT/DELETE `/labels` مع SSE broadcast `labels_update`
+    - GET/POST/DELETE `/conversations/:id/labels` مع timeline log + SSE `conv_update`
+    - نقل الـ labels endpoints من `conversations.js` لـ `labels.js`
+  - P3-1: `public/dashboard/inbox-v4/labels.js` — frontend كامل
+    - `InboxLabels.init()` + `openConversation(convId, labels)`
+    - Label Manager Modal: إنشاء / تعديل / حذف labels مع 20 لون جاهز
+    - Label Picker في Chat Header: chips + dropdown + بحث
+    - SSE listener: `labels_update` + `conv_update` → تحديث فوري
+  - `api.js`: إضافة `labels.update()` + `labels.getConvLabels()`
+  - `app.js`: تفعيل `InboxLabels.init()`
+  - `chat.js`: إضافة `iv4-label-picker-mount` + استدعاء `InboxLabels.openConversation`
+  - `stream.js`: استقبال `labels_update` من SSE
+  - `inbox.css`: أكثر من 200 سطر CSS لـ label picker + manager + chips + dropdown
+- قرارات: لا جديد
+- آخر commit: be1d659
+- المهمة القادمة: **P3-2 Priority (Low/Normal/High/Urgent)** — `conv-list.js` + backend `conversations.js`
+
+---
+
 ## جلسة 2026-05-03 19:38 UTC
 - الحالة: مكتملة
 - ما تم:
