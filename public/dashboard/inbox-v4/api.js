@@ -210,8 +210,18 @@ const InboxAPI = (() => {
       return _post('/inbox/labels', { name, color });
     },
 
+    // P3-1: تعديل اسم أو لون label
+    update(labelId, name, color) {
+      return _put(`/inbox/labels/${labelId}`, { name, color });
+    },
+
     delete(labelId) {
       return _delete(`/inbox/labels/${labelId}`);
+    },
+
+    // P3-1: جلب labels محادثة معينة
+    getConvLabels(convId) {
+      return _get(`/inbox/conversations/${convId}/labels`);
     },
 
     addToConv(convId, labelId) {

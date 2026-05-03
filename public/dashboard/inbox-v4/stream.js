@@ -164,6 +164,14 @@ const InboxStream = (() => {
         _showMentionToast(data);
       }
     });
+
+    // ─── labels_update (تحديث labels — P3-1) ───
+    _es.addEventListener('labels_update', (e) => {
+      const data = _parse(e.data);
+      if (!data) return;
+      // أبلغ InboxLabels مباشرة
+      InboxStore.emit('sse:labels_update', data);
+    });
   }
 
   // ─── Disconnect ───────────────────────────────────────────────────────

@@ -139,6 +139,12 @@ const InboxChat = (() => {
 
     // رسم الـ header
     _renderHeader();
+
+    // P3-1: Label Picker — تمرير labels المحادثة
+    if (typeof InboxLabels !== 'undefined') {
+      const conv = InboxStore.state.activeConv;
+      InboxLabels.openConversation(convId, conv ? (conv.labels || []) : []);
+    }
   }
 
   // ─── جلب الرسائل ─────────────────────────────────────────────────────────
@@ -609,7 +615,8 @@ const InboxChat = (() => {
   <button class="iv4-header-btn iv4-header-btn--secondary" id="iv4-btn-reopen" title="إعادة فتح" ${status !== 'closed' ? 'hidden' : ''}>
     🔄 إعادة فتح
   </button>
-</div>`.trim();
+</div>
+<div id="iv4-label-picker-mount" class="iv4-label-picker-mount"></div>`.trim();
 
     // ربط زر التعيين (P2-2)
     const assignBtn = header.querySelector('#iv4-assign-agent-btn');

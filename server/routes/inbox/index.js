@@ -40,8 +40,8 @@ router.use('/', require('./messages'));
 // Phase 2 — Team Assignment
 router.use('/', require('./team'));
 
-// [Phase 3] Labels
-// router.use('/', require('./labels'));
+// Phase 3 — Labels
+router.use('/', require('./labels'));
 
 // [Phase 4] Automation
 // router.use('/', require('./automation'));
