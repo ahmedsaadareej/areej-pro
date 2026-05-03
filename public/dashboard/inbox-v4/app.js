@@ -239,6 +239,9 @@
     // Phase 7-1 — AI Features
     if (typeof InboxAI          !== 'undefined') InboxAI.init();           // P7-1 ✅
 
+    // Phase 8-2 — WA Interactive Messages
+    if (typeof InboxInteractive !== 'undefined') InboxInteractive.init();  // P8-2 ✅
+
     // expose showInboxToast globally (for team.js + other modules)
     window.showInboxToast = toast;
 

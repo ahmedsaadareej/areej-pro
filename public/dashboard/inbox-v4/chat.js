@@ -477,26 +477,59 @@ ${transcriptHtml}`.trim();
     let meta = {};
     try { meta = JSON.parse(msg.metadata || '{}'); } catch {}
 
-    const bodyText = meta.body?.text || msg.content || '';
-    const buttons  = meta.action?.buttons || [];
-    const rows     = meta.action?.sections?.flatMap(s => s.rows || []) || [];
+    // رد WA وارد (button_reply / list_reply)
+    const reply = meta.button_reply || meta.list_reply;
+    if (reply) {
+      return `
+<div class="iv4-msg-interactive iv4-msg-interactive--reply">
+  <span class="iv4-interactive-reply-icon">✓</span>
+  <span class="iv4-interactive-reply-text">${_escHtml(reply.title || reply.id || '')}</span>
+</div>`.trim();
+    }
 
-    const btnHTML = buttons.map(b =>
+    // رسالة تفاعلية صادرة
+    const iact = meta.interactive || {};
+    const bodyText = iact.body?.text || msg.content || '';
+    const header   = iact.header   || null;
+    const footer   = iact.footer   || null;
+    const buttons  = iact.action?.buttons || [];
+    const sections = iact.action?.sections || [];
+    const isList   = iact.type === 'list';
+
+    // Header HTML
+    let headerHtml = '';
+    if (header?.type === 'text' && header.text) {
+      headerHtml = `<div class="iv4-interactive-header">${_escHtml(header.text)}</div>`;
+    } else if (header?.type === 'image' && header.image?.link) {
+      headerHtml = `<img class="iv4-interactive-header-img" src="${_escHtml(header.image.link)}" alt="header" loading="lazy">`;
+    }
+
+    // Buttons HTML
+    const btnHTML = buttons.slice(0, 3).map(b =>
       `<div class="iv4-interactive-btn">${_escHtml(b.reply?.title || b.title || '')}</div>`
     ).join('');
 
-    const rowHTML = rows.map(r =>
-      `<div class="iv4-interactive-row">
-        <strong>${_escHtml(r.title || '')}</strong>
-        ${r.description ? `<span>${_escHtml(r.description)}</span>` : ''}
-      </div>`
-    ).join('');
+    // List sections HTML
+    const listHTML = isList ? sections.map(sec => {
+      const rowsHtml = (sec.rows || []).map(r =>
+        `<div class="iv4-interactive-row">
+          <span class="iv4-interactive-row-title">${_escHtml(r.title || '')}</span>
+          ${r.description ? `<span class="iv4-interactive-row-desc">${_escHtml(r.description)}</span>` : ''}
+        </div>`
+      ).join('');
+      return `<div class="iv4-interactive-section">
+        ${sec.title ? `<div class="iv4-interactive-section-title">${_escHtml(sec.title)}</div>` : ''}
+        ${rowsHtml}
+      </div>`;
+    }).join('') : '';
 
     return `
 <div class="iv4-msg-interactive">
+  ${headerHtml}
   <div class="iv4-msg-text">${_escHtml(bodyText)}</div>
+  ${footer?.text ? `<div class="iv4-interactive-footer">${_escHtml(footer.text)}</div>` : ''}
   ${btnHTML ? `<div class="iv4-interactive-btns">${btnHTML}</div>` : ''}
-  ${rowHTML ? `<div class="iv4-interactive-rows">${rowHTML}</div>` : ''}
+  ${listHTML ? `<div class="iv4-interactive-list">${listHTML}</div>` : ''}
 </div>`.trim();
   }
 

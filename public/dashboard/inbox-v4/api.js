@@ -205,6 +205,15 @@ const InboxAPI = (() => {
     transcript(convId, msgId) {
       return _post(`/inbox/conversations/${convId}/messages/${msgId}/transcript`, {});
     },
+
+    /**
+     * إرسال WA Interactive Message (Buttons أو List)
+     * @param {string|number} convId
+     * @param {object} opts - { type, header?, body, footer?, buttons[], sections[], button_label? }
+     */
+    sendInteractive(convId, opts) {
+      return _post(`/inbox/conversations/${convId}/messages/interactive`, opts);
+    },
   };
 
   // ─── Labels ───────────────────────────────────────────────────────────

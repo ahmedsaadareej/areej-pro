@@ -4,6 +4,7 @@
  *
  * Endpoints:
  *   POST /api/inbox/conversations/:id/messages/:msgId/transcript — تحويل voice note إلى نص (Whisper)
+ *   POST /api/inbox/conversations/:id/messages/interactive — WA Interactive Messages (Buttons/List) (P8-2)
  *   POST /api/inbox/conversations/:id/messages  — إرسال رسالة أو ملاحظة
  *   POST /api/inbox/conversations/:id/messages/media — رفع ميديا + إرسال
  *
@@ -825,6 +826,156 @@ function _extToMime(ext) {
   };
   return MAP[ext] || 'audio/ogg';
 }
+
+// ─── POST /conversations/:id/messages/interactive ────────────────────────────
+// إرسال WA Interactive Message (أزرار أو قائمة)
+// Body: { type: 'button'|'list', header?, body, footer?, buttons[], sections[] }
+router.post('/conversations/:id/messages/interactive', async (req, res) => {
+  const { id: convId } = req.params;
+
+  try {
+    const db   = req.db;
+    const conv = await _getConv(db, convId);
+    if (!conv) return res.status(404).json({ error: 'المحادثة غير موجودة' });
+    if (conv.status === 'closed') return res.status(400).json({ error: 'المحادثة مغلقة' });
+
+    if (conv.platform !== 'whatsapp_api') {
+      return res.status(400).json({ error: 'Interactive messages تعمل فقط مع WhatsApp API' });
+    }
+
+    const {
+      type    = 'button',   // 'button' | 'list'
+      header  = null,       // { type:'text'|'image', text?, media_url? }
+      body    = '',         // نص الرسالة (إلزامي)
+      footer  = null,       // نص اختياري
+      buttons = [],         // لـ type='button': [{ id, title }] (حتى 3)
+      sections = [],        // لـ type='list': [{ title, rows: [{ id, title, description? }] }]
+      button_label = 'اختر', // label زر الـ list
+    } = req.body;
+
+    // ── Validation ──────────────────────────────────────────────────────
+    if (!body.trim()) return res.status(400).json({ error: 'نص الرسالة مطلوب' });
+
+    if (type === 'button') {
+      if (!buttons.length || buttons.length > 3)
+        return res.status(400).json({ error: 'الأزرار: بين 1 و 3 أزرار' });
+    } else if (type === 'list') {
+      if (!sections.length)
+        return res.status(400).json({ error: 'القائمة: تحتاج section واحد على الأقل' });
+      const totalRows = sections.reduce((s, sec) => s + (sec.rows?.length || 0), 0);
+      if (totalRows < 1 || totalRows > 10)
+        return res.status(400).json({ error: 'إجمالي العناصر: بين 1 و 10' });
+    } else {
+      return res.status(400).json({ error: `نوع غير مدعوم: ${type}` });
+    }
+
+    // ── بناء WA Interactive Payload ───────────────────────────────────
+    const cfg = await _getChannelConfig(db, 'whatsapp_api');
+    if (!cfg || !cfg.access_token || !cfg.phone_number_id) {
+      return res.status(503).json({ error: 'WhatsApp API غير مُفعَّل' });
+    }
+
+    const waInteractive = { type };
+
+    // Header
+    if (header) {
+      if (header.type === 'text' && header.text) {
+        waInteractive.header = { type: 'text', text: header.text.slice(0, 60) };
+      } else if (header.type === 'image' && header.media_url) {
+        waInteractive.header = { type: 'image', image: { link: header.media_url } };
+      }
+    }
+
+    // Body (required)
+    waInteractive.body = { text: body.slice(0, 1024) };
+
+    // Footer
+    if (footer) waInteractive.footer = { text: String(footer).slice(0, 60) };
+
+    // Action
+    if (type === 'button') {
+      waInteractive.action = {
+        buttons: buttons.slice(0, 3).map((b, i) => ({
+          type:  'reply',
+          reply: { id: String(b.id || `btn_${i}`).slice(0, 256), title: String(b.title || '').slice(0, 20) },
+        })),
+      };
+    } else {
+      waInteractive.action = {
+        button: button_label.slice(0, 20),
+        sections: sections.map(sec => ({
+          title: String(sec.title || '').slice(0, 24),
+          rows:  (sec.rows || []).map(r => ({
+            id:          String(r.id || '').slice(0, 256),
+            title:       String(r.title || '').slice(0, 24),
+            ...(r.description ? { description: String(r.description).slice(0, 72) } : {}),
+          })),
+        })),
+      };
+    }
+
+    const waPayload = {
+      messaging_product: 'whatsapp',
+      to:          conv.contact_phone,
+      type:        'interactive',
+      interactive: waInteractive,
+    };
+
+    // ── إرسال عبر WA Graph API ───────────────────────────────────────
+    const apiUrl = `https://graph.facebook.com/v19.0/${cfg.phone_number_id}/messages`;
+    const waResp = await fetch(apiUrl, {
+      method:  'POST',
+      headers: { 'Authorization': `Bearer ${cfg.access_token}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify(waPayload),
+    });
+
+    const waJson = await waResp.json().catch(() => ({}));
+    if (!waResp.ok) {
+      const errMsg = waJson?.error?.message || `HTTP ${waResp.status}`;
+      return res.status(502).json({ error: `WA API: ${errMsg}` });
+    }
+
+    const externalId = waJson?.messages?.[0]?.id || null;
+
+    // ── حفظ الرسالة في الداتابيز ─────────────────────────────────
+    // نخزّن الـ interactive payload في metadata للعرض في الشاشة
+    const savedMsg = await _saveMessage(db, {
+      convId,
+      direction:   'outbound',
+      contentType: 'interactive',
+      content:     body.trim(),
+      agentId:     req.user.id,
+      agentName:   req.user.name || req.user.username || 'موظف',
+      platform:    'whatsapp_api',
+      status:      externalId ? 'sent' : 'pending',
+    });
+
+    // حفظ الـ interactive structure في metadata
+    await new Promise((resolve, reject) => {
+      db.run(
+        `UPDATE inbox_messages_v4 SET metadata = ?, external_id = ? WHERE id = ?`,
+        [JSON.stringify({ interactive: waInteractive }), externalId, savedMsg.id],
+        (err) => { if (err) return reject(err); resolve(); }
+      );
+    });
+
+    savedMsg.metadata = JSON.stringify({ interactive: waInteractive });
+
+    // SSE broadcast
+    try {
+      const { broadcast: sseBroadcast } = require('./stream');
+      sseBroadcast(req.user.id, { type: 'message_new', data: { ...savedMsg, conversation_id: convId } });
+    } catch (_) {}
+
+    await _touchConv(db, convId, `[رسالة تفاعلية]`, 'interactive', conv.status);
+
+    return res.json({ success: true, message: savedMsg });
+
+  } catch (e) {
+    console.error('[messages.js] interactive error:', e.message);
+    return res.status(500).json({ error: e.message || 'خطأ داخلي' });
+  }
+});
 
 module.exports = router;
 
