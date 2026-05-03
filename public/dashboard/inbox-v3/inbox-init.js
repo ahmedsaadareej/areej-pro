@@ -31,6 +31,9 @@ async function iv3Init() {
   // 4. بدء الـ Polling
   iv3StartPolling();
 
+  // 4b. بدء Relative Time Ticker (FEAT-3)
+  iv3StartRelativeTimeTicker();
+
   // 5. تحميل الـ Sound
   iv3InitSound();
 

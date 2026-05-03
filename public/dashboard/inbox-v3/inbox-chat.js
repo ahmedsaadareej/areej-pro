@@ -229,7 +229,7 @@ function iv3BuildMsgBubble(msg) {
         ${quoteHtml}
         ${content}
         <div class="iv3-msg-meta">
-          <span class="iv3-msg-time">${time}</span>
+          <span class="iv3-msg-time" title="${iv3RelativeTimeFull(msg.sent_at || msg.created_at)}">${time}</span>
           ${statusIcon}
         </div>
       </div>
@@ -599,7 +599,10 @@ function iv3DateLabel(ts) {
 
 function iv3FormatMsgTime(ts) {
   if (!ts) return '';
-  return new Date(ts).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+  const d = new Date(ts);
+  if (isNaN(d)) return '';
+  // الوقت في الرسائل يبقى HH:MM للدقة داخل المحادثة
+  return d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
 }
 
 function iv3StatusLabel(status) {

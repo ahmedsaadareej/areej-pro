@@ -247,7 +247,7 @@ function iv3BuildConvItem(c) {
       <div class="iv3-conv-body">
         <div class="iv3-conv-row1">
           ${iv3PlatBadge(c.platform)}<span class="iv3-conv-name">${iv3EscHtml(displayName || 'مجهول')}</span>
-          <span class="iv3-conv-time">${timeStr}</span>
+          <span class="iv3-conv-time" data-ts="${c.last_message_at || c.updated_at || ''}" title="${iv3RelativeTimeFull(c.last_message_at || c.updated_at)}">${timeStr}</span>
         </div>
         <div class="iv3-conv-row2">
           <span class="iv3-conv-preview">${lastMsg}</span>
@@ -384,16 +384,9 @@ function iv3AvatarColor(seed) {
   return colors[Math.abs(h) % colors.length];
 }
 
+// iv3FormatTime — تستخدم iv3RelativeTime من inbox-state.js
 function iv3FormatTime(ts) {
-  if (!ts) return '';
-  const d = new Date(ts);
-  const now = new Date();
-  const diff = (now - d) / 1000;
-  if (diff < 60)    return 'الآن';
-  if (diff < 3600)  return `${Math.floor(diff/60)}د`;
-  if (diff < 86400) return `${Math.floor(diff/3600)}س`;
-  if (diff < 604800) return `${Math.floor(diff/86400)}ي`;
-  return d.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' });
+  return iv3RelativeTime(ts);
 }
 
 function iv3TruncText(str, maxLen) {
