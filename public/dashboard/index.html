@@ -3429,184 +3429,205 @@
             <button id="wa-scenario-new"      onclick="waSetScenario('new')"      style="flex:1;padding:10px 6px;border-radius:8px;font-size:12px;font-weight:800;font-family:Cairo,sans-serif;cursor:pointer;border:2px solid #e5e7eb;background:#f9fafb;color:#374151">🆕 محتاج أنشئ رقم جديد</button>
           </div>
 
-          <!-- ── Block A: رقم موجود ── -->
+          <!-- ── Block A: عندي رقم WhatsApp Business API موجود ── -->
           <div id="wa-block-existing">
 
-            <!-- تحذير: لو مربوط بمنصة تانية -->
-            <div style="background:#fff7ed;border:1.5px solid #fdba74;border-radius:10px;padding:14px;margin-bottom:14px">
-              <div style="font-size:12px;font-weight:800;color:#9a3412;margin-bottom:8px">⚠️ لو رقمك مربوط بمنصة تانية (Respond.io / Wati / غيرها) — افصله الأول</div>
-              <div style="font-size:11px;color:#7c2d12;line-height:1.8">
-                <strong>الخطوات:</strong><br>
-                ① روح <a href="https://business.facebook.com" target="_blank" style="color:#9a3412;font-weight:700">Meta Business Suite</a> → من القائمة اليسرى اختار <strong>Settings (الإعدادات)</strong><br>
-                ② اضغط على <strong>Business Assets → WhatsApp Accounts</strong><br>
+            <!-- ماذا يعني "رقم API"؟ -->
+            <div style="background:#eff6ff;border:1.5px solid #93c5fd;border-radius:10px;padding:12px;margin-bottom:14px;font-size:11px;color:#1e40af;line-height:1.8">
+              <strong>📌 كيف تعرف إن رقمك هو "WhatsApp Business API"؟</strong><br>
+              لو رقمك مربوط بـ Respond.io أو Wati أو 360dialog أو أي منصة messaging — إذاً هو رقم API ✅<br>
+              لو الرقم عليه تطبيق WhatsApp شخصي أو WhatsApp Business العادي — إذاً مش API ❌ (استخدم الزر التاني)
+            </div>
+
+            <!-- تحذير الفصل لو مربوط بمنصة تانية -->
+            <div style="background:#fff7ed;border:1.5px solid #fdba74;border-radius:10px;padding:14px;margin-bottom:16px">
+              <div style="font-size:12px;font-weight:800;color:#9a3412;margin-bottom:8px">⚠️ الخطوة الأولى: افصل الرقم من المنصة القديمة (Respond / Wati / غيرها)</div>
+              <div style="font-size:11px;color:#7c2d12;line-height:2">
+                ① افتح <a href="https://business.facebook.com/settings/whatsapp-business-accounts" target="_blank" style="color:#9a3412;font-weight:700">business.facebook.com/settings</a><br>
+                ② من القائمة: <strong>Accounts → WhatsApp Accounts</strong><br>
                 ③ اختار حساب الواتساب بتاعك → اضغط <strong>Settings</strong><br>
-                ④ اختار <strong>WhatsApp Manager</strong> → من القائمة اليسرى <strong>Phone Numbers</strong><br>
-                ⑤ اضغط على الرقم → اختار <strong>Settings</strong> → ابحث عن <strong>"Connected App"</strong> أو <strong>"Assigned Partners"</strong><br>
-                ⑥ اضغط <strong>Remove</strong> أو <strong>Revoke Access</strong> بجوار المنصة القديمة<br>
-                ⑦ بعدها بدقائق، الرقم بيكون حر وتقدر تربطه هنا ✅
+                ④ من القائمة اليسرى اضغط <strong>WhatsApp Manager</strong> → ثم <strong>Phone Numbers</strong><br>
+                ⑤ اضغط على الرقم → ثم <strong>Settings</strong> (أيقونة الترس)<br>
+                ⑥ دوّر على <strong>"Assigned Partners"</strong> أو <strong>"Connected App"</strong> → اضغط <strong>Remove / Revoke</strong><br>
+                ⑦ انتظر 2-3 دقائق → الرقم بقى حر ✅
               </div>
             </div>
 
-            <!-- الخطوات -->
-            <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px;margin-bottom:16px">
-              <div style="font-size:13px;font-weight:800;color:#166534;margin-bottom:12px">🎯 خطوات الربط (3 خطوات بس)</div>
+            <!-- خطوات الربط -->
+            <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px;margin-bottom:4px">
+              <div style="font-size:13px;font-weight:800;color:#166534;margin-bottom:14px">🎯 خطوات الربط — 3 خطوات فقط</div>
 
               <!-- خطوة 1 -->
-              <div style="display:flex;gap:10px;margin-bottom:14px">
-                <div style="width:24px;height:24px;border-radius:50%;background:#16a34a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
-                <div>
-                  <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px">جيب الـ Phone Number ID</div>
-                  <div style="font-size:11px;color:#374151;line-height:1.8">
-                    ① افتح <a href="https://developers.facebook.com/apps" target="_blank" style="color:#1B5E30;font-weight:700">Meta for Developers</a> → اختار تطبيقك<br>
-                    ② من القائمة اليسرى: <strong>WhatsApp → API Setup</strong><br>
-                    ③ هتشوف قسم <strong>"Step 1: Select a phone number"</strong><br>
-                    ④ انسخ الرقم اللي جنبه <strong>"Phone number ID"</strong> — هو رقم طويل زي: 123456789012345
+              <div style="display:flex;gap:10px;margin-bottom:16px">
+                <div style="width:28px;height:28px;border-radius:50%;background:#16a34a;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:800;color:#111827;margin-bottom:6px">جيب الـ Phone Number ID</div>
+                  <div style="font-size:11px;color:#374151;line-height:2;background:#fff;border-radius:8px;padding:10px;border:1px solid #d1fae5">
+                    ① افتح <a href="https://business.facebook.com/settings/whatsapp-business-accounts" target="_blank" style="color:#1B5E30;font-weight:700">business.facebook.com/settings</a><br>
+                    ② من القائمة: <strong>Accounts → WhatsApp Accounts</strong><br>
+                    ③ اضغط على حساب الواتساب بتاعك<br>
+                    ④ من القائمة اليسرى اضغط <strong>WhatsApp Manager</strong> → ثم <strong>Phone Numbers</strong><br>
+                    ⑤ هتشوف جدول برقمك — انسخ الـ <strong>Phone Number ID</strong> (رقم طويل زي: 123456789012345)
                   </div>
-                  <a href="https://developers.facebook.com/apps" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-weight:700;color:#1B5E30;text-decoration:none;background:#dcfce7;padding:4px 10px;border-radius:6px;border:1px solid #86efac">🔗 افتح Meta Developers ↗</a>
+                  <a href="https://business.facebook.com/settings/whatsapp-business-accounts" target="_blank" style="display:inline-flex;align-items:center;gap:5px;margin-top:8px;font-size:11px;font-weight:700;color:#1B5E30;text-decoration:none;background:#dcfce7;padding:5px 12px;border-radius:6px;border:1px solid #86efac">🔗 افتح Meta Business Settings ↗</a>
                 </div>
               </div>
 
               <!-- خطوة 2 -->
-              <div style="display:flex;gap:10px;margin-bottom:14px">
-                <div style="width:24px;height:24px;border-radius:50%;background:#16a34a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
-                <div>
-                  <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px">جيب الـ Access Token الدائم</div>
-                  <div style="font-size:11px;color:#374151;line-height:1.8">
-                    ① افتح <a href="https://business.facebook.com/settings/system-users" target="_blank" style="color:#1B5E30;font-weight:700">Business Settings → System Users</a><br>
-                    ② اضغط <strong>Add</strong> → أنشئ System User باسم مثلاً "Areej Bot" — النوع: Employee<br>
-                    ③ بعد الإنشاء اضغط عليه → اضغط <strong>Generate New Token</strong><br>
-                    ④ اختار التطبيق بتاعك من القائمة<br>
-                    ⑤ من الـ Permissions اختار: <strong>whatsapp_business_messaging</strong> و <strong>whatsapp_business_management</strong><br>
-                    ⑥ اضغط <strong>Generate Token</strong> → انسخ الـ Token واحفظه فوراً (مش هيتعرضلك تاني)<br>
-                    ⑦ ارجع للـ System User → اضغط <strong>Add Assets</strong> → اختار WhatsApp Account → منح الصلاحية
+              <div style="display:flex;gap:10px;margin-bottom:16px">
+                <div style="width:28px;height:28px;border-radius:50%;background:#16a34a;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:800;color:#111827;margin-bottom:6px">أنشئ Token دائم (System User Token)</div>
+                  <div style="font-size:11px;color:#374151;line-height:2;background:#fff;border-radius:8px;padding:10px;border:1px solid #d1fae5">
+                    ① افتح <a href="https://business.facebook.com/settings/system-users" target="_blank" style="color:#1B5E30;font-weight:700">business.facebook.com/settings → System Users</a><br>
+                    ② اضغط <strong>Add</strong> → أدخل أي اسم (مثلاً: <em>Areej Bot</em>) → النوع: <strong>Employee</strong> → اضغط Create<br>
+                    ③ بعد الإنشاء اضغط على المستخدم الجديد → اضغط <strong>Add Assets</strong><br>
+                    ④ اختار <strong>WhatsApp Accounts</strong> من القائمة → اختار حسابك → فعّل <strong>Manage WhatsApp Business</strong> → اضغط Save<br>
+                    ⑤ ارجع للـ System User → اضغط <strong>Generate New Token</strong><br>
+                    ⑥ اختار أي تطبيق من القائمة (لو ما عندكش تطبيق، اضغط <a href="https://developers.facebook.com/apps/create/" target="_blank" style="color:#1B5E30;font-weight:700">أنشئ واحد بسيط من هنا ← مجاني وبيأخذ دقيقتين</a>)<br>
+                    ⑦ فعّل <strong>whatsapp_business_messaging</strong> + <strong>whatsapp_business_management</strong><br>
+                    ⑧ اضغط <strong>Generate Token</strong> → <span style="color:#dc2626;font-weight:700">انسخه فوراً واحفظه — مش هيتعرضلك تاني أبداً!</span>
                   </div>
-                  <a href="https://business.facebook.com/settings/system-users" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-weight:700;color:#1B5E30;text-decoration:none;background:#dcfce7;padding:4px 10px;border-radius:6px;border:1px solid #86efac">🔗 System Users ↗</a>
+                  <a href="https://business.facebook.com/settings/system-users" target="_blank" style="display:inline-flex;align-items:center;gap:5px;margin-top:8px;font-size:11px;font-weight:700;color:#1B5E30;text-decoration:none;background:#dcfce7;padding:5px 12px;border-radius:6px;border:1px solid #86efac">🔗 افتح System Users ↗</a>
                 </div>
               </div>
 
               <!-- خطوة 3 -->
               <div style="display:flex;gap:10px">
-                <div style="width:24px;height:24px;border-radius:50%;background:#16a34a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
-                <div>
-                  <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px">اضبط الـ Webhook (مرة واحدة بس)</div>
-                  <div style="font-size:11px;color:#374151;line-height:1.8">
-                    ① في Meta Developers → تطبيقك → من القائمة اليسرى: <strong>WhatsApp → Configuration</strong><br>
-                    ② في قسم <strong>Webhook</strong>: اضغط <strong>Edit</strong><br>
-                    ③ في حقل <strong>Callback URL</strong>: انسخ الـ URL من الأسفل وضعه هنا<br>
-                    ④ في حقل <strong>Verify token</strong>: انسخ الـ Verify Token من الأسفل وضعه هنا<br>
-                    ⑤ اضغط <strong>Verify and Save</strong> — المفروض يقولك ✅ Verified<br>
-                    ⑥ بعدها اضغط <strong>Manage</strong> بجوار الـ Webhook → فعّل <strong>messages</strong> فقط
+                <div style="width:28px;height:28px;border-radius:50%;background:#16a34a;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:800;color:#111827;margin-bottom:6px">اضبط الـ Webhook في Meta (مرة واحدة بس)</div>
+                  <div style="font-size:11px;color:#374151;line-height:2;background:#fff;border-radius:8px;padding:10px;border:1px solid #d1fae5">
+                    ① افتح <a href="https://developers.facebook.com/apps" target="_blank" style="color:#1B5E30;font-weight:700">developers.facebook.com/apps</a> → اختار تطبيقك<br>
+                    ② من القائمة اليسرى: <strong>WhatsApp → Configuration</strong><br>
+                    ③ اضغط <strong>Edit</strong> في قسم Webhook<br>
+                    ④ في <strong>Callback URL</strong>: انسخ الـ URL المكتوب في الأسفل وضعه هنا<br>
+                    ⑤ في <strong>Verify token</strong>: انسخ الـ Verify Token المكتوب في الأسفل وضعه هنا<br>
+                    ⑥ اضغط <strong>Verify and Save</strong> — هيقولك ✅ Verified<br>
+                    ⑦ اضغط <strong>Manage</strong> بجوار Webhook Subscriptions → فعّل <strong>messages</strong> فقط
                   </div>
                 </div>
               </div>
+
             </div>
           </div><!-- /wa-block-existing -->
 
-          <!-- ── Block B: رقم جديد ── -->
+          <!-- ── Block B: محتاج رقم جديد ── -->
           <div id="wa-block-new" style="display:none">
 
-            <div class="is-requirements-box">
-              <h4 style="margin:0 0 10px;font-size:13px;font-weight:800;color:#92400e">📋 اللي محتاجه قبل ما تبدأ</h4>
-              <ul style="margin:0;padding-right:18px;font-size:12px;color:#374151;line-height:2.2">
-                <li>✅ حساب <strong>Meta Business Manager</strong> موثّق باسمك أو اسم شركتك</li>
-                <li>✅ رقم هاتف <strong>غير مستخدم في أي واتساب</strong> — شخصي أو بيزنس — نهائياً</li>
-                <li>✅ بطاقة ائتمان أو Visa مربوطة بحساب Meta (للفوترة الشهرية)</li>
-                <li>✅ متصفح Chrome أو Edge (مش Firefox)</li>
-              </ul>
+            <!-- ماذا يعني "رقم جديد"؟ -->
+            <div style="background:#eff6ff;border:1.5px solid #93c5fd;border-radius:10px;padding:12px;margin-bottom:14px;font-size:11px;color:#1e40af;line-height:1.8">
+              <strong>📌 متى تختار هذا الخيار؟</strong><br>
+              لو عندك رقم هاتف مش مستخدم في أي واتساب، وعايز تربطه بـ WhatsApp Business API من الصفر ✅<br>
+              <span style="color:#dc2626;font-weight:700">⚠️ الرقم ده لازم يكون مش عليه واتساب خالص</span> — الرقم اللي عليه واتساب شخصي أو بيزنس مش هينفع مباشرة (لازم تحذف منه الواتساب الأول)
             </div>
 
-            <div style="margin-bottom:16px;margin-top:14px">
-              <h4 style="font-size:13px;font-weight:800;color:#111827;margin:0 0 14px">🪜 الخطوات من الأول للآخر</h4>
+            <!-- المتطلبات -->
+            <div style="background:#fff7ed;border:1.5px solid #fdba74;border-radius:10px;padding:14px;margin-bottom:16px">
+              <div style="font-size:12px;font-weight:800;color:#92400e;margin-bottom:8px">📋 اللي محتاجه قبل ما تبدأ</div>
+              <div style="font-size:11px;color:#7c2d12;line-height:2">
+                ✅ حساب <strong>Meta Business Manager</strong> — سجّل من <a href="https://business.facebook.com" target="_blank" style="color:#92400e;font-weight:700">business.facebook.com</a> لو مش عندك<br>
+                ✅ رقم هاتف <strong>غير مستخدم في أي واتساب</strong> نهائياً (شخصي أو بيزنس)<br>
+                ✅ بطاقة بنكية (Visa / Mastercard) مربوطة بحساب Meta للفوترة<br>
+                ✅ متصفح Chrome أو Edge (مش Firefox)
+              </div>
+            </div>
+
+            <!-- خطوات إنشاء رقم جديد -->
+            <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px;margin-bottom:4px">
+              <div style="font-size:13px;font-weight:800;color:#166534;margin-bottom:14px">🪜 خطوات إنشاء رقم جديد من الصفر</div>
 
               <!-- خطوة 1 -->
               <div style="display:flex;gap:10px;margin-bottom:16px">
-                <div style="width:24px;height:24px;border-radius:50%;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
-                <div>
-                  <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px">أنشئ تطبيق على Meta Developers</div>
-                  <div style="font-size:11px;color:#4b5563;line-height:1.8">
-                    ① افتح <a href="https://developers.facebook.com/apps/create/" target="_blank" style="color:#1B5E30;font-weight:700">developers.facebook.com</a> → اضغط <strong>My Apps</strong> في الأعلى → اضغط <strong>Create App</strong><br>
+                <div style="width:28px;height:28px;border-radius:50%;background:#1B5E30;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:800;color:#111827;margin-bottom:6px">أنشئ تطبيق على Meta Developers</div>
+                  <div style="font-size:11px;color:#4b5563;line-height:2;background:#fff;border-radius:8px;padding:10px;border:1px solid #d1fae5">
+                    ① افتح <a href="https://developers.facebook.com/apps/create/" target="_blank" style="color:#1B5E30;font-weight:700">developers.facebook.com/apps/create</a><br>
                     ② اختار <strong>Other</strong> → اضغط Next → اختار <strong>Business</strong> → اضغط Next<br>
-                    ③ أدخل اسم للتطبيق (مثلاً: Areej WhatsApp) → اختار Business Account → اضغط <strong>Create App</strong><br>
-                    ④ هيطلب منك تأكيد كلمة السر
+                    ③ أدخل اسم (مثلاً: <em>Areej WhatsApp</em>) → اختار Business Account → اضغط <strong>Create App</strong>
                   </div>
-                  <a href="https://developers.facebook.com/apps/create/" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-weight:700;color:#1B5E30;text-decoration:none;background:#f0fdf4;padding:4px 10px;border-radius:6px;border:1px solid #bbf7d0">🔗 فتح Meta Developers ↗</a>
+                  <a href="https://developers.facebook.com/apps/create/" target="_blank" style="display:inline-flex;align-items:center;gap:5px;margin-top:8px;font-size:11px;font-weight:700;color:#1B5E30;text-decoration:none;background:#dcfce7;padding:5px 12px;border-radius:6px;border:1px solid #86efac">🔗 إنشاء تطبيق جديد ↗</a>
                 </div>
               </div>
 
               <!-- خطوة 2 -->
               <div style="display:flex;gap:10px;margin-bottom:16px">
-                <div style="width:24px;height:24px;border-radius:50%;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
-                <div>
-                  <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px">أضف منتج WhatsApp للتطبيق</div>
-                  <div style="font-size:11px;color:#4b5563;line-height:1.8">
-                    ① بعد إنشاء التطبيق هتشوف صفحة "Add products to your app"<br>
+                <div style="width:28px;height:28px;border-radius:50%;background:#1B5E30;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:800;color:#111827;margin-bottom:6px">أضف منتج WhatsApp للتطبيق</div>
+                  <div style="font-size:11px;color:#4b5563;line-height:2;background:#fff;border-radius:8px;padding:10px;border:1px solid #d1fae5">
+                    ① بعد إنشاء التطبيق هتشوف صفحة <strong>"Add products to your app"</strong><br>
                     ② ابحث عن <strong>WhatsApp</strong> في القائمة → اضغط <strong>Set up</strong><br>
-                    ③ اختار أو أنشئ <strong>Meta Business Account</strong> → اضغط Continue<br>
-                    ④ هتتوجّه لصفحة <strong>WhatsApp Getting Started</strong>
+                    ③ اختار الـ <strong>Meta Business Account</strong> بتاعك → اضغط Continue<br>
+                    ④ هتتوجّه لصفحة <strong>WhatsApp → Getting Started</strong> تلقائياً
                   </div>
                 </div>
               </div>
 
               <!-- خطوة 3 -->
               <div style="display:flex;gap:10px;margin-bottom:16px">
-                <div style="width:24px;height:24px;border-radius:50%;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
-                <div>
-                  <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px">أضف رقم هاتف حقيقي</div>
-                  <div style="font-size:11px;color:#4b5563;line-height:1.8">
+                <div style="width:28px;height:28px;border-radius:50%;background:#1B5E30;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:800;color:#111827;margin-bottom:6px">أضف رقم الهاتف</div>
+                  <div style="font-size:11px;color:#4b5563;line-height:2;background:#fff;border-radius:8px;padding:10px;border:1px solid #d1fae5">
                     ① في صفحة Getting Started → اضغط <strong>Add phone number</strong><br>
-                    ② أدخل اسم شركتك واسم التصنيف<br>
-                    ③ أدخل رقم الهاتف الجديد → اختار طريقة التحقق (SMS أو مكالمة)<br>
-                    ④ أدخل الكود اللي وصلك → اضغط Next<br>
-                    ⑤ انتظر حتى يظهر الرقم في القائمة بحالة <strong>Connected</strong>
+                    ② أدخل اسم شركتك → اختار تصنيف النشاط<br>
+                    ③ أدخل رقم الهاتف → اختار طريقة التحقق (SMS أو مكالمة صوتية)<br>
+                    ④ أدخل الكود الذي وصلك → اضغط Next<br>
+                    ⑤ انتظر حتى يظهر الرقم بحالة <strong>Connected ✅</strong>
                   </div>
                 </div>
               </div>
 
               <!-- خطوة 4 -->
               <div style="display:flex;gap:10px;margin-bottom:16px">
-                <div style="width:24px;height:24px;border-radius:50%;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>
-                <div>
-                  <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px">جيب الـ Phone Number ID والـ WABA ID</div>
-                  <div style="font-size:11px;color:#4b5563;line-height:1.8">
-                    ① في صفحة <strong>WhatsApp → API Setup</strong><br>
-                    ② هتشوف قسم "Step 1": بجوار رقمك يظهر الـ <strong>Phone number ID</strong> — انسخه<br>
-                    ③ فوقه بيظهر الـ <strong>WhatsApp Business Account ID</strong> — انسخه كمان
+                <div style="width:28px;height:28px;border-radius:50%;background:#1B5E30;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:800;color:#111827;margin-bottom:6px">جيب الـ Phone Number ID والـ WABA ID</div>
+                  <div style="font-size:11px;color:#4b5563;line-height:2;background:#fff;border-radius:8px;padding:10px;border:1px solid #d1fae5">
+                    ① في نفس الصفحة (WhatsApp → API Setup)<br>
+                    ② بجوار رقمك هتشوف <strong>Phone number ID</strong> — انسخه<br>
+                    ③ فوقه هتشوف <strong>WhatsApp Business Account ID</strong> — انسخه كمان
                   </div>
                 </div>
               </div>
 
               <!-- خطوة 5 -->
               <div style="display:flex;gap:10px;margin-bottom:16px">
-                <div style="width:24px;height:24px;border-radius:50%;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">5</div>
-                <div>
-                  <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px">أنشئ Access Token دائم</div>
-                  <div style="font-size:11px;color:#4b5563;line-height:1.8">
-                    ① افتح <a href="https://business.facebook.com/settings/system-users" target="_blank" style="color:#1B5E30;font-weight:700">Business Settings → System Users</a><br>
-                    ② اضغط <strong>Add</strong> → أنشئ System User باسم "Areej Bot" — النوع: Employee<br>
-                    ③ اضغط على المستخدم الجديد → اضغط <strong>Generate New Token</strong><br>
-                    ④ اختار تطبيقك → فعّل: <strong>whatsapp_business_messaging</strong> و <strong>whatsapp_business_management</strong><br>
-                    ⑤ اضغط <strong>Generate Token</strong> → انسخ الـ Token واحفظه (مش هيتعرضلك تاني!)<br>
-                    ⑥ ارجع للـ System User → <strong>Add Assets</strong> → WhatsApp Account → منح الصلاحية
+                <div style="width:28px;height:28px;border-radius:50%;background:#1B5E30;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">5</div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:800;color:#111827;margin-bottom:6px">أنشئ Token دائم (System User Token)</div>
+                  <div style="font-size:11px;color:#4b5563;line-height:2;background:#fff;border-radius:8px;padding:10px;border:1px solid #d1fae5">
+                    ① افتح <a href="https://business.facebook.com/settings/system-users" target="_blank" style="color:#1B5E30;font-weight:700">business.facebook.com/settings → System Users</a><br>
+                    ② اضغط <strong>Add</strong> → أدخل اسم (مثلاً: <em>Areej Bot</em>) → النوع: <strong>Employee</strong> → Create<br>
+                    ③ اضغط على المستخدم الجديد → اضغط <strong>Add Assets</strong><br>
+                    ④ اختار <strong>WhatsApp Accounts</strong> → اختار حسابك → فعّل <strong>Manage WhatsApp Business</strong> → Save<br>
+                    ⑤ ارجع للـ System User → اضغط <strong>Generate New Token</strong><br>
+                    ⑥ اختار التطبيق اللي أنشأته للتو<br>
+                    ⑦ فعّل: <strong>whatsapp_business_messaging</strong> + <strong>whatsapp_business_management</strong><br>
+                    ⑧ اضغط <strong>Generate Token</strong> → <span style="color:#dc2626;font-weight:700">انسخه فوراً واحفظه — مش هيتعرضلك تاني!</span>
                   </div>
-                  <a href="https://business.facebook.com/settings/system-users" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-weight:700;color:#1B5E30;text-decoration:none;background:#f0fdf4;padding:4px 10px;border-radius:6px;border:1px solid #bbf7d0">🔗 System Users ↗</a>
+                  <a href="https://business.facebook.com/settings/system-users" target="_blank" style="display:inline-flex;align-items:center;gap:5px;margin-top:8px;font-size:11px;font-weight:700;color:#1B5E30;text-decoration:none;background:#dcfce7;padding:5px 12px;border-radius:6px;border:1px solid #86efac">🔗 System Users ↗</a>
                 </div>
               </div>
 
               <!-- خطوة 6 -->
               <div style="display:flex;gap:10px">
-                <div style="width:24px;height:24px;border-radius:50%;background:#1B5E30;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">6</div>
-                <div>
-                  <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px">اضبط الـ Webhook</div>
-                  <div style="font-size:11px;color:#4b5563;line-height:1.8">
-                    ① في Meta Developers → تطبيقك → <strong>WhatsApp → Configuration</strong><br>
-                    ② في قسم Webhook: اضغط <strong>Edit</strong><br>
-                    ③ في <strong>Callback URL</strong>: انسخ الـ URL من الأسفل وضعه<br>
-                    ④ في <strong>Verify token</strong>: انسخ الـ Verify Token من الأسفل وضعه<br>
+                <div style="width:28px;height:28px;border-radius:50%;background:#1B5E30;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">6</div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:800;color:#111827;margin-bottom:6px">اضبط الـ Webhook</div>
+                  <div style="font-size:11px;color:#4b5563;line-height:2;background:#fff;border-radius:8px;padding:10px;border:1px solid #d1fae5">
+                    ① في Meta Developers → تطبيقك → من القائمة اليسرى: <strong>WhatsApp → Configuration</strong><br>
+                    ② اضغط <strong>Edit</strong> في قسم Webhook<br>
+                    ③ في <strong>Callback URL</strong>: انسخ الـ URL المكتوب في الأسفل وضعه هنا<br>
+                    ④ في <strong>Verify token</strong>: انسخ الـ Verify Token المكتوب في الأسفل وضعه هنا<br>
                     ⑤ اضغط <strong>Verify and Save</strong> — لازم يقولك ✅ Verified<br>
-                    ⑥ اضغط <strong>Manage</strong> بجوار الـ Webhook → فعّل <strong>messages</strong>
+                    ⑥ اضغط <strong>Manage</strong> بجوار Webhook Subscriptions → فعّل <strong>messages</strong> فقط → Save
                   </div>
                 </div>
               </div>
+
             </div>
           </div><!-- /wa-block-new -->
 
