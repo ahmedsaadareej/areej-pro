@@ -404,6 +404,18 @@ router.post('/whatsapp/:userId', express.json(), async (req, res) => {
           }
           console.log('[WA Webhook POST] saved msg convId=' + (conv && conv.id) + ' from=' + senderId + ' content=' + content);
 
+          // P4-3 Welcome + Away Engine
+          try {
+            const { processWelcomeAway } = require('./routes/inbox/automation');
+            const convV4wa = db.prepare(
+              "SELECT * FROM inbox_conversations_v4 WHERE platform = 'whatsapp' AND sender_phone = ? LIMIT 1"
+            ).get(senderId);
+            if (convV4wa) {
+              const isNew = !existingConv; // كان جديد قبل upsert
+              processWelcomeAway(db, convV4wa, isNew, userId).catch(() => {});
+            }
+          } catch (_waErr) { /* تجاهل */ }
+
           // P4-2 Chatbot Engine — تشغيل محرك الـ chatbot على الرسالة الواردة (v4)
           try {
             const { processChatbot } = require('./routes/inbox/chatbot');

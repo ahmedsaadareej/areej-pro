@@ -472,5 +472,184 @@ function _formatRule(r) {
 
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
-module.exports        = router;
-module.exports.processAutoReply = processAutoReply;
+
+// ══════════════════════════════════════════════════════════════════════════════
+// P4-3 Welcome + Away Messages
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * _ensureWelcomeAway — تأكد وجود صف الـ tenant أو أنشئ واحداً افتراضياً
+ */
+function _ensureWelcomeAway(db, tenantId) {
+  db.prepare(`
+    INSERT OR IGNORE INTO inbox_welcome_away_v4 (tenant_id)
+    VALUES (?)
+  `).run(tenantId);
+  return db.prepare('SELECT * FROM inbox_welcome_away_v4 WHERE tenant_id = ?').get(tenantId);
+}
+
+function _fmtWA(r) {
+  if (!r) return null;
+  return {
+    ...r,
+    welcome_active : r.welcome_active === 1,
+    away_active    : r.away_active    === 1,
+    work_days      : _safeParse(r.work_days, [1,2,3,4,5]),
+  };
+}
+
+// GET /api/inbox/automation/welcome-away
+router.get('/automation/welcome-away', (req, res) => {
+  try {
+    const row = _ensureWelcomeAway(req.db, req.user.id);
+    res.json({ ok: true, settings: _fmtWA(row) });
+  } catch (err) {
+    console.error('[automation] get welcome-away:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/inbox/automation/welcome-away
+router.put('/automation/welcome-away', (req, res) => {
+  try {
+    _ensureWelcomeAway(req.db, req.user.id);
+
+    const {
+      welcome_active, welcome_message,
+      away_active, away_message,
+      away_start, away_end,
+      timezone, work_days, away_mode,
+    } = req.body;
+
+    const sets   = [];
+    const params = [];
+
+    if (welcome_active  !== undefined) { sets.push('welcome_active = ?');  params.push(welcome_active  ? 1 : 0); }
+    if (welcome_message !== undefined) { sets.push('welcome_message = ?'); params.push(welcome_message ?? ''); }
+    if (away_active     !== undefined) { sets.push('away_active = ?');     params.push(away_active     ? 1 : 0); }
+    if (away_message    !== undefined) { sets.push('away_message = ?');    params.push(away_message    ?? ''); }
+    if (away_start      !== undefined) { sets.push('away_start = ?');      params.push(away_start      ?? '22:00'); }
+    if (away_end        !== undefined) { sets.push('away_end = ?');        params.push(away_end        ?? '09:00'); }
+    if (timezone        !== undefined) { sets.push('timezone = ?');        params.push(timezone        ?? 'Africa/Cairo'); }
+    if (work_days       !== undefined) { sets.push('work_days = ?');       params.push(JSON.stringify(work_days)); }
+    if (away_mode       !== undefined) { sets.push('away_mode = ?');       params.push(away_mode       ?? 'schedule'); }
+
+    if (!sets.length) return res.json({ ok: true, changed: false });
+
+    sets.push('updated_at = unixepoch()');
+    params.push(req.user.id);
+
+    req.db.prepare(`
+      UPDATE inbox_welcome_away_v4
+      SET ${sets.join(', ')}
+      WHERE tenant_id = ?
+    `).run(...params);
+
+    const updated = _fmtWA(req.db.prepare('SELECT * FROM inbox_welcome_away_v4 WHERE tenant_id = ?').get(req.user.id));
+    res.json({ ok: true, settings: updated });
+  } catch (err) {
+    console.error('[automation] put welcome-away:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * processWelcomeAway — يُشغَّل عند بدء محادثة جديدة (isNew=true) أو رسالة واردة
+ * @param {object}  db
+ * @param {object}  conv      — محادثة inbox_conversations_v4
+ * @param {boolean} isNew     — true لو المحادثة أُنشئت للتو → يفعّل Welcome
+ * @param {number}  tenantId
+ * @returns {boolean} true لو أرسل رداً
+ */
+async function processWelcomeAway(db, conv, isNew, tenantId) {
+  try {
+    const cfg = db.prepare('SELECT * FROM inbox_welcome_away_v4 WHERE tenant_id = ?').get(tenantId);
+    if (!cfg) return false;
+
+    const dispatch = _getDispatch();
+    if (!dispatch) return false;
+
+    // ── Welcome
+    if (isNew && cfg.welcome_active && cfg.welcome_message) {
+      await dispatch(db, conv, {
+        id           : require('crypto').randomUUID(),
+        direction    : 'outbound',
+        message_type : 'text',
+        content      : cfg.welcome_message,
+        sender_name  : 'Bot',
+        sent_at      : Date.now(),
+      });
+      return true;
+    }
+
+    // ── Away
+    if (!isNew && cfg.away_active && cfg.away_message) {
+      if (_isAwayNow(cfg)) {
+        await dispatch(db, conv, {
+          id           : require('crypto').randomUUID(),
+          direction    : 'outbound',
+          message_type : 'text',
+          content      : cfg.away_message,
+          sender_name  : 'Bot',
+          sent_at      : Date.now(),
+        });
+        return true;
+      }
+    }
+
+    return false;
+  } catch (err) {
+    console.error('[automation] processWelcomeAway:', err.message);
+    return false;
+  }
+}
+
+/**
+ * _isAwayNow — تحقق إذا كان الوقت الحالي خارج ساعات العمل
+ */
+function _isAwayNow(cfg) {
+  try {
+    const tz       = cfg.timezone || 'Africa/Cairo';
+    const workDays = _safeParse(cfg.work_days, [1,2,3,4,5]);
+    const mode     = cfg.away_mode || 'schedule';
+
+    if (mode === 'always') return true;
+
+    const now      = new Date();
+    const localStr = now.toLocaleString('en-US', {
+      timeZone: tz, hour12: false,
+      hour: '2-digit', minute: '2-digit', weekday: 'short',
+    });
+    // تنسيق: "Mon, 14:30" أو "Mon 14:30"
+    const cleaned  = localStr.replace(',', '');
+    const parts    = cleaned.trim().split(/\s+/);
+    const dayName  = parts[0];
+    const timePart = parts[1] || '00:00';
+    const [curH, curM] = timePart.split(':').map(Number);
+    const curMins  = curH * 60 + curM;
+
+    const DAY_MAP  = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
+    const dayNum   = DAY_MAP[dayName] ?? now.getDay();
+
+    const isWorkDay = workDays.includes(dayNum);
+
+    const [startH, startM] = (cfg.away_start || '22:00').split(':').map(Number);
+    const [endH,   endM  ] = (cfg.away_end   || '09:00').split(':').map(Number);
+    const startMins = startH * 60 + startM;
+    const endMins   = endH   * 60 + endM;
+
+    // overnight: away_start > away_end مثل 22:00 → 09:00
+    const isInAwayTime = startMins > endMins
+      ? (curMins >= startMins || curMins < endMins)
+      : (curMins >= startMins && curMins < endMins);
+
+    return !isWorkDay || isInAwayTime;
+  } catch (_) {
+    return false;
+  }
+}
+
+
+module.exports                    = router;
+module.exports.processAutoReply   = processAutoReply;
+module.exports.processWelcomeAway = processWelcomeAway;

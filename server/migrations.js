@@ -438,6 +438,24 @@ const TENANT_MIGRATIONS = [
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_chatbot_sessions_v4_conv ON inbox_chatbot_sessions_v4(conversation_id)`,
   ]},
 
+  // v27: inbox_welcome_away_v4 (P4-3 Welcome + Away Messages)
+  { version: 27, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_welcome_away_v4 (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id           INTEGER NOT NULL UNIQUE,
+      welcome_active      INTEGER NOT NULL DEFAULT 0,
+      welcome_message     TEXT    NOT NULL DEFAULT '',
+      away_active         INTEGER NOT NULL DEFAULT 0,
+      away_message        TEXT    NOT NULL DEFAULT '',
+      away_start          TEXT    NOT NULL DEFAULT '22:00',
+      away_end            TEXT    NOT NULL DEFAULT '09:00',
+      timezone            TEXT    NOT NULL DEFAULT 'Africa/Cairo',
+      work_days           TEXT    NOT NULL DEFAULT '[1,2,3,4,5]',
+      away_mode           TEXT    NOT NULL DEFAULT 'schedule',
+      updated_at          INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+  ]},
+
   // أضف migrations جديدة هنا دايماً — لا تعدّل القديمة أبداً
 ];
 

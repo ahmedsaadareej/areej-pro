@@ -503,6 +503,13 @@ const InboxAPI = (() => {
   };
 
 
+
+  // ─── Welcome + Away (P4-3) ────────────────────────────────────────────
+  const welcomeAway = {
+    get    : ()     => _get('/inbox/automation/welcome-away'),
+    update : (data) => _put('/inbox/automation/welcome-away', data),
+  };
+
   // ─── Chatbot Flows (P4-2) ──────────────────────────────────────────────
   const chatbot = {
     list       : ()          => _get('/inbox/chatbot/flows'),
@@ -536,6 +543,7 @@ const InboxAPI = (() => {
     newConversation,
     context,
     chatbot,
+    welcomeAway,
     // expose للـ debugging
     _fetch,
     _get,
