@@ -3,6 +3,124 @@
 
 ---
 
+## جلسة 2026-05-03 21:21 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P5-2: `public/dashboard/inbox-v4/context.js` — تحسين كامل للـ tabs
+    - Pagination على Invoices + Orders + PayLinks (10 عناصر/صفحة)
+    - فلتر حالة على الفواتير (الكل/مدفوعة/مرسلة/مسودة/ملغاة) + الطلبات
+    - CLV Mini Summary أعلى tab الفواتير (مدفوع + عدد + متوسط)
+    - تب CLV كامل: grid بطاقات 6 إحصائيات + progress bar التحويل + رسم شهري mini bar chart
+  - P5-3: Quick Actions مكتمل
+    - زر "+ فاتورة" في tab الفواتير → modal بسيط (مبلغ + وصف) → API → reload + toast
+    - زر "+ رابط دفع" في tab الدفع → modal → API → reload + toast
+    - زر "📋 نسخ" لكل رابط دفع نشط → clipboard copy
+    - زر "📤 إرسال" لكل رابط دفع نشط → يُدرج النص في reply box
+  - `inbox.css`: ~210 سطر CSS جديد
+    - toolbar + filter pills + clv-mini + pager + pay-actions
+    - CLV grid + progress bar + bar chart
+    - Quick Action modal + overlay + toast
+    - dark mode كامل
+- قرارات: لا جديد
+- آخر commit: 9cfe934
+- المهمة القادمة: **P5-4 Internal Notes** — `context.js` أو **P5-5 Conversation Timeline** — `context.js`
+
+---
+
+## جلسة 2026-05-03 21:01 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P5-1: `server/routes/inbox/context.js` — جديد — 3 endpoints
+    - `GET /conversations/:id/context`: بيانات العميل + فواتير + طلبات + روابط دفع + CLV
+    - ربط تلقائي بالهاتف لو كان العميل غير مربوط
+    - `POST /conversations/:id/context/link`: ربط/إلغاء ربط CRM + timeline log + SSE
+    - `GET /conversations/:id/context/search`: بحث في crm_contacts (10 نتائج)
+  - P5-1: `public/dashboard/inbox-v4/context.js` — frontend كامل
+    - تب Contact: avatar + بيانات + CLV stats row + fields + بحث CRM + فتح صفحة CRM
+    - تب Invoices: آخر 5 فواتير مع الحالة + رابط صفحة الفواتير
+    - تب Orders: آخر 5 طلبات + tracking_no + رابط صفحة الطلبات
+    - تب Pay: روابط الدفع
+    - Auto-reload عند فتح محادثة جديدة
+    - بحث autocomplete للربط اليدوي
+  - `server/routes/inbox/index.js`: تسجيل context route
+  - `index.html`: تفعيل context.js
+  - `app.js`: `InboxContext.init()`
+  - `inbox.css`: ~180 سطر CSS (كل مكونات البانل + dark mode)
+- قرارات: لا جديد
+- آخر commit: 3bd636f
+- المهمة القادمة: **P5-2 Order/Invoice History + CLV** — `context.js` + backend أو **P5-3 Quick Actions**
+
+---
+
+## جلسة 2026-05-03 20:56 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P4-1: `server/routes/inbox/automation.js` — جديد بالكامل
+    - 6 Endpoints: GET/POST/PUT/DELETE keywords + toggle + reorder
+    - POST `/automation/test`: اختبار قاعدة على نص بدون إرسال
+    - `processAutoReply(db, conv, text, tenantId)`: المحرك المركزي — يُستدعى من webhook عند استقبال رسالة واردة
+    - 4 أنماط مطابقة: exact / contains / starts / regex
+    - دعم تأخير `reply_delay_sec` + `apply_once_per_conv` + تصفية حسب المنصة `platforms`
+    - SSE broadcast عند كل رد تلقائي
+    - أولوية `priority_order` + `reorder` endpoint
+  - `server/routes/inbox/index.js`: تفعيل automation route
+  - `server/routes/inbox/messages.js`: تصدير `dispatchOutbound` لاستخدام automation.js
+- قرارات: لا جديد
+- آخر commit: f46c564
+- المهمة القادمة: **P4-2 Chatbot Flows** — `settings.js` + backend أو **P5-1 Customer Info + CRM Link** — `context.js`
+
+---
+
+## جلسة 2026-05-03 20:51 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P3-6: `server/routes/inbox/conversations.js` — SLA helpers
+    - `SLA_THRESHOLDS_SEC`: حدود الوقت حسب الأولوية (urgent 15د / high 1س / normal 4س / low 24س)
+    - `_computeSLA(conv)`: حساب first_response_status + resolution_status + نسب الوقت المستهلك
+    - `recordFirstResponse(db, convId, sentAt)`: تسجيل أول رد صادر (no-op لو محدد مسبقاً)
+    - `GET /conversations/:id/sla`: SLA لمحادثة واحدة
+    - `POST /conversations/:id/sla/backfill`: إعادة حساب من الرسائل الفعلية
+    - `module.exports`: تصدير `recordFirstResponse` + `computeSLA` + `SLA_THRESHOLDS_SEC`
+  - P3-6: `server/routes/inbox/messages.js` — hook SLA تلقائي
+    - `recordFirstResponse` يُستدعى بعد نجاح إرسال أي رسالة صادرة (outbound غير failed)
+  - P3-6: `server/routes/inbox/analytics.js` — جديد بالكامل
+    - `GET /analytics/overview`: أرقام عامة (inbox health)
+    - `GET /analytics/sla`: نسب الالتزام + متوسطات + توزيع حسب الأولوية
+    - `GET /analytics/agents`: أداء الموظفين (ردود + وقت استجابة + إغلاق + CSAT)
+    - `GET /analytics/platforms`: توزيع المحادثات على المنصات
+  - `server/routes/inbox/index.js`: تسجيل analytics route على `/analytics`
+- قرارات: لا جديد
+- آخر commit: fc082db
+- المهمة القادمة: **P4-1 Keywords Auto-Reply** — backend `server/routes/inbox/automation.js`
+
+---
+
+## جلسة 2026-05-03 20:43 UTC
+- الحالة: مكتملة
+- ما تم:
+  - P3-5: `server/routes/inbox/search.js` — backend كامل
+    - `GET /search`: بحث quick (اسم + هاتف + آخر رسالة) + deep (كل نص الرسائل)
+    - `GET /search/suggest`: autocomplete أسماء وأرقام العملاء
+    - `_highlight()`: تشغيل snippet مع تمييز النص المطابق
+    - scope check للصلاحيات (owner/admin يشوف الكل — موظف عادي = محادثاته فقط)
+  - P3-5: `public/dashboard/inbox-v4/search.js` — frontend كامل
+    - Quick Search: إدخال debounce 300ms + suggest dropdown مع تنقل (لوحة مفاتيح + ماوس)
+    - Deep Search: overlay كامل مع فلاتر (mode/status/platform) + تمييز النص + load more
+    - Ctrl+F → يفتح deep overlay
+    - بادج badge "في رسالة" للنتائج من نص الرسائل
+    - فتح المحادثة مباشرة عند النقر على النتيجة
+  - `api.js`: إضافة `InboxAPI.search.search()` + `InboxAPI.search.suggest()`
+  - `server/routes/inbox/index.js`: تسجيل search route
+  - `index.html`: إضافة `search.js` + زر بحث متقدم + trigger داخل شريط البحث
+  - `app.js`: تهيئة InboxSearch.init() + ربط أزرار البحث المتقدم
+  - `inbox.css`: تصميم كامل (suggest dropdown + deep overlay + result items + dark mode)
+  - Smoke test: HTTP 200 health ✔️ + routes 401 ✔️
+- قرارات: لا جديد
+- آخر commit: 73e5969
+- المهمة القادمة: **P3-6 SLA Tracking** — backend `conversations.js` + `analytics.js`
+
+---
+
 ## جلسة 2026-05-03 20:39 UTC
 - الحالة: مكتملة
 - ما تم:

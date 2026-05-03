@@ -49,8 +49,8 @@
 | P3-2 | Priority (Low/Normal/High/Urgent) | `conv-list.js` + backend | ✅ مكتملة |
 | P3-3 | Snooze | `conv-list.js` + backend | ✅ مكتملة |
 | P3-4 | Bulk Actions | `conv-list.js` | ✅ مكتملة |
-| P3-5 | Search (Quick + Deep) | `search.js` + backend | ⬜ |
-| P3-6 | SLA Tracking | backend `conversations.js` + analytics | ⬜ |
+| P3-5 | Search (Quick + Deep) | `search.js` + backend | ✅ مكتملة |
+| P3-6 | SLA Tracking | backend `conversations.js` + analytics | ✅ مكتملة |
 
 ---
 
@@ -58,7 +58,7 @@
 
 | # | المهمة | الملفات | الحالة |
 |---|--------|---------|--------|
-| P4-1 | Keywords Auto-Reply | backend `automation.js` | ⬜ |
+| P4-1 | Keywords Auto-Reply | backend `automation.js` | ✅ مكتملة |
 | P4-2 | Chatbot Flows (visual builder) | `settings.js` + backend | ⬜ |
 | P4-3 | Welcome + Away Messages | backend `automation.js` | ⬜ |
 | P4-4 | Auto-Close | backend `automation.js` | ⬜ |
@@ -70,9 +70,9 @@
 
 | # | المهمة | الملفات | الحالة |
 |---|--------|---------|--------|
-| P5-1 | Customer Info + CRM Link | `context.js` | ⬜ |
-| P5-2 | Order/Invoice History + CLV | `context.js` + backend | ⬜ |
-| P5-3 | Quick Actions (New Invoice / Payment Link) | `context.js` | ⬜ |
+| P5-1 | Customer Info + CRM Link | `context.js` | ✅ مكتملة |
+| P5-2 | Order/Invoice History + CLV | `context.js` + backend | ✅ مكتملة |
+| P5-3 | Quick Actions (New Invoice / Payment Link) | `context.js` | ✅ مكتملة |
 | P5-4 | Internal Notes | `context.js` | ⬜ |
 | P5-5 | Conversation Timeline | `context.js` | ⬜ |
 
@@ -116,4 +116,6 @@
 ---
 
 ## 🔴 المهمة القادمة
-**P3-1: Labels + Tags** — `public/dashboard/inbox-v4/labels.js` + backend `server/routes/inbox/labels.js`
+**P5-4: Internal Notes** — `context.js`
+أو — **P5-5: Conversation Timeline** — `context.js`
+أو — **P4-2: Chatbot Flows** — `settings.js` + backend
