@@ -1,3 +1,20 @@
+## Session 2026-05-03 (09:02 → 09:25 UTC) — مكتملة
+- الحالة: تم الإكمال (2 مهام رئيسية)
+- ما تم إنجازه:
+  - feat: QUAL-2 — CSAT تقييم العملاء كامل (c71537e)
+    - sendCsatIfEnabled() يُرسل تلقائياً عند إغلاق المحادثة (Telegram + WA)
+    - GET /inbox/csat-stats + POST /inbox/csat-settings
+    - لوحة إحصائيات كاملة في إعدادات الرسائل → CSAT
+    - lazy migration لـ csat_enabled + csat_message في inbox_settings
+  - (QUAL-1 + QUAL-4 + cache-bust في الجلسة السابقة)
+- قرارات تقنية:
+  - fire-and-forget لإرسال CSAT (لا await حتى لا يُبطئ status update)
+  - csat_sent_at guard: لا يُرسل مرتين لنفس المحادثة
+  - رابط التقييم: https://pro.areejegypt.com/csat/:token
+  - toggle UI بـ pure CSS (لا library)
+- آخر Commit: c71537e
+- نقطة البداية القادمة: FEAT-5 — New Conversation Modal: إضافة دعم Instagram + تحسين validation
+
 ## Session 2026-05-03 (08:43 → 09:05 UTC) — مكتملة
 - الحالة: تم الإكمال (5 مهام)
 - ما تم إنجازه:
