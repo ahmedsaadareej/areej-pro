@@ -188,9 +188,9 @@
     // اتصل بـ SSE
     InboxStream.connect();
 
-    // Phase 1 — Conversations List
+    // Phase 1 — Conversations List + Chat Window
     InboxConvList.init();
-    // InboxChat.init();  ← يُفعَّل في P1-2
+    InboxChat.init();  // P1-2 ✅
 
     console.log('[Inbox v4] ✅ جاهز');
   }

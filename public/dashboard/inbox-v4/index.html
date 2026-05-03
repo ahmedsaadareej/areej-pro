@@ -179,14 +179,9 @@
 
         <!-- Messages Area -->
         <div id="iv4-messages" class="iv4-messages">
-          <div id="iv4-load-older" class="iv4-load-older hidden">
-            <button id="iv4-load-older-btn">رسائل أقدم</button>
-          </div>
-          <div id="iv4-messages-list" class="iv4-messages-list">
-            <!-- تُحمَّل ديناميكياً -->
-          </div>
-          <!-- Scroll anchor -->
-          <div id="iv4-scroll-anchor"></div>
+          <!-- sentinel للـ IntersectionObserver (يُضاف ديناميكياً) -->
+          <button id="iv4-msg-load-more" class="iv4-load-older hidden">رسائل أقدم ▲</button>
+          <!-- الرسائل تُحمَّل ديناميكياً هنا -->
         </div>
 
         <!-- Reply Box -->
@@ -278,7 +273,7 @@
   <script src="stream.js?v=1"></script>
   <!-- [يُضاف مع كل Phase] -->
   <script src="conv-list.js?v=1"></script>
-  <!-- <script src="chat.js?v=1"></script>      -->
+  <script src="chat.js?v=1"></script>
   <!-- <script src="reply.js?v=1"></script>     -->
   <!-- <script src="context.js?v=1"></script>   -->
   <!-- <script src="labels.js?v=1"></script>    -->
