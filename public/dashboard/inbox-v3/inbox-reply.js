@@ -1042,7 +1042,8 @@ function iv3UpdateCharCount(el) {
  * mono   → ```text```
  */
 function iv3FmtWrap(type) {
-  const ta = document.getElementById('iv3-reply-input');
+  // يدعم كلا الـ id: iv3-textarea (index.html) و iv3-reply-input (inbox.html standalone)
+  const ta = document.getElementById('iv3-textarea') || document.getElementById('iv3-reply-input');
   if (!ta) return;
 
   const start = ta.selectionStart;

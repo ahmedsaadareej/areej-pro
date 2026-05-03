@@ -352,9 +352,9 @@ async function iv3CtxNewInvoice() {
   const conv = IV3.activeConv;
   if (!conv) return;
 
-  // 1. تحديد اللوحة الصحيحة
-  if (typeof switchPanel === 'function') switchPanel('invoices');
-  else if (typeof loadPage === 'function') loadPage('invoices');
+  // 1. تحديد لوحة الفواتير (sbShowPage هي الدالة الفعلية في index.html)
+  if (typeof sbShowPage === 'function') sbShowPage('invoices', document.querySelector('[onclick*="sbShowPage(\'invoices"]'));
+  else if (typeof switchPanel === 'function') switchPanel('invoices');
 
   // 2. انتظر تحميل invoices panel
   await new Promise(r => setTimeout(r, 350));

@@ -1,3 +1,18 @@
+## Session 2026-05-03 (13:35 → 13:55 UTC) — مهمة 4 مكتملة
+- الحالة: تم الإكمال (مهمة 4 من 5)
+- ما تم إنجازه:
+  - iv3CtxNewInvoice(): يفتح invoiceModal مباشرة بدل window.open مع prefill كامل (اسم/تليفون/إيميل/مدينة)
+  + تحديد العميل من CRM dropdown تلقائياً لو IV3._ctxContactId موجود
+  - أزرار تنسيق في الـ toolbar: Bold (*) / Italic (_) / Strike (~) / Mono (```)
+  - iv3FmtWrap(): يلف النص المحدد أو يضع placeholder، مع toggle لإزالة التنسيق
+  - cache-bust → v=1777815452
+- قرارات تقنية:
+  - switchPanel/loadPage: محاولة استدعاء دالة التنقل الموجودة + انتظار 350ms قبل openNewInvoice
+  - FmtWrap toggle: لو النص مغلف بالفعل → يشيل الـ markers
+  - Default placeholder: 'نص' لو مفيش selection
+- آخر Commit: 5c70ad6
+- نقطة البداية القادمة: مهمة 5 — New Conversation Modal (ابتداء محادثة جديدة أو تحسينات أخرى)
+
 ## Session 2026-05-03 (13:31 → 13:48 UTC) — مهمة 3 مكتملة
 - الحالة: تم الإكمال (مهمة 3 من 5)
 - ما تم إنجازه:
