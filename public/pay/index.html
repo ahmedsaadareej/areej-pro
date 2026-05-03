@@ -222,6 +222,13 @@ let _selMethod = 'card';
 
 // ── Init ─────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
+  // معالجة redirect من بوابة الدفع: /pay/:token/result?status=paid
+  const _urlParams = new URLSearchParams(window.location.search);
+  const _redirectStatus = _urlParams.get('status');
+  if (_redirectStatus === 'paid')    { showScreen('paid'); return; }
+  if (_redirectStatus === 'error')   { showError('حدث خطأ أثناء معالجة الدفع'); return; }
+  if (_redirectStatus === 'pending') { showError('لم يتم تأكيد الدفعة بعد — تواصل مع الشركة'); return; }
+
   // استخرج الـ token من الـ URL: /pay/{slug}.{token}
   const parts = window.location.pathname.split('/pay/');
   _token = parts[1] ? decodeURIComponent(parts[1].split('/')[0]) : '';
@@ -328,12 +335,6 @@ function selectGateway(gwName) {
 
 function selectMethod(method) {
   _selMethod = method;
-  document.querySelectorAll('.method-btn').forEach(b => b.classList.toggle('active', b.textContent.trim() === GATEWAY_INFO.fawaterk.methods[method]));
-  document.querySelectorAll('.method-btn').forEach(b => {
-    const isActive = b.onclick?.toString().includes(`'${method}'`);
-    b.classList.toggle('active', isActive);
-  });
-  // أسهل:
   document.querySelectorAll('.method-btn').forEach(b => {
     b.classList.remove('active');
     if (b.getAttribute('onclick') === `selectMethod('${method}')`) b.classList.add('active');

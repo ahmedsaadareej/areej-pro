@@ -172,7 +172,8 @@ function formatUptime(s) {
 }
 
 app.get('/csat/:token',        (req, res) => res.sendFile(require('path').join(__dirname, '../public/csat/index.html')));
-app.get('/pay/:token',        (req, res) => res.sendFile(path.join(__dirname, '../public/pay/index.html')));
+app.get('/pay/:token',         (req, res) => res.sendFile(path.join(__dirname, '../public/pay/index.html')));
+app.get('/pay/:token/result',  (req, res) => res.sendFile(path.join(__dirname, '../public/pay/index.html')));
 app.get('/track/:waybill',    (req, res) => res.sendFile(path.join(__dirname, '../public/track/index.html')));
 app.get('/order-form/:token', (req, res) => res.sendFile(path.join(__dirname, '../public/order-form/index.html')));
 app.get('/landing*', (req, res) => res.sendFile(path.join(__dirname, '../public/landing/index.html')));

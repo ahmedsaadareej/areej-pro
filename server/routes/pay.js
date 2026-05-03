@@ -441,11 +441,8 @@ router.post('/webhook/fawaterk', async (req, res) => {
                    String(invoice_status).toLowerCase() === 'paid';
 
     if (isPaid) {
-      db.prepare(`UPDATE payment_links SET status='paid', paid_at=datetime('now') WHERE id=?`).run(link.id);
-      if (link.invoice_id) {
-        db.prepare(`UPDATE sys_invoices SET status='paid', paid_at=datetime('now') WHERE id=?`).run(link.invoice_id);
-      }
-      console.log(`✅ Payment paid via Fawaterk: link#${link.id}`);
+      await handlePaymentSuccess(db, link, 'fawaterk', link.amount);
+      console.log(`✅ Payment paid via Fawaterk webhook: link#${link.id}`);
     }
 
     res.sendStatus(200);
@@ -487,11 +484,9 @@ router.post('/webhook/paymob', async (req, res) => {
     }
 
     if (success) {
-      db.prepare(`UPDATE payment_links SET status='paid', paid_at=datetime('now') WHERE id=?`).run(link.id);
-      if (link.invoice_id) {
-        db.prepare(`UPDATE sys_invoices SET status='paid', paid_at=datetime('now') WHERE id=?`).run(link.invoice_id);
-      }
-      console.log(`✅ Payment paid via Paymob: link#${link.id}`);
+      const paidAmt = parseFloat(obj.amount_cents || 0) / 100 || link.amount;
+      await handlePaymentSuccess(db, link, 'paymob', paidAmt);
+      console.log(`✅ Payment paid via Paymob webhook: link#${link.id}`);
     }
 
     res.sendStatus(200);
