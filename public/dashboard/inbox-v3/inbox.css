@@ -2276,3 +2276,77 @@ body.ltr .iv3-ctx-icon-btn::before {
   transition: background .15s;
 }
 .iv3-load-more-btn:hover { background: #e2e8f0; color: #1e293b; }
+
+/* ── Snooze Dashboard Panel ─────────────────────────────── */
+.iv3-snooze-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid #F3F4F6;
+  cursor: pointer;
+  transition: background .12s;
+  gap: 10px;
+}
+.iv3-snooze-row:hover { background: #F9FAFB; }
+.iv3-snooze-row:last-child { border-bottom: none; }
+
+.iv3-snooze-row-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.iv3-snooze-plat {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.iv3-snooze-info { min-width: 0; }
+.iv3-snooze-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.iv3-snooze-preview {
+  font-size: 12px;
+  color: #9CA3AF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+.iv3-snooze-row-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.iv3-snooze-time {
+  font-size: 11px;
+  color: #6B7280;
+  white-space: nowrap;
+  direction: rtl;
+}
+.iv3-snooze-cancel {
+  background: none;
+  border: 1px solid #E5E7EB;
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  color: #9CA3AF;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .12s;
+}
+.iv3-snooze-cancel:hover {
+  background: #FEF2F2;
+  border-color: #EF4444;
+  color: #EF4444;
+}

@@ -2140,6 +2140,23 @@ router.get('/inbox/conversations/:id/timeline', requireAuth, (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
+// GET /api/system/inbox/snoozed-list
+// يرجع كل المحادثات ذات الحالة 'snoozed' مع وقت الإيقاظ
+router.get('/inbox/snoozed-list', requireAuth, (req, res) => {
+  const db = req.db;
+  try {
+    const cols = db.prepare('PRAGMA table_info(inbox_conversations)').all().map(c => c.name);
+    if (!cols.includes('snoozed_until')) return res.json({ ok: true, conversations: [] });
+    const rows = db.prepare(`
+      SELECT id, sender_name, sender_id, platform, last_message, snoozed_until
+      FROM inbox_conversations
+      WHERE status = 'snoozed' AND snoozed_until IS NOT NULL
+      ORDER BY snoozed_until ASC
+    `).all();
+    res.json({ ok: true, conversations: rows });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
 // GET /api/system/inbox/snooze-wakeup
 // يُستدعى من polling لإيقاظ المحادثات التي انتهى وقت snooze-ها
 router.get('/inbox/snooze-wakeup', requireAuth, (req, res) => {

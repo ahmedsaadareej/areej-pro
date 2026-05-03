@@ -830,6 +830,96 @@ function iv3ApplyDateFilter() {
   iv3LoadConvs(true);
 }
 
+// ── Snooze Dashboard ─────────────────────────────────
+
+async function iv3OpenSnoozePanel() {
+  // أزل قديم إن وجد
+  document.getElementById('iv3-snooze-panel')?.remove();
+
+  // مؤشر تحميل
+  const btn = document.getElementById('iv3-snooze-dash-btn');
+  if (btn) btn.style.opacity = '0.5';
+
+  let rows = [];
+  try {
+    const data = await IV3_API._get('/api/system/inbox/snoozed-list');
+    rows = data.conversations || [];
+  } catch(e) {
+    iv3Toast('فشل تحميل المؤجلة', 'error');
+    if (btn) btn.style.opacity = '';
+    return;
+  }
+  if (btn) btn.style.opacity = '';
+
+  const now = new Date();
+
+  const rowsHtml = rows.length ? rows.map(c => {
+    const name    = iv3EscHtml(c.sender_name || c.sender_id || 'مجهول');
+    const preview = iv3EscHtml(iv3TruncText(c.last_message || '...', 50));
+    const until   = new Date(c.snoozed_until);
+    const diff    = Math.round((until - now) / 60000); // بالدقائق
+    let timeLabel;
+    if (diff <= 0)        timeLabel = '<span style="color:#EF4444">حان الإيقاظ</span>';
+    else if (diff < 60)  timeLabel = `بعد ${diff} دقيقة`;
+    else if (diff < 1440) timeLabel = `بعد ${Math.round(diff/60)} ساعة`;
+    else                  timeLabel = `بعد ${Math.round(diff/1440)} يوم`;
+
+    const platIcon = iv3PlatIcon(c.platform);
+    return `
+      <div class="iv3-snooze-row" onclick="iv3OpenConv(${c.id});iv3CloseModal('iv3-snooze-panel')">
+        <div class="iv3-snooze-row-left">
+          <span class="iv3-snooze-plat">${platIcon}</span>
+          <div class="iv3-snooze-info">
+            <div class="iv3-snooze-name">${name}</div>
+            <div class="iv3-snooze-preview">${preview}</div>
+          </div>
+        </div>
+        <div class="iv3-snooze-row-right">
+          <div class="iv3-snooze-time">⏰ ${timeLabel}</div>
+          <button class="iv3-snooze-cancel" title="إلغاء التأجيل"
+            onclick="event.stopPropagation();iv3CancelSnooze(${c.id})">&#x2715;</button>
+        </div>
+      </div>`;
+  }).join('') : `<div style="text-align:center;padding:24px;color:#9CA3AF;font-size:13px">لا توجد محادثات مؤجلة حالياً ⏰</div>`;
+
+  const panel = document.createElement('div');
+  panel.id = 'iv3-snooze-panel';
+  panel.className = 'iv3-modal-overlay';
+  panel.onclick = (e) => { if (e.target === panel) panel.remove(); };
+  panel.innerHTML = `
+    <div class="iv3-modal" style="max-width:480px;max-height:70vh;display:flex;flex-direction:column">
+      <div class="iv3-modal-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>⏰ المحادثات المؤجلة (${rows.length})</span>
+        <button onclick="document.getElementById('iv3-snooze-panel').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:#6B7280">×</button>
+      </div>
+      <div style="overflow-y:auto;flex:1">
+        <div id="iv3-snooze-rows">${rowsHtml}</div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(panel);
+}
+
+async function iv3CancelSnooze(convId) {
+  try {
+    await IV3_API._post(`/api/system/inbox/conversations/${convId}/snooze`, { minutes: 0 });
+    // أزل الصف من الـ panel
+    const row = document.querySelector(`#iv3-snooze-rows .iv3-snooze-row[onclick*="iv3OpenConv(${convId})"]`);
+    if (row) row.remove();
+    // تحديث العداد
+    const title = document.querySelector('#iv3-snooze-panel .iv3-modal-title span');
+    if (title) {
+      const remaining = document.querySelectorAll('#iv3-snooze-rows .iv3-snooze-row').length;
+      title.textContent = `⏰ المحادثات المؤجلة (${remaining})`;
+    }
+    iv3Toast('تم إلغاء التأجيل', 'success');
+    // تحديث قائمة المحادثات
+    await iv3LoadConvs(true);
+  } catch(e) {
+    iv3Toast('فشل إلغاء التأجيل', 'error');
+  }
+}
+
 // ── Mark All as Read ─────────────────────────────────
 
 async function iv3MarkAllRead() {
