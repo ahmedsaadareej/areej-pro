@@ -2925,3 +2925,182 @@
   .iv4-ctx-result-item:hover { background: #0f172a; }
   .iv4-ctx-list-item { background: #1e293b; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   P5-2: Order/Invoice History + CLV  |  P5-3: Quick Actions
+   آخر تحديث: 2026-05-03
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Toolbar (فلاتر + Quick Action buttons) ──────────────────────────── */
+.iv4-ctx-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin-bottom: 12px; flex-wrap: wrap;
+}
+.iv4-ctx-filter-pills {
+  display: flex; gap: 4px; flex-wrap: wrap;
+}
+.iv4-ctx-filter-pill {
+  padding: 3px 10px; border-radius: 20px; font-size: .75rem;
+  border: 1px solid var(--iv4-border); background: var(--iv4-surface-2);
+  color: var(--iv4-text); cursor: pointer; transition: all .15s;
+}
+.iv4-ctx-filter-pill:hover   { border-color: var(--iv4-accent); color: var(--iv4-accent); }
+.iv4-ctx-filter-pill.active  { background: var(--iv4-accent); color: #fff; border-color: var(--iv4-accent); }
+
+/* ── CLV Mini Summary (أعلى tab الفواتير) ──────────────────────────── */
+.iv4-ctx-clv-mini {
+  display: flex; gap: 8px; margin-bottom: 12px;
+  background: var(--iv4-surface-2); border-radius: 10px; padding: 10px;
+}
+.iv4-ctx-clv-mini-item { flex: 1; text-align: center; }
+.iv4-ctx-clv-mini-val  { font-size: .9rem; font-weight: 700; color: var(--iv4-accent); display: block; }
+.iv4-ctx-clv-mini-lbl  { font-size: .7rem; color: var(--iv4-muted); }
+
+/* ── Due Date على الفواتير ───────────────────────────────────────────── */
+.iv4-ctx-due { font-size: .72rem; color: #f59e0b; margin-top: 4px; }
+
+/* ── Pagination ──────────────────────────────────────────────────────── */
+.iv4-ctx-pager {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; margin: 10px 0 6px;
+}
+.iv4-ctx-pager-btn {
+  padding: 4px 12px; border-radius: 6px; font-size: .78rem;
+  border: 1px solid var(--iv4-border); background: var(--iv4-surface-2);
+  color: var(--iv4-text); cursor: pointer; transition: all .15s;
+}
+.iv4-ctx-pager-btn:hover:not([disabled]) { border-color: var(--iv4-accent); color: var(--iv4-accent); }
+.iv4-ctx-pager-btn[disabled] { opacity: .4; cursor: default; }
+.iv4-ctx-pager-info { font-size: .78rem; color: var(--iv4-muted); }
+
+/* ── Pay Link Actions ────────────────────────────────────────────────── */
+.iv4-ctx-pay-actions { display: flex; gap: 6px; margin-top: 6px; }
+.iv4-ctx-copy-btn, .iv4-ctx-send-btn {
+  padding: 3px 10px; font-size: .73rem; border-radius: 6px;
+  border: 1px solid var(--iv4-border); background: transparent;
+  color: var(--iv4-accent); cursor: pointer; transition: all .15s;
+}
+.iv4-ctx-copy-btn:hover, .iv4-ctx-send-btn:hover {
+  background: var(--iv4-accent); color: #fff; border-color: var(--iv4-accent);
+}
+
+/* ── CLV Dashboard (tab كامل) ────────────────────────────────────────── */
+.iv4-ctx-clv-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;
+}
+.iv4-ctx-clv-card {
+  background: var(--iv4-surface-2); border-radius: 10px;
+  padding: 12px 10px; text-align: center;
+}
+.iv4-ctx-clv-card.iv4-ctx-clv-primary {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+}
+.iv4-ctx-clv-card.iv4-ctx-clv-primary .iv4-ctx-clv-card-val { color: #fff; font-size: 1.15rem; }
+.iv4-ctx-clv-card.iv4-ctx-clv-primary .iv4-ctx-clv-card-lbl { color: rgba(255,255,255,.8); }
+.iv4-ctx-clv-card-val { font-size: .95rem; font-weight: 700; color: var(--iv4-accent); }
+.iv4-ctx-clv-card-lbl { font-size: .72rem; color: var(--iv4-muted); margin-top: 3px; }
+
+/* ── Progress Bar ────────────────────────────────────────────────────── */
+.iv4-ctx-clv-progress { margin-bottom: 14px; }
+.iv4-ctx-clv-progress-label {
+  display: flex; justify-content: space-between;
+  font-size: .75rem; color: var(--iv4-muted); margin-bottom: 5px;
+}
+.iv4-ctx-clv-progress-bar {
+  height: 8px; background: var(--iv4-surface-2); border-radius: 4px; overflow: hidden;
+}
+.iv4-ctx-clv-progress-fill {
+  height: 100%; background: linear-gradient(90deg, #0ea5e9, #6366f1);
+  border-radius: 4px; transition: width .4s ease;
+}
+
+/* ── Dates Row ───────────────────────────────────────────────────────── */
+.iv4-ctx-clv-dates {
+  display: flex; gap: 12px; margin-bottom: 14px;
+  background: var(--iv4-surface-2); border-radius: 8px; padding: 10px 12px;
+}
+.iv4-ctx-clv-date-item { flex: 1; }
+
+/* ── Monthly Bar Chart (mini) ────────────────────────────────────────── */
+.iv4-ctx-clv-chart { margin-top: 4px; }
+.iv4-ctx-clv-chart-title {
+  font-size: .78rem; color: var(--iv4-muted); margin-bottom: 8px; font-weight: 600;
+}
+.iv4-ctx-clv-bars {
+  display: flex; align-items: flex-end; gap: 4px; height: 70px;
+  padding: 0 4px;
+}
+.iv4-ctx-clv-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; }
+.iv4-ctx-clv-bar {
+  width: 100%; background: var(--iv4-accent); border-radius: 3px 3px 0 0;
+  min-width: 6px; transition: height .3s ease; cursor: pointer;
+  opacity: .75;
+}
+.iv4-ctx-clv-bar:hover { opacity: 1; }
+.iv4-ctx-clv-bar-label {
+  font-size: .6rem; color: var(--iv4-muted); margin-top: 3px;
+  writing-mode: vertical-rl; text-orientation: mixed;
+  max-height: 24px; overflow: hidden;
+}
+
+/* ── Quick Action Modal ──────────────────────────────────────────────── */
+.iv4-ctx-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  z-index: 9999; display: flex; align-items: center; justify-content: center;
+  animation: iv4-fade-in .15s ease;
+}
+.iv4-ctx-modal {
+  background: var(--iv4-surface); border-radius: 14px; width: 340px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.25); overflow: hidden;
+}
+.iv4-ctx-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; font-size: .9rem; font-weight: 700;
+  border-bottom: 1px solid var(--iv4-border); color: var(--iv4-text);
+}
+.iv4-ctx-modal-close {
+  width: 26px; height: 26px; border-radius: 50%; border: none;
+  background: var(--iv4-surface-2); color: var(--iv4-muted);
+  cursor: pointer; font-size: .8rem; display: flex; align-items: center; justify-content: center;
+}
+.iv4-ctx-modal-close:hover { background: #fee2e2; color: #dc2626; }
+.iv4-ctx-modal-body { padding: 16px; }
+.iv4-ctx-modal-input {
+  width: 100%; padding: 9px 12px; border-radius: 8px;
+  border: 1px solid var(--iv4-border); background: var(--iv4-surface-2);
+  color: var(--iv4-text); font-size: .87rem; outline: none; box-sizing: border-box;
+}
+.iv4-ctx-modal-input:focus { border-color: var(--iv4-accent); }
+.iv4-ctx-modal-footer {
+  display: flex; gap: 8px; justify-content: flex-end;
+  padding: 12px 16px; border-top: 1px solid var(--iv4-border);
+}
+
+/* ── Toast (Context Panel) ───────────────────────────────────────────── */
+.iv4-ctx-toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: #1e293b; color: #f8fafc; padding: 10px 20px;
+  border-radius: 10px; font-size: .84rem; z-index: 10000;
+  opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none;
+  white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,.3);
+}
+.iv4-ctx-toast--show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* iv4-btn-xs */
+.iv4-btn-xs { padding: 4px 10px !important; font-size: .75rem !important; }
+
+/* ── Dark Mode additions ─────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .iv4-ctx-filter-pill  { background: #1e293b; border-color: #334155; }
+  .iv4-ctx-clv-mini     { background: #1e293b; }
+  .iv4-ctx-clv-card     { background: #1e293b; }
+  .iv4-ctx-clv-dates    { background: #1e293b; }
+  .iv4-ctx-pager-btn    { background: #1e293b; border-color: #334155; }
+  .iv4-ctx-modal        { background: #1e293b; }
+  .iv4-ctx-modal-header { border-color: #334155; }
+  .iv4-ctx-modal-footer { border-color: #334155; }
+  .iv4-ctx-modal-input  { background: #0f172a; border-color: #334155; color: #f1f5f9; }
+  .iv4-ctx-modal-close  { background: #334155; }
+  .iv4-ctx-toast        { background: #f8fafc; color: #1e293b; }
+}
