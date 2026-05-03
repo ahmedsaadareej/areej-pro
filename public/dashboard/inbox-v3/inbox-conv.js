@@ -204,6 +204,9 @@ function iv3RenderConvs() {
     : '';
 
   container.innerHTML = items + loadMore;
+
+  // تحديث badge المحادثات المؤجلة
+  iv3UpdateSnoozeBadge();
 }
 
 function iv3BuildConvItem(c) {
@@ -898,6 +901,18 @@ async function iv3OpenSnoozePanel() {
     </div>`;
 
   document.body.appendChild(panel);
+}
+
+function iv3UpdateSnoozeBadge() {
+  const snoozedCount = IV3.convs.filter(c => c.status === 'snoozed').length;
+  const badge = document.getElementById('iv3-snooze-badge');
+  if (!badge) return;
+  if (snoozedCount > 0) {
+    badge.textContent = snoozedCount > 9 ? '9+' : snoozedCount;
+    badge.style.display = 'block';
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 async function iv3CancelSnooze(convId) {
