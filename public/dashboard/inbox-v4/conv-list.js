@@ -448,7 +448,33 @@ const InboxConvList = (() => {
         newEl.classList.add('active');
         // اضمن أن المحادثة مرئية
         newEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+        // P1-5 — أزل الـ unread badge فوراً (optimistic UI)
+        _clearUnreadBadge(newEl, newId);
       }
+    }
+  }
+
+  /**
+   * P1-5 — إزالة unread badge من عنصر المحادثة فوراً
+   * يُستدعى عند فتح المحادثة في القائمة
+   * الـ API call الفعلي يتم في chat.js (_scheduleMarkRead)
+   *
+   * @param {Element} itemEl  - عنصر .iv4-conv-item
+   * @param {number}  convId
+   */
+  function _clearUnreadBadge(itemEl, convId) {
+    if (!itemEl) return;
+
+    // أزل الـ badge من الـ DOM
+    const badge = itemEl.querySelector('.iv4-conv-badge');
+    if (badge) badge.remove();
+    itemEl.classList.remove('unread');
+
+    // حدّث الـ store محلياً
+    const conv = InboxStore.state.conversations.find(c => c.id === convId);
+    if (conv && conv.unread_count > 0) {
+      InboxStore.upsertConversation({ ...conv, unread_count: 0 });
     }
   }
 

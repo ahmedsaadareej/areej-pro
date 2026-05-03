@@ -955,3 +955,80 @@
   outline-offset: -2px;
   background: color-mix(in srgb, var(--iv4-accent) 8%, var(--iv4-bg));
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   P1-4 — Reply Button + Note Tag
+   P1-5 — Unread Badge clear animation
+   آخر تحديث: 2026-05-03
+════════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Reply Button (يظهر عند hover على الرسالة) ─────────────────────── */
+.iv4-msg {
+  position: relative;
+}
+
+.iv4-msg-reply-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--iv4-bg);
+  border: 1px solid var(--iv4-border);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--iv4-text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity .15s, background .15s;
+  z-index: 5;
+  box-shadow: 0 1px 4px rgba(0,0,0,.15);
+  line-height: 1;
+}
+
+/* رسائل الوارد: زر الرد على اليمين */
+.iv4-msg--in  .iv4-msg-reply-btn { right: -36px; }
+/* رسائل الصادر: زر الرد على اليسار */
+.iv4-msg--out .iv4-msg-reply-btn { left: -36px; }
+
+.iv4-msg:hover .iv4-msg-reply-btn { opacity: 1; }
+.iv4-msg-reply-btn:hover { background: var(--iv4-bg-2); color: var(--iv4-accent); }
+.iv4-msg-reply-btn:active { transform: translateY(-50%) scale(.92); }
+
+/* ─── Note Tag (مُحسَّن) ────────────────────────────────────────────── */
+.iv4-note-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-bottom: 4px;
+  width: fit-content;
+}
+
+.iv4-note-icon { font-size: 12px; }
+
+/* Bubble للملاحظات الداخلية */
+.iv4-msg--note .iv4-msg-bubble {
+  background: #fffbeb !important;
+  border: 1px dashed #fbbf24 !important;
+  color: #78350f;
+}
+
+/* ─── Unread badge clear animation ─────────────────────────────────── */
+.iv4-conv-item:not(.unread) .iv4-conv-badge {
+  animation: iv4-badge-fade 0.3s ease forwards;
+}
+
+@keyframes iv4-badge-fade {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(.5); }
+}

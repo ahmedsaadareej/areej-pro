@@ -250,25 +250,34 @@ const InboxChat = (() => {
    * @returns {string} HTML
    */
   function _renderMessage(msg) {
-    const dir      = msg.direction; // in | out | note
-    const isIn     = dir === 'in';
-    const isOut    = dir === 'out';
+    const dir      = msg.direction; // inbound | outbound | note
+    const isIn     = dir === 'inbound'  || dir === 'in';
+    const isOut    = dir === 'outbound' || dir === 'out';
     const isNote   = dir === 'note';
-    const msgClass = `iv4-msg iv4-msg--${dir}`;
+    const dirClass = isIn ? 'in' : isOut ? 'out' : 'note';
+    const msgClass = `iv4-msg iv4-msg--${dirClass}`;
 
     const time    = _formatTime(msg.sent_at || msg.created_at);
     const status  = isOut ? _renderStatus(msg.status) : '';
-    const sender  = isIn  ? `<div class="iv4-msg-sender">${_escHtml(msg.sender_name || '')}</div>` : '';
+    const sender  = isIn  ? `<div class="iv4-msg-sender">${_escHtml(msg.sender_name || msg.contact_name || '')}</div>` : '';
     const content = _renderContent(msg);
 
     // Quoted message
     const quote = msg.quoted_msg_id ? _renderQuote(msg) : '';
 
     // Note indicator
-    const noteTag = isNote ? '<span class="iv4-note-tag">📝 ملاحظة داخلية</span>' : '';
+    const noteTag = isNote
+      ? '<div class="iv4-note-tag"><span class="iv4-note-icon">📝</span> ملاحظة داخلية</div>'
+      : '';
+
+    // زر الرد على الرسالة (لا يظهر على الملاحظات)
+    const replyBtn = !isNote
+      ? `<button class="iv4-msg-reply-btn" data-msg-id="${msg.id}" title="رد على هذه الرسالة">↩</button>`
+      : '';
 
     return `
-<div class="${msgClass}" data-msg-id="${msg.id}" data-direction="${dir}">
+<div class="${msgClass}" data-msg-id="${msg.id}" data-direction="${dirClass}">
+  ${replyBtn}
   <div class="iv4-msg-bubble">
     ${noteTag}
     ${sender}
@@ -785,6 +794,32 @@ const InboxChat = (() => {
     container.querySelectorAll('.iv4-msg-quote[data-quoted-id]').forEach(q => {
       q.style.cursor = 'pointer';
       q.addEventListener('click', () => _scrollToMessage(q.dataset.quotedId));
+    });
+
+    // زر الرد على رسالة محددة
+    container.querySelectorAll('.iv4-msg-reply-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const msgId  = btn.dataset.msgId;
+        const msgEl  = btn.closest('[data-msg-id]');
+        if (!msgId) return;
+
+        // جهّز بيانات الاقتباس من الـ store أو الـ DOM
+        const storeMsg = InboxStore.state.messages.find(m => String(m.id) === String(msgId));
+        const msgData  = storeMsg || {
+          id:           msgId,
+          content:      msgEl?.querySelector('.iv4-msg-text')?.textContent || '',
+          contact_name: msgEl?.querySelector('.iv4-msg-sender')?.textContent || '',
+          agent_name:   '',
+          direction:    msgEl?.dataset.direction || 'inbound',
+        };
+
+        // أطلق الـ event لـ reply.js
+        InboxStore.emit('reply:quote', { msg: msgData });
+
+        // focus على الـ textarea
+        document.getElementById('iv4-reply-textarea')?.focus();
+      });
     });
   }
 
