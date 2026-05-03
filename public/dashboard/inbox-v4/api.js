@@ -574,6 +574,18 @@ const InboxAPI = (() => {
     run        : ()                   => _post('/inbox/automation/scheduled/run', {}),
   };
 
+  // ─── Webhook Triggers (P8-5) ──────────────────────────────────────────
+  const webhooks = {
+    events : ()          => _get('/inbox/automation/webhook-events'),
+    list   : ()          => _get('/inbox/automation/webhooks'),
+    create : (data)      => _post('/inbox/automation/webhooks', data),
+    update : (id, data)  => _put(`/inbox/automation/webhooks/${id}`, data),
+    delete : (id)        => _delete(`/inbox/automation/webhooks/${id}`),
+    toggle : (id)        => _put(`/inbox/automation/webhooks/${id}/toggle`, {}),
+    test   : (id)        => _post(`/inbox/automation/webhooks/${id}/test`, {}),
+    logs   : (id, limit) => _get(`/inbox/automation/webhooks/${id}/logs${limit ? `?limit=${limit}` : ''}`),
+  };
+
   // ─── Auto-Close (P4-4) ────────────────────────────────────────────────
   const autoClose = {
     get    : ()     => _get('/inbox/automation/auto-close'),
@@ -632,6 +644,7 @@ const InboxAPI = (() => {
     welcomeAway,
     autoClose,
     scheduled,
+    webhooks,
     // expose للـ debugging
     _fetch,
     _get,

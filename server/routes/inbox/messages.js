@@ -544,6 +544,22 @@ router.post('/conversations/:id/messages', async (req, res) => {
       });
     } catch (_) {}
 
+    // ── Webhook Trigger: message.sent (P8-5) ─────────────────────────
+    if (!isNote) {
+      try {
+        const { triggerWebhooks } = require('./automation');
+        triggerWebhooks(db, req.user.id, 'message.sent', {
+          conversation_id: convId,
+          message_id     : savedMsg.id,
+          direction      : 'outbound',
+          content_type,
+          content        : (content || '').slice(0, 300),
+          platform,
+          agent_id       : req.user.id,
+        });
+      } catch (_) {}
+    }
+
     return res.json({
       success:       true,
       message:       savedMsg,

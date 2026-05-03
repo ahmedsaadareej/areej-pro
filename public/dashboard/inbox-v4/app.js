@@ -248,6 +248,9 @@
     // Phase 8-4 — Broadcast V2
     if (typeof InboxBroadcast !== 'undefined') InboxBroadcast.init();       // P8-4 ✅
 
+    // Phase 8-5 — Webhook Triggers
+    if (typeof InboxWebhooks  !== 'undefined') InboxWebhooks.init();        // P8-5 ✅
+
     // expose showInboxToast globally (for team.js + other modules)
     window.showInboxToast = toast;
 

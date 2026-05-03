@@ -429,6 +429,33 @@ router.post('/whatsapp/:userId', express.json(), async (req, res) => {
               );
             }
           } catch (_cbErr) { /* chatbot table غير موجودة بعد — تجاهل */ }
+
+          // P8-5 Webhook Triggers — message.received + conversation.created
+          try {
+            const { triggerWebhooks } = require('./routes/inbox/automation');
+            const convV4wh = db.prepare(
+              "SELECT * FROM inbox_conversations_v4 WHERE platform = 'whatsapp' AND sender_phone = ? LIMIT 1"
+            ).get(senderId);
+            if (convV4wh) {
+              // حدث: رسالة واردة
+              triggerWebhooks(db, userId, 'message.received', {
+                conversation_id: convV4wh.id,
+                direction      : 'inbound',
+                content        : (content || '').slice(0, 300),
+                platform       : 'whatsapp',
+                sender_phone   : senderId,
+              }).catch(() => {});
+              // حدث: محادثة جديدة
+              if (!existingConv) {
+                triggerWebhooks(db, userId, 'conversation.created', {
+                  conversation_id: convV4wh.id,
+                  platform       : 'whatsapp',
+                  sender_phone   : senderId,
+                  sender_name    : senderName,
+                }).catch(() => {});
+              }
+            }
+          } catch (_whErr) { /* webhook table غير موجودة بعد — تجاهل */ }
         }
       }
     }

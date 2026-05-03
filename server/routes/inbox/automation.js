@@ -1,6 +1,6 @@
 /**
  * inbox/automation.js — Automation Routes لـ Inbox v4
- * آخر تحديث: 2026-05-03 (P4-1 Keywords Auto-Reply)
+ * آخر تحديث: 2026-05-03 (P8-5 Webhook Triggers)
  *
  * Endpoints:
  *   GET    /api/inbox/automation/keywords         — قائمة قواعد الكلمات
@@ -1031,3 +1031,356 @@ module.exports.processAutoReply       = processAutoReply;
 module.exports.processWelcomeAway     = processWelcomeAway;
 module.exports.runAutoClose           = runAutoClose;
 module.exports.runScheduledMessages   = runScheduledMessages;
+module.exports.triggerWebhooks        = triggerWebhooks;
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// P8-5 Webhook Triggers
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * قائمة الـ events المدعومة
+ * كل event له label عربي + key بالإنجليزي
+ */
+const WEBHOOK_EVENTS = [
+  { key: 'conversation.created',   label: 'محادثة جديدة' },
+  { key: 'conversation.closed',    label: 'محادثة مغلقة' },
+  { key: 'conversation.assigned',  label: 'تعيين محادثة' },
+  { key: 'message.received',       label: 'رسالة واردة' },
+  { key: 'message.sent',           label: 'رسالة صادرة' },
+  { key: 'conversation.snoozed',   label: 'محادثة مؤجلة' },
+  { key: 'csat.submitted',         label: 'تقييم CSAT جديد' },
+  { key: 'label.applied',          label: 'تطبيق تسمية' },
+];
+
+// كشف الـ WEBHOOK_EVENTS للـ frontend
+router.get('/automation/webhook-events', (req, res) => {
+  res.json({ ok: true, events: WEBHOOK_EVENTS });
+});
+
+// ─── GET /automation/webhooks ──────────────────────────────────────────────────
+router.get('/automation/webhooks', (req, res) => {
+  try {
+    const rows = req.db.prepare(
+      'SELECT * FROM inbox_webhooks_v4 WHERE tenant_id = ? ORDER BY created_at DESC'
+    ).all(req.user.id);
+    res.json({ ok: true, webhooks: rows.map(_fmtWH) });
+  } catch (err) {
+    console.error('[webhooks] list:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── POST /automation/webhooks ─────────────────────────────────────────────────
+router.post('/automation/webhooks', (req, res) => {
+  const { name, url, secret, events, retry_count } = req.body;
+
+  if (!name?.trim())   return res.status(400).json({ error: 'name مطلوب' });
+  if (!url?.trim())    return res.status(400).json({ error: 'url مطلوب' });
+  if (!Array.isArray(events) || events.length === 0)
+    return res.status(400).json({ error: 'اختر حدث واحد على الأقل' });
+
+  // تحقق URL
+  try { new URL(url); } catch (_) {
+    return res.status(400).json({ error: 'url غير صالح' });
+  }
+
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const result = req.db.prepare(`
+      INSERT INTO inbox_webhooks_v4
+        (tenant_id, name, url, secret, events, is_active, retry_count, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)
+    `).run(
+      req.user.id,
+      name.trim(),
+      url.trim(),
+      secret?.trim() || null,
+      JSON.stringify(events),
+      Math.min(parseInt(retry_count) || 3, 10),
+      now, now
+    );
+    const webhook = req.db.prepare('SELECT * FROM inbox_webhooks_v4 WHERE id = ?').get(result.lastInsertRowid);
+    res.json({ ok: true, webhook: _fmtWH(webhook) });
+  } catch (err) {
+    console.error('[webhooks] create:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── PUT /automation/webhooks/:id ──────────────────────────────────────────────
+router.put('/automation/webhooks/:id', (req, res) => {
+  const wh = req.db.prepare(
+    'SELECT id FROM inbox_webhooks_v4 WHERE id = ? AND tenant_id = ?'
+  ).get(req.params.id, req.user.id);
+  if (!wh) return res.status(404).json({ error: 'webhook غير موجود' });
+
+  const { name, url, secret, events, is_active, retry_count } = req.body;
+  const sets = [], params = [];
+
+  if (name       !== undefined) { sets.push('name = ?');        params.push(name.trim()); }
+  if (url        !== undefined) {
+    try { new URL(url); } catch (_) { return res.status(400).json({ error: 'url غير صالح' }); }
+    sets.push('url = ?'); params.push(url.trim());
+  }
+  if (secret     !== undefined) { sets.push('secret = ?');      params.push(secret?.trim() || null); }
+  if (events     !== undefined) { sets.push('events = ?');      params.push(JSON.stringify(events)); }
+  if (is_active  !== undefined) { sets.push('is_active = ?');   params.push(is_active ? 1 : 0); }
+  if (retry_count!== undefined) { sets.push('retry_count = ?'); params.push(Math.min(parseInt(retry_count)||3, 10)); }
+
+  if (!sets.length) return res.status(400).json({ error: 'لا توجد حقول للتحديث' });
+
+  sets.push('updated_at = ?');
+  params.push(Math.floor(Date.now() / 1000));
+  params.push(req.params.id);
+
+  try {
+    req.db.prepare(`UPDATE inbox_webhooks_v4 SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+    const updated = req.db.prepare('SELECT * FROM inbox_webhooks_v4 WHERE id = ?').get(req.params.id);
+    res.json({ ok: true, webhook: _fmtWH(updated) });
+  } catch (err) {
+    console.error('[webhooks] update:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── DELETE /automation/webhooks/:id ────────────────────────────────────────────
+router.delete('/automation/webhooks/:id', (req, res) => {
+  const wh = req.db.prepare(
+    'SELECT id FROM inbox_webhooks_v4 WHERE id = ? AND tenant_id = ?'
+  ).get(req.params.id, req.user.id);
+  if (!wh) return res.status(404).json({ error: 'webhook غير موجود' });
+
+  try {
+    req.db.prepare('DELETE FROM inbox_webhooks_v4 WHERE id = ?').run(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[webhooks] delete:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── PUT /automation/webhooks/:id/toggle ───────────────────────────────────────
+router.put('/automation/webhooks/:id/toggle', (req, res) => {
+  const wh = req.db.prepare(
+    'SELECT id, is_active FROM inbox_webhooks_v4 WHERE id = ? AND tenant_id = ?'
+  ).get(req.params.id, req.user.id);
+  if (!wh) return res.status(404).json({ error: 'webhook غير موجود' });
+
+  try {
+    const newState = wh.is_active ? 0 : 1;
+    req.db.prepare(
+      'UPDATE inbox_webhooks_v4 SET is_active = ?, updated_at = ? WHERE id = ?'
+    ).run(newState, Math.floor(Date.now()/1000), req.params.id);
+    res.json({ ok: true, is_active: newState === 1 });
+  } catch (err) {
+    console.error('[webhooks] toggle:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── POST /automation/webhooks/:id/test ─────────────────────────────────────────
+// إرسال ping تجريبي للـ URL
+router.post('/automation/webhooks/:id/test', async (req, res) => {
+  const wh = req.db.prepare(
+    'SELECT * FROM inbox_webhooks_v4 WHERE id = ? AND tenant_id = ?'
+  ).get(req.params.id, req.user.id);
+  if (!wh) return res.status(404).json({ error: 'webhook غير موجود' });
+
+  const testPayload = {
+    event       : 'webhook.test',
+    webhook_id  : wh.id,
+    webhook_name: wh.name,
+    timestamp   : new Date().toISOString(),
+    data        : { message: 'مرحباً! هذا اختبار من Areej Inbox v4' },
+  };
+
+  try {
+    const { statusCode, body } = await _fireWebhook(wh, 'webhook.test', testPayload, 1);
+    res.json({ ok: statusCode >= 200 && statusCode < 300, status_code: statusCode, response: body });
+  } catch (err) {
+    res.json({ ok: false, error: err.message });
+  }
+});
+
+// ─── GET /automation/webhooks/:id/logs ──────────────────────────────────────────
+router.get('/automation/webhooks/:id/logs', (req, res) => {
+  const wh = req.db.prepare(
+    'SELECT id FROM inbox_webhooks_v4 WHERE id = ? AND tenant_id = ?'
+  ).get(req.params.id, req.user.id);
+  if (!wh) return res.status(404).json({ error: 'webhook غير موجود' });
+
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const logs  = req.db.prepare(
+      'SELECT * FROM inbox_webhook_logs_v4 WHERE webhook_id = ? ORDER BY fired_at DESC LIMIT ?'
+    ).all(req.params.id, limit);
+    res.json({ ok: true, logs });
+  } catch (err) {
+    console.error('[webhooks] logs:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Engine: triggerWebhooks
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * triggerWebhooks — يُستدعى من أي مكان عند حدوث حدث في النظام
+ *
+ * @param {object} db        - tenant SQLite instance
+ * @param {number} tenantId
+ * @param {string} event     - مصطلحاتمثل: 'message.received', 'conversation.created'
+ * @param {object} data      - بيانات الحدث
+ * @returns {Promise<void>}
+ */
+async function triggerWebhooks(db, tenantId, event, data) {
+  try {
+    // جلب كل webhooks الفعّالة التي تشترك في هذا الـ event
+    const allActive = db.prepare(
+      'SELECT * FROM inbox_webhooks_v4 WHERE tenant_id = ? AND is_active = 1'
+    ).all(tenantId);
+
+    if (!allActive || allActive.length === 0) return;
+
+    const payload = {
+      event,
+      tenant_id : tenantId,
+      timestamp : new Date().toISOString(),
+      data,
+    };
+
+    const toFire = allActive.filter(wh => {
+      const events = _safeParse(wh.events, []);
+      // لو الـ events فاضي = كل الأحداث
+      return events.length === 0 || events.includes(event) || events.includes('*');
+    });
+
+    // إطلاق كل webhook بشكل متوازي (لا ننتظر بعضهم)
+    await Promise.allSettled(
+      toFire.map(wh => _fireWithRetry(db, wh, event, payload))
+    );
+  } catch (err) {
+    console.error('[webhooks] triggerWebhooks error:', err.message);
+  }
+}
+
+/**
+ * _fireWithRetry — يحاول الإرسال مع retry تلقائي (exponential backoff)
+ */
+async function _fireWithRetry(db, wh, event, payload) {
+  const maxTries = Math.max(1, wh.retry_count || 3);
+  let lastErr    = null;
+
+  for (let attempt = 1; attempt <= maxTries; attempt++) {
+    try {
+      const { statusCode, body } = await _fireWebhook(wh, event, payload, attempt);
+      const success = statusCode >= 200 && statusCode < 300;
+
+      // تسجيل في DB
+      _logWebhook(db, wh.id, wh.tenant_id, event, payload, statusCode, body, attempt, success);
+
+      // تحديث last_triggered_at + last_status
+      db.prepare(
+        'UPDATE inbox_webhooks_v4 SET last_triggered_at = ?, last_status = ? WHERE id = ?'
+      ).run(Math.floor(Date.now()/1000), success ? 'ok' : `http_${statusCode}`, wh.id);
+
+      if (success) return; // نجح — نتوقف
+
+      lastErr = `HTTP ${statusCode}`;
+    } catch (err) {
+      lastErr = err.message;
+      _logWebhook(db, wh.id, wh.tenant_id, event, payload, null, null, attempt, false, err.message);
+    }
+
+    // تأخير exponential: 1s, 2s, 4s
+    if (attempt < maxTries) {
+      await new Promise(r => setTimeout(r, Math.pow(2, attempt - 1) * 1000));
+    }
+  }
+
+  // بعد كل المحاولات فشلت
+  db.prepare(
+    'UPDATE inbox_webhooks_v4 SET last_status = ? WHERE id = ?'
+  ).run(`failed:${lastErr}`, wh.id);
+}
+
+/**
+ * _fireWebhook — إرسال HTTP POST واحد للـ webhook URL
+ * @returns {{ statusCode: number, body: string }}
+ */
+async function _fireWebhook(wh, event, payload, attempt = 1) {
+  const http  = require(wh.url.startsWith('https') ? 'https' : 'http');
+  const body  = JSON.stringify(payload);
+
+  // توقيع HMAC-SHA256 إذا كان هناك secret
+  let signature = '';
+  if (wh.secret) {
+    const crypto = require('crypto');
+    signature = crypto.createHmac('sha256', wh.secret).update(body).digest('hex');
+  }
+
+  const parsedUrl = new URL(wh.url);
+  const options = {
+    hostname: parsedUrl.hostname,
+    port    : parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+    path    : parsedUrl.pathname + parsedUrl.search,
+    method  : 'POST',
+    timeout : 10000, // 10ثانية
+    headers : {
+      'Content-Type'           : 'application/json',
+      'Content-Length'         : Buffer.byteLength(body),
+      'X-Areej-Event'          : event,
+      'X-Areej-Webhook-Attempt': String(attempt),
+      ...(signature ? { 'X-Areej-Signature': `sha256=${signature}` } : {}),
+    },
+  };
+
+  return new Promise((resolve, reject) => {
+    const req = http.request(options, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => resolve({ statusCode: res.statusCode, body: data.slice(0, 500) }));
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.write(body);
+    req.end();
+  });
+}
+
+/**
+ * _logWebhook — تسجيل محاولة إرسال في DB
+ */
+function _logWebhook(db, webhookId, tenantId, event, payload, statusCode, response, attempt, success, errorMsg = null) {
+  try {
+    db.prepare(`
+      INSERT INTO inbox_webhook_logs_v4
+        (webhook_id, tenant_id, event, payload, status_code, response, attempt, success, error_msg, fired_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      webhookId, tenantId, event,
+      JSON.stringify(payload).slice(0, 2000),
+      statusCode, response, attempt,
+      success ? 1 : 0, errorMsg,
+      Math.floor(Date.now() / 1000)
+    );
+  } catch (_) {}
+}
+
+/**
+ * _fmtWH — تنسيق بيانات webhook للـ API response
+ */
+function _fmtWH(r) {
+  if (!r) return null;
+  return {
+    ...r,
+    events    : _safeParse(r.events, []),
+    is_active : r.is_active === 1,
+    last_triggered_at_iso: r.last_triggered_at
+      ? new Date(r.last_triggered_at * 1000).toISOString()
+      : null,
+  };
+}

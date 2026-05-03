@@ -475,6 +475,42 @@ const TENANT_MIGRATIONS = [
 
   // أضف migrations جديدة هنا دايماً — لا تعدّل القديمة أبداً
 
+  // v31: inbox_webhooks_v4 (P8-5 Webhook Triggers)
+  { version: 31, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_webhooks_v4 (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id    INTEGER NOT NULL,
+      name         TEXT    NOT NULL,
+      url          TEXT    NOT NULL,
+      secret       TEXT,
+      events       TEXT    NOT NULL DEFAULT '[]',
+      is_active    INTEGER NOT NULL DEFAULT 1,
+      retry_count  INTEGER NOT NULL DEFAULT 3,
+      last_triggered_at INTEGER,
+      last_status  TEXT,
+      created_at   INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at   INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_wh_v4_tenant ON inbox_webhooks_v4(tenant_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_wh_v4_active ON inbox_webhooks_v4(tenant_id, is_active) WHERE is_active = 1`,
+    // جدول سجل الـ delivery لكل webhook fire
+    `CREATE TABLE IF NOT EXISTS inbox_webhook_logs_v4 (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      webhook_id   INTEGER NOT NULL REFERENCES inbox_webhooks_v4(id) ON DELETE CASCADE,
+      tenant_id    INTEGER NOT NULL,
+      event        TEXT    NOT NULL,
+      payload      TEXT    NOT NULL,
+      status_code  INTEGER,
+      response     TEXT,
+      attempt      INTEGER NOT NULL DEFAULT 1,
+      success      INTEGER NOT NULL DEFAULT 0,
+      error_msg    TEXT,
+      fired_at     INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_whl_v4_wh  ON inbox_webhook_logs_v4(webhook_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_whl_v4_ten ON inbox_webhook_logs_v4(tenant_id, fired_at DESC)`,
+  ]},
+
   // v30: inbox_broadcasts_v4 (P8-4 Broadcast V2)
   { version: 30, sqls: [
     `CREATE TABLE IF NOT EXISTS inbox_broadcasts_v4 (

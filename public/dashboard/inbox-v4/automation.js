@@ -1,6 +1,6 @@
 /**
  * automation.js — Welcome + Away Messages UI لـ Inbox v4
- * آخر تحديث: 2026-05-03 (P4-3 Welcome + Away Messages)
+ * آخر تحديث: 2026-05-03 (P8-5 Webhook Triggers)
  *
  * يوفر:
  *   - Overlay لإعداد رسالة الترحيب (Welcome) عند بدء محادثة جديدة
@@ -581,6 +581,375 @@ const InboxAutomation = (() => {
     } catch (err) {
       _showToast('❌ خطأ في حفظ Auto-Close: ' + err.message);
     }
+  }
+
+  return { init, open };
+})();
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// P8-5 InboxWebhooks — إدارة Webhook Triggers
+// ══════════════════════════════════════════════════════════════════════════════
+
+/* global InboxAPI */
+
+const InboxWebhooks = (() => {
+  'use strict';
+
+  // ── State ──────────────────────────────────────────────────────────────
+  let _webhooks  = [];
+  let _events    = [];
+  let _editId    = null; // null = إضافة جديدة
+
+  // ── Init ─────────────────────────────────────────────────────────────
+  function init() {
+    document.addEventListener('click', e => {
+      if (e.target.closest('[data-action="open-webhooks"]')) open();
+    });
+  }
+
+  // ── فتح الـ Panel ───────────────────────────────────────────────────────
+  async function open() {
+    _removePanel();
+
+    const panel = document.createElement('div');
+    panel.id = 'iv4-wh-panel';
+    panel.innerHTML = `
+      <div class="iv4-wh-overlay">
+        <div class="iv4-wh-container">
+          <div class="iv4-wh-header">
+            <h2>⚡ Webhook Triggers</h2>
+            <button class="iv4-wh-close" id="iv4-wh-close">✕</button>
+          </div>
+          <div class="iv4-wh-body" id="iv4-wh-body">
+            <div class="iv4-wh-loading">جاري التحميل…</div>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(panel);
+
+    panel.querySelector('#iv4-wh-close').onclick = _removePanel;
+    panel.querySelector('.iv4-wh-overlay').addEventListener('click', e => {
+      if (e.target.classList.contains('iv4-wh-overlay')) _removePanel();
+    });
+
+    await _loadAndRender();
+  }
+
+  // ── جلب + عرض ──────────────────────────────────────────────────────────
+  async function _loadAndRender() {
+    const body = document.getElementById('iv4-wh-body');
+    if (!body) return;
+    try {
+      const [whData, evData] = await Promise.all([
+        InboxAPI.webhooks.list(),
+        InboxAPI.webhooks.events(),
+      ]);
+      _webhooks = whData.webhooks  || [];
+      _events   = evData.events    || [];
+      _renderList(body);
+    } catch (err) {
+      body.innerHTML = `<div class="iv4-wh-error">خطأ: ${_esc(err.message)}</div>`;
+    }
+  }
+
+  // ── عرض القائمة ──────────────────────────────────────────────────────
+  function _renderList(container) {
+    container.innerHTML = `
+      <div class="iv4-wh-list-header">
+        <p class="iv4-wh-desc">
+          اربط النظام بأنظمتك الخارجية — سيرسل Areej Inbox طلب HTTP POST للـ URL المحدد عند كل حدث
+        </p>
+        <button class="iv4-wh-btn iv4-wh-btn--primary" id="iv4-wh-add-btn">➕ إضافة Webhook</button>
+      </div>
+
+      ${_webhooks.length === 0
+        ? '<div class="iv4-wh-empty">لا توجد webhooks حتى الآن. أضف واحداً للبدء ️</div>'
+        : `<div class="iv4-wh-cards">${_webhooks.map(_buildCard).join('')}</div>`
+      }
+    `;
+
+    // أحداث
+    container.querySelector('#iv4-wh-add-btn').onclick = () => _openForm(null);
+
+    container.querySelectorAll('.iv4-wh-card-edit').forEach(btn => {
+      btn.onclick = () => _openForm(btn.dataset.id);
+    });
+    container.querySelectorAll('.iv4-wh-card-delete').forEach(btn => {
+      btn.onclick = () => _delete(btn.dataset.id);
+    });
+    container.querySelectorAll('.iv4-wh-card-toggle').forEach(btn => {
+      btn.onclick = () => _toggle(btn.dataset.id);
+    });
+    container.querySelectorAll('.iv4-wh-card-test').forEach(btn => {
+      btn.onclick = () => _testWebhook(btn.dataset.id);
+    });
+    container.querySelectorAll('.iv4-wh-card-logs').forEach(btn => {
+      btn.onclick = () => _openLogs(btn.dataset.id);
+    });
+  }
+
+  // ── بناء بطاقة webhook ───────────────────────────────────────────────────
+  function _buildCard(wh) {
+    const statusClass = wh.is_active ? 'iv4-wh-status--on' : 'iv4-wh-status--off';
+    const statusLabel = wh.is_active ? 'فعّال' : 'معطّل';
+    const lastTrig    = wh.last_triggered_at_iso
+      ? new Date(wh.last_triggered_at_iso).toLocaleString('ar-EG')
+      : 'لم يُشغّل بعد';
+    const events      = (wh.events || []).length > 0
+      ? wh.events.join(' · ')
+      : 'كل الأحداث';
+    const lastStatus  = wh.last_status
+      ? (wh.last_status === 'ok'
+          ? '<span class="iv4-wh-ok">✅ OK</span>'
+          : `<span class="iv4-wh-fail">❌ ${_esc(wh.last_status)}</span>`)
+      : '';
+
+    return `
+      <div class="iv4-wh-card ${wh.is_active ? '' : 'iv4-wh-card--off'}" data-id="${wh.id}">
+        <div class="iv4-wh-card-top">
+          <div class="iv4-wh-card-info">
+            <div class="iv4-wh-card-name">${_esc(wh.name)}</div>
+            <div class="iv4-wh-card-url" title="${_esc(wh.url)}">${_esc(_truncateUrl(wh.url))}</div>
+            <div class="iv4-wh-card-events">️أحداث: ${_esc(events)}</div>
+          </div>
+          <div class="iv4-wh-card-meta">
+            <span class="iv4-wh-status ${statusClass}">${statusLabel}</span>
+            ${lastStatus}
+          </div>
+        </div>
+        <div class="iv4-wh-card-bottom">
+          <span class="iv4-wh-card-trig">آخر تشغيل: ${_esc(lastTrig)}</span>
+          <div class="iv4-wh-card-actions">
+            <button class="iv4-wh-btn iv4-wh-btn--sm iv4-wh-card-test"   data-id="${wh.id}">️اختبار</button>
+            <button class="iv4-wh-btn iv4-wh-btn--sm iv4-wh-card-logs"   data-id="${wh.id}">📜 سجل</button>
+            <button class="iv4-wh-btn iv4-wh-btn--sm iv4-wh-card-toggle" data-id="${wh.id}">${wh.is_active ? '⏸ إيقاف' : '▶ تفعيل'}</button>
+            <button class="iv4-wh-btn iv4-wh-btn--sm iv4-wh-card-edit"   data-id="${wh.id}">✏️ تعديل</button>
+            <button class="iv4-wh-btn iv4-wh-btn--sm iv4-wh-btn--danger iv4-wh-card-delete" data-id="${wh.id}">🗑️</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ── فورم إضافة / تعديل ─────────────────────────────────────────────────
+  function _openForm(id) {
+    _editId     = id || null;
+    const body  = document.getElementById('iv4-wh-body');
+    if (!body) return;
+
+    const wh = id ? _webhooks.find(w => String(w.id) === String(id)) : null;
+    const checkedEvents = wh ? (wh.events || []) : [];
+
+    body.innerHTML = `
+      <div class="iv4-wh-form">
+        <h3>${wh ? 'تعديل Webhook' : 'Webhook جديد'}</h3>
+
+        <div class="iv4-wh-form-row">
+          <label>الاسم</label>
+          <input type="text" id="iv4-wh-name" class="iv4-wh-input"
+            placeholder="مثال: Zapier CRM Sync"
+            value="${_esc(wh?.name || '')}">
+        </div>
+
+        <div class="iv4-wh-form-row">
+          <label>URL (HTTPS)</label>
+          <input type="url" id="iv4-wh-url" class="iv4-wh-input"
+            placeholder="https://hooks.zapier.com/..."
+            value="${_esc(wh?.url || '')}">
+        </div>
+
+        <div class="iv4-wh-form-row">
+          <label>Secret (اختياري) — HMAC-SHA256</label>
+          <input type="text" id="iv4-wh-secret" class="iv4-wh-input"
+            placeholder="اتركه فارغاً إذا لم تحتاج تحقق التوقيع"
+            value="${_esc(wh?.secret || '')}">
+          <div class="iv4-wh-hint">سيصلك header: <code>X-Areej-Signature: sha256=...</code></div>
+        </div>
+
+        <div class="iv4-wh-form-row">
+          <label>الأحداث</label>
+          <div class="iv4-wh-events-grid" id="iv4-wh-events-grid">
+            ${_events.map(ev => `
+              <label class="iv4-wh-ev-label">
+                <input type="checkbox" class="iv4-wh-ev-cb" value="${_esc(ev.key)}"
+                  ${checkedEvents.includes(ev.key) ? 'checked' : ''}>
+                <span>${_esc(ev.label)}</span>
+                <small class="iv4-wh-ev-key">${_esc(ev.key)}</small>
+              </label>`).join('')}
+          </div>
+          <button class="iv4-wh-btn iv4-wh-btn--xs" id="iv4-wh-ev-all">تحديد الكل</button>
+          <button class="iv4-wh-btn iv4-wh-btn--xs" id="iv4-wh-ev-none">إلغاء الكل</button>
+        </div>
+
+        <div class="iv4-wh-form-row">
+          <label>عدد المحاولات عند الفشل</label>
+          <input type="number" id="iv4-wh-retry" class="iv4-wh-input iv4-wh-input--sm"
+            min="1" max="10" value="${wh?.retry_count || 3}">
+          <div class="iv4-wh-hint">exponential backoff: 1s, 2s, 4s, 8s…</div>
+        </div>
+
+        <div class="iv4-wh-form-footer">
+          <button class="iv4-wh-btn" id="iv4-wh-back">← رجوع</button>
+          <button class="iv4-wh-btn iv4-wh-btn--primary" id="iv4-wh-save">💾 حفظ</button>
+        </div>
+        <div class="iv4-wh-form-error" id="iv4-wh-form-error" style="display:none"></div>
+      </div>`;
+
+    // أحداث
+    body.querySelector('#iv4-wh-back').onclick = () => _loadAndRender();
+    body.querySelector('#iv4-wh-save').onclick = () => _save();
+    body.querySelector('#iv4-wh-ev-all').onclick  = () =>
+      body.querySelectorAll('.iv4-wh-ev-cb').forEach(cb => { cb.checked = true; });
+    body.querySelector('#iv4-wh-ev-none').onclick = () =>
+      body.querySelectorAll('.iv4-wh-ev-cb').forEach(cb => { cb.checked = false; });
+  }
+
+  // ── حفظ ─────────────────────────────────────────────────────────────────
+  async function _save() {
+    const name        = document.getElementById('iv4-wh-name')?.value.trim();
+    const url         = document.getElementById('iv4-wh-url')?.value.trim();
+    const secret      = document.getElementById('iv4-wh-secret')?.value.trim();
+    const retry_count = parseInt(document.getElementById('iv4-wh-retry')?.value) || 3;
+    const events      = Array.from(document.querySelectorAll('.iv4-wh-ev-cb:checked')).map(cb => cb.value);
+
+    const errEl = document.getElementById('iv4-wh-form-error');
+    const _showErr = msg => { if (errEl) { errEl.textContent = msg; errEl.style.display = ''; } };
+    const _hideErr = ()  => { if (errEl) errEl.style.display = 'none'; };
+
+    if (!name)             return _showErr('الاسم مطلوب');
+    if (!url)              return _showErr('URL مطلوب');
+    if (events.length === 0) return _showErr('اختر حدثاً واحداً على الأقل');
+    _hideErr();
+
+    const saveBtn = document.getElementById('iv4-wh-save');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'جاري الحفظ…'; }
+
+    try {
+      const data = { name, url, secret: secret || null, events, retry_count };
+      if (_editId) {
+        await InboxAPI.webhooks.update(_editId, data);
+      } else {
+        await InboxAPI.webhooks.create(data);
+      }
+      _showToast(_editId ? '✅ تم تحديث الـ webhook' : '✅ تم إنشاء الـ webhook');
+      await _loadAndRender();
+    } catch (err) {
+      _showErr('خطأ: ' + err.message);
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 حفظ'; }
+    }
+  }
+
+  // ── حذف ──────────────────────────────────────────────────────────────
+  async function _delete(id) {
+    const wh = _webhooks.find(w => String(w.id) === String(id));
+    if (!wh) return;
+    if (!confirm(`حذف webhook «${wh.name}» نهائياً؟`)) return;
+    try {
+      await InboxAPI.webhooks.delete(id);
+      _showToast('🗑️ تم الحذف');
+      await _loadAndRender();
+    } catch (err) {
+      _showToast('❌ خطأ: ' + err.message);
+    }
+  }
+
+  // ── toggle ────────────────────────────────────────────────────────────
+  async function _toggle(id) {
+    try {
+      const data = await InboxAPI.webhooks.toggle(id);
+      const wh   = _webhooks.find(w => String(w.id) === String(id));
+      if (wh) wh.is_active = data.is_active;
+      const body = document.getElementById('iv4-wh-body');
+      if (body) _renderList(body);
+    } catch (err) {
+      _showToast('❌ ' + err.message);
+    }
+  }
+
+  // ── اختبار الـ webhook ─────────────────────────────────────────────────
+  async function _testWebhook(id) {
+    const wh = _webhooks.find(w => String(w.id) === String(id));
+    if (!wh) return;
+
+    _showToast(`📬 جاري إرسال ping لـ ${_truncateUrl(wh.url)}…`);
+    try {
+      const res = await InboxAPI.webhooks.test(id);
+      if (res.ok) {
+        _showToast(`✅ Ping نجح — HTTP ${res.status_code}`);
+      } else {
+        _showToast(`❌ فشل — ${res.error || 'HTTP ' + res.status_code}`);
+      }
+    } catch (err) {
+      _showToast('❌ ' + err.message);
+    }
+  }
+
+  // ── سجل المحاولات ───────────────────────────────────────────────────
+  async function _openLogs(id) {
+    const wh   = _webhooks.find(w => String(w.id) === String(id));
+    const body = document.getElementById('iv4-wh-body');
+    if (!body) return;
+
+    body.innerHTML = `<div class="iv4-wh-loading">جاري جلب السجل…</div>`;
+    try {
+      const data = await InboxAPI.webhooks.logs(id, 30);
+      const logs = data.logs || [];
+
+      body.innerHTML = `
+        <div class="iv4-wh-logs-header">
+          <h3>📜 سجل المحاولات — ${_esc(wh?.name || id)}</h3>
+          <button class="iv4-wh-btn" id="iv4-wh-logs-back">← رجوع</button>
+        </div>
+        ${logs.length === 0
+          ? '<div class="iv4-wh-empty">لا توجد محاولات بعد</div>'
+          : `<table class="iv4-wh-logs-table">
+              <thead><tr><th>وقت</th><th>حدث</th><th>محاولة</th><th>كود</th><th>حالة</th></tr></thead>
+              <tbody>
+                ${logs.map(l => `
+                  <tr class="${l.success ? '' : 'iv4-wh-log-fail'}">
+                    <td>${new Date(l.fired_at * 1000).toLocaleString('ar-EG')}</td>
+                    <td><code>${_esc(l.event)}</code></td>
+                    <td>${l.attempt}</td>
+                    <td>${l.status_code || '-'}</td>
+                    <td>${l.success ? '✅' : '❌ ' + _esc(l.error_msg || '')}</td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>`
+        }`;
+
+      body.querySelector('#iv4-wh-logs-back').onclick = () => _loadAndRender();
+    } catch (err) {
+      body.innerHTML = `<div class="iv4-wh-error">خطأ: ${_esc(err.message)}</div>`;
+    }
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
+  function _removePanel() {
+    document.getElementById('iv4-wh-panel')?.remove();
+  }
+
+  function _esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function _truncateUrl(url) {
+    if (!url) return '';
+    try {
+      const u = new URL(url);
+      const path = u.pathname.length > 20 ? u.pathname.slice(0,18) + '…' : u.pathname;
+      return u.hostname + path;
+    } catch (_) {
+      return url.length > 40 ? url.slice(0,38) + '…' : url;
+    }
+  }
+
+  function _showToast(msg) {
+    const t = document.createElement('div');
+    t.className   = 'iv4-auto-toast'; // نفس CSS الـ automation overlay
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.classList.add('iv4-auto-toast--show'), 10);
+    setTimeout(() => { t.classList.remove('iv4-auto-toast--show'); setTimeout(() => t.remove(), 300); }, 3200);
   }
 
   return { init, open };

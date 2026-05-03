@@ -239,6 +239,18 @@ router.put('/conversations/:id/status', (req, res) => {
     // إطلاق SSE event للموجودين
     _broadcastConvUpdate(req, id, { status });
 
+    // Webhook Trigger: conversation.closed (P8-5)
+    if (status === 'closed') {
+      try {
+        const { triggerWebhooks } = require('./automation');
+        triggerWebhooks(db, req.user.id, 'conversation.closed', {
+          conversation_id: id,
+          closed_at      : now,
+          closed_by      : req.user.id,
+        });
+      } catch (_) {}
+    }
+
     res.json({ ok: true });
   } catch (e) {
     console.error('[inbox/conversations/:id/status PUT]', e.message);
