@@ -16,6 +16,8 @@ const IV3 = {
   statusFilter: '',     // '' = الكل، 'open'، 'waiting'، 'closed'
   agentFilter: '',      // '' = الكل، 'unassigned'، أو user_id
   searchQuery: '',      // نص البحث
+  dateFrom: '',         // فلتر من تاريخ (YYYY-MM-DD)
+  dateTo: '',           // فلتر إلى تاريخ (YYYY-MM-DD)
 
   // ── الرسائل ────────────────────────────────────────
   messages: [],         // رسائل المحادثة الحالية

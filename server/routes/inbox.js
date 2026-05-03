@@ -61,9 +61,14 @@ router.get('/inbox/conversations', requireAuth, (req, res) => {
   const db = req.db;
   try {
     const platform    = req.query.platform || '';
-    const assignedTo  = req.query.assigned_to || ''; // فلتر بالموظف (owner only)
-    const status      = req.query.status || '';       // open | closed | all
+    const assignedTo  = req.query.assigned_to || req.query.assigned || '';
+    const status      = req.query.status || '';
+    const search      = (req.query.search || '').trim();
+    const from        = req.query.from  || '';
+    const to          = req.query.to    || '';
+    const page        = Math.max(1, parseInt(req.query.page) || 1);
     const limit       = Math.min(parseInt(req.query.limit) || 50, 200);
+    const offset      = (page - 1) * limit;
 
     const { whereClause, params, isOwner } = getConversationScope(req);
 
@@ -79,6 +84,13 @@ router.get('/inbox/conversations', requireAuth, (req, res) => {
         conditions.push('c.assigned_to_id=?'); qParams.push(parseInt(assignedTo));
       }
     }
+    if (search) {
+      conditions.push('(c.sender_name LIKE ? OR c.last_message LIKE ? OR c.sender_phone LIKE ?)');
+      const like = '%' + search + '%';
+      qParams.push(like, like, like);
+    }
+    if (from) { conditions.push('c.last_message_at >= ?'); qParams.push(from); }
+    if (to)   { conditions.push('c.last_message_at <= ?'); qParams.push(to + ' 23:59:59'); }
 
     const allConditions = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
     // تطبيق scope الموظف
@@ -92,9 +104,9 @@ router.get('/inbox/conversations', requireAuth, (req, res) => {
       FROM inbox_conversations c
       LEFT JOIN tenant_users tu ON tu.id = c.assigned_to_id
       ${scopeConditions}
-      ORDER BY c.last_message_at DESC LIMIT ?`;
+      ORDER BY c.last_message_at DESC LIMIT ? OFFSET ?`;
 
-    const rows = db.prepare(q).all(...qParams, ...params, limit);
+    const rows = db.prepare(q).all(...qParams, ...params, limit, offset);
     res.json({ ok: true, conversations: rows, isOwner });
   } catch(e) { console.error('[inbox/conversations]', e.message); res.json({ ok: true, conversations: [], isOwner: false }); }
 });

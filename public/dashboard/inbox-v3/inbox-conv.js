@@ -22,6 +22,8 @@ async function iv3LoadConvs(reset = true) {
       status:   IV3.statusFilter,
       assigned: IV3.agentFilter,
       search:   IV3.searchQuery,
+      from:     IV3.dateFrom,
+      to:       IV3.dateTo,
       page:     IV3.convPage,
       limit:    IV3.convPageSize,
     });
@@ -771,6 +773,8 @@ function iv3ExportConvs() {
   const params = new URLSearchParams();
   if (IV3.platform && IV3.platform !== 'all') params.set('platform', IV3.platform);
   if (IV3.statusFilter && IV3.statusFilter !== 'all') params.set('status', IV3.statusFilter);
+  if (IV3.dateFrom) params.set('from', IV3.dateFrom);
+  if (IV3.dateTo)   params.set('to',   IV3.dateTo);
 
   const url = `/api/system/inbox/conversations/export?${params.toString()}`;
   iv3Toast('📥 جاري تحضير الملف...', 'info');
@@ -797,4 +801,56 @@ function iv3ExportConvs() {
     iv3Toast('✅ تم تصدير المحادثات بنجاح', 'success');
   })
   .catch(e => iv3Toast('❌ ' + e.message, 'error'));
+}
+
+// ── Date Range Filter ────────────────────────────────────────
+
+function iv3ToggleDateFilter() {
+  const inputs = document.getElementById('iv3-date-inputs');
+  const toggle = document.getElementById('iv3-date-toggle');
+  if (!inputs) return;
+  const open = inputs.style.display === 'none' || inputs.style.display === '';
+  inputs.style.display = open ? 'flex' : 'none';
+  toggle?.classList.toggle('active', open);
+}
+
+function iv3ApplyDateFilter() {
+  const fromEl = document.getElementById('iv3-date-from');
+  const toEl   = document.getElementById('iv3-date-to');
+  IV3.dateFrom = fromEl?.value || '';
+  IV3.dateTo   = toEl?.value   || '';
+
+  // تحديث label الزر
+  const label = document.getElementById('iv3-date-label');
+  if (label) {
+    if (IV3.dateFrom || IV3.dateTo) {
+      const f = IV3.dateFrom || '…';
+      const t = IV3.dateTo   || '…';
+      label.textContent = `${f} ← ${t}`;
+      document.getElementById('iv3-date-toggle')?.classList.add('active');
+    } else {
+      label.textContent = 'تصفية بالتاريخ';
+      document.getElementById('iv3-date-toggle')?.classList.remove('active');
+    }
+  }
+
+  iv3LoadConvs(true);
+}
+
+function iv3ClearDateFilter() {
+  IV3.dateFrom = '';
+  IV3.dateTo   = '';
+  const fromEl = document.getElementById('iv3-date-from');
+  const toEl   = document.getElementById('iv3-date-to');
+  if (fromEl) fromEl.value = '';
+  if (toEl)   toEl.value   = '';
+
+  const label = document.getElementById('iv3-date-label');
+  if (label) label.textContent = 'تصفية بالتاريخ';
+  document.getElementById('iv3-date-toggle')?.classList.remove('active');
+
+  // أخفِ الـ inputs وأعد التحميل
+  const inputs = document.getElementById('iv3-date-inputs');
+  if (inputs) inputs.style.display = 'none';
+  iv3LoadConvs(true);
 }

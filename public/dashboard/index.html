@@ -2405,6 +2405,25 @@
           <button class="iv3-filt" data-status="waiting" onclick="iv3SetStatusFilter('waiting',this)">⏳ انتظار</button>
           <button class="iv3-filt" data-status="closed"  onclick="iv3SetStatusFilter('closed',this)">✓ مغلقة</button>
         </div>
+
+        <!-- Date Range Filter -->
+        <div class="iv3-date-filter" id="iv3-date-filter-wrap">
+          <button class="iv3-date-toggle" id="iv3-date-toggle" onclick="iv3ToggleDateFilter()" title="فلتر بالتاريخ">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span id="iv3-date-label">تصفية بالتاريخ</span>
+          </button>
+          <div class="iv3-date-inputs" id="iv3-date-inputs" style="display:none">
+            <div class="iv3-date-row">
+              <label>من</label>
+              <input type="date" id="iv3-date-from" onchange="iv3ApplyDateFilter()">
+            </div>
+            <div class="iv3-date-row">
+              <label>إلى</label>
+              <input type="date" id="iv3-date-to" onchange="iv3ApplyDateFilter()">
+            </div>
+            <button class="iv3-date-clear" onclick="iv3ClearDateFilter()">× مسح</button>
+          </div>
+        </div>
       </div>
 
       <!-- Conversations scroll list -->

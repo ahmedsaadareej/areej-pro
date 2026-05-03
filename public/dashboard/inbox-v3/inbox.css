@@ -2193,3 +2193,67 @@ body.ltr .iv3-ctx-icon-btn::before {
   color: #6b7280;
   font-size: 12px;
 }
+
+/* ── Date Range Filter ───────────────────────────────────────── */
+.iv3-date-filter {
+  padding: 0 8px 6px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.iv3-date-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: Cairo, sans-serif;
+  color: #6b7280;
+  cursor: pointer;
+  width: 100%;
+  transition: border-color .15s, color .15s;
+}
+.iv3-date-toggle:hover,
+.iv3-date-toggle.active { border-color: #6366f1; color: #6366f1; }
+.iv3-date-toggle.active { background: #eef2ff; }
+.iv3-date-inputs {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  animation: iv3FadeIn .15s ease;
+}
+.iv3-date-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #374151;
+  font-family: Cairo, sans-serif;
+}
+.iv3-date-row label { min-width: 20px; color: #6b7280; }
+.iv3-date-row input[type=date] {
+  flex: 1;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: 11px;
+  font-family: Cairo, sans-serif;
+  color: #111;
+  outline: none;
+  transition: border-color .15s;
+}
+.iv3-date-row input[type=date]:focus { border-color: #6366f1; }
+.iv3-date-clear {
+  align-self: flex-end;
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: Cairo, sans-serif;
+}
+.iv3-date-clear:hover { background: #fef2f2; }
