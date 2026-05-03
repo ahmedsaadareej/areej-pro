@@ -2995,4 +2995,99 @@ router.get('/inbox/wa-analytics', requireAuth, async (req, res) => {
   }
 });
 
+// ── Export Conversations as CSV ────────────────────────────────────────────
+router.get('/inbox/conversations/export', requireAuth, (req, res) => {
+  try {
+    const db = req.db;
+    const { platform, status, from, to } = req.query;
+
+    let where = [];
+    let params = [];
+
+    if (platform && platform !== 'all') {
+      where.push('c.platform = ?');
+      params.push(platform);
+    }
+    if (status && status !== 'all') {
+      where.push('c.status = ?');
+      params.push(status);
+    }
+    if (from) {
+      where.push('c.last_message_at >= ?');
+      params.push(from);
+    }
+    if (to) {
+      where.push('c.last_message_at <= ?');
+      params.push(to + ' 23:59:59');
+    }
+
+    const whereClause = where.length ? 'WHERE ' + where.join(' AND ') : '';
+
+    const convs = db.prepare(`
+      SELECT
+        c.id,
+        c.platform,
+        c.sender_name,
+        c.sender_phone,
+        c.status,
+        c.assigned_to_name,
+        c.unread_count,
+        c.last_message,
+        c.last_message_at,
+        c.created_at,
+        (
+          SELECT COUNT(*) FROM inbox_messages m
+          WHERE m.conversation_id = c.id
+        ) AS total_messages,
+        (
+          SELECT COUNT(*) FROM inbox_messages m
+          WHERE m.conversation_id = c.id AND m.direction = 'in'
+        ) AS inbound_messages,
+        (
+          SELECT COUNT(*) FROM inbox_messages m
+          WHERE m.conversation_id = c.id AND m.direction = 'out'
+        ) AS outbound_messages
+      FROM inbox_conversations c
+      ${whereClause}
+      ORDER BY c.last_message_at DESC
+      LIMIT 5000
+    `).all(...params);
+
+    // بناء CSV
+    const escCSV = (v) => {
+      if (v == null) return '';
+      const s = String(v);
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    };
+
+    const headers = [
+      'ID', 'المنصة', 'اسم العميل', 'رقم الهاتف', 'الحالة',
+      'الموظف المسؤول', 'رسائل غير مقروءة',
+      'آخر رسالة', 'تاريخ آخر رسالة', 'تاريخ الإنشاء',
+      'إجمالي الرسائل', 'رسائل واردة', 'رسائل صادرة'
+    ];
+
+    const rows = convs.map(c => [
+      c.id, c.platform, c.sender_name, c.sender_phone, c.status,
+      c.assigned_to_name, c.unread_count,
+      c.last_message, c.last_message_at, c.created_at,
+      c.total_messages, c.inbound_messages, c.outbound_messages
+    ].map(escCSV).join(','));
+
+    // BOM لدعم Excel العربي
+    const bom = '\uFEFF';
+    const csv = bom + headers.join(',') + '\n' + rows.join('\n');
+
+    const filename = `conversations-${new Date().toISOString().slice(0,10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send(csv);
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 module.exports = router;

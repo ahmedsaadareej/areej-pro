@@ -763,3 +763,38 @@ document.addEventListener('click', function(e) {
     iv3CloseNewConvModal();
   }
 });
+
+// ── Export Conversations CSV ─────────────────────────────────
+
+function iv3ExportConvs() {
+  // بناء الـ query params من الفلاتر الحالية
+  const params = new URLSearchParams();
+  if (IV3.platform && IV3.platform !== 'all') params.set('platform', IV3.platform);
+  if (IV3.statusFilter && IV3.statusFilter !== 'all') params.set('status', IV3.statusFilter);
+
+  const url = `/api/system/inbox/conversations/export?${params.toString()}`;
+  iv3Toast('📥 جاري تحضير الملف...', 'info');
+
+  // إنشاء رابط تنزيل مؤقت مع Bearer token
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+
+  fetch(url, {
+    headers: { 'Authorization': 'Bearer ' + token }
+  })
+  .then(r => {
+    if (!r.ok) throw new Error('فشل التصدير');
+    return r.blob();
+  })
+  .then(blob => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const date = new Date().toISOString().slice(0, 10);
+    a.download = `conversations-${date}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    iv3Toast('✅ تم تصدير المحادثات بنجاح', 'success');
+  })
+  .catch(e => iv3Toast('❌ ' + e.message, 'error'));
+}
