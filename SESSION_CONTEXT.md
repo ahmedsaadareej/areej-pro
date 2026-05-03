@@ -1,3 +1,20 @@
+## Session 2026-05-03 (07:43 → 08:05 UTC) — مكتملة
+- الحالة: تم الإكمال (5 مهام — الحد الأقصى للجلسة)
+- ما تم إنجازه:
+  - feat: FEAT-1 — Browser Push Notifications + Service Worker (eab6336)
+  - feat: FEAT-2 — Mark All as Read (be2796f)
+  - feat: FEAT-3 — Relative Time عربي (cb1e79e)
+  - feat: FEAT-4 — نسخ رسالة Double-click (bfce41e)
+  - feat: FEAT-6 — AI Suggestions بـ Genspark API مباشر بدل execSync (ceb26d0)
+- قرارات تقنية:
+  - Genspark proxy: OPENAI_BASE_URL=https://www.genspark.ai/api/llm_proxy/v1
+  - النموذج المختار: claude-haiku-4-5 (أسرع + أرخص + عربي ممتاز)
+  - gpt-4o-mini غير مسموح في Genspark — claude-haiku-4-5 بديل مثالي
+  - .env في gitignore (صح أمنياً) — لا يُضاف للـ repo
+  - fallback كلمات مفتاحية لو API فشل
+- آخر Commit: ceb26d0
+- نقطة البداية القادمة: QUAL-1 — Snooze Dashboard (عرض المحادثات المؤجلة في inbox-conv.js + server/routes/inbox.js)
+
 ## Session 2026-05-03 (07:34 → 07:52 UTC) — مكتملة
 - الحالة: تم الإكمال (4 مهام — الحد الأقصى للجلسة)
 - ما تم إنجازه:
