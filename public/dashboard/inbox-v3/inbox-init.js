@@ -48,6 +48,17 @@ async function iv3Init() {
 function iv3StartPolling() {
   if (IV3.pollTimer) clearInterval(IV3.pollTimer);
   IV3.pollTimer = setInterval(iv3PollUpdate, IV3.pollInterval);
+
+  // BUG-4: تقليل الـ polling لما التبويب مخفي (من 8s إلى 30s)
+  if (!IV3._visibilityListenerAdded) {
+    IV3._visibilityListenerAdded = true;
+    document.addEventListener('visibilitychange', () => {
+      if (!IV3.pollTimer) return;
+      clearInterval(IV3.pollTimer);
+      const interval = document.hidden ? 30000 : IV3.pollInterval;
+      IV3.pollTimer = setInterval(iv3PollUpdate, interval);
+    });
+  }
 }
 
 function iv3StopPolling() {
@@ -79,6 +90,9 @@ async function iv3PollUpdate() {
       platform: IV3.platform,
       status:   IV3.statusFilter,
       assigned: IV3.agentFilter,
+      from:     IV3.dateFrom  || undefined,
+      to:       IV3.dateTo    || undefined,
+      search:   IV3.searchQuery || undefined,
       page: 1,
       limit: IV3.convPageSize,
     });

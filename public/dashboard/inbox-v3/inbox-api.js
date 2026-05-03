@@ -52,6 +52,8 @@ const IV3_API = {
     if (params.status)    q.set('status', params.status);
     if (params.assigned)  q.set('assigned', params.assigned);
     if (params.search)    q.set('search', params.search);
+    if (params.from)      q.set('from', params.from);
+    if (params.to)        q.set('to', params.to);
     if (params.page)      q.set('page', params.page);
     if (params.limit)     q.set('limit', params.limit || 30);
     const data = await this._get(`/api/system/inbox/conversations?${q}`);

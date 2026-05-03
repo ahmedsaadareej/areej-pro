@@ -780,7 +780,7 @@ function iv3ExportConvs() {
   iv3Toast('📥 جاري تحضير الملف...', 'info');
 
   // إنشاء رابط تنزيل مؤقت مع Bearer token
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+  const token = localStorage.getItem('pro_token') || sessionStorage.getItem('pro_token') || '';
 
   fetch(url, {
     headers: { 'Authorization': 'Bearer ' + token }
