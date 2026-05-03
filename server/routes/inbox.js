@@ -310,6 +310,7 @@ router.post('/inbox/settings', requireAuth, (req, res) => {
     if (!cols.includes('wa_account_id')) db.prepare('ALTER TABLE inbox_settings ADD COLUMN wa_account_id TEXT').run();
     if (!cols.includes('wa_token'))      db.prepare('ALTER TABLE inbox_settings ADD COLUMN wa_token TEXT').run();
     if (!cols.includes('wa_active'))     db.prepare('ALTER TABLE inbox_settings ADD COLUMN wa_active INTEGER DEFAULT 0').run();
+    if (!cols.includes('wa_verify_token')) db.prepare('ALTER TABLE inbox_settings ADD COLUMN wa_verify_token TEXT').run();
 
     const b = req.body;
     // Get existing row
@@ -327,19 +328,20 @@ router.post('/inbox/settings', requireAuth, (req, res) => {
       wa_phone_id:     b.wa_phone_id     !== undefined ? b.wa_phone_id     : existing.wa_phone_id,
       wa_account_id:   b.wa_account_id   !== undefined ? b.wa_account_id   : existing.wa_account_id,
       wa_token:        b.wa_token        !== undefined ? b.wa_token        : existing.wa_token,
-      wa_active:       b.wa_active       !== undefined ? (b.wa_active?1:0)  : existing.wa_active,
-      wa_qr_active:    b.wa_qr_active    !== undefined ? (b.wa_qr_active?1:0) : existing.wa_qr_active,
+      wa_active:        b.wa_active        !== undefined ? (b.wa_active?1:0)  : existing.wa_active,
+      wa_verify_token:  b.wa_verify_token  !== undefined ? b.wa_verify_token  : existing.wa_verify_token,
+      wa_qr_active:     b.wa_qr_active     !== undefined ? (b.wa_qr_active?1:0) : existing.wa_qr_active,
       welcome_active:  b.welcome_active  !== undefined ? (b.welcome_active?1:0) : existing.welcome_active,
       welcome_message: b.welcome_message !== undefined ? b.welcome_message : existing.welcome_message,
       away_active:     b.away_active     !== undefined ? (b.away_active?1:0) : existing.away_active,
       away_message:    b.away_message    !== undefined ? b.away_message    : existing.away_message,
     };
     db.prepare(`INSERT OR REPLACE INTO inbox_settings 
-      (id, telegram_token, telegram_active, meta_token, meta_page_id, meta_active, ig_token, ig_account_id, ig_active, wa_phone_id, wa_account_id, wa_token, wa_active, wa_qr_active, welcome_active, welcome_message, away_active, away_message, updated_at)
-      VALUES (1,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))`).run(
+      (id, telegram_token, telegram_active, meta_token, meta_page_id, meta_active, ig_token, ig_account_id, ig_active, wa_phone_id, wa_account_id, wa_token, wa_active, wa_verify_token, wa_qr_active, welcome_active, welcome_message, away_active, away_message, updated_at)
+      VALUES (1,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))`).run(
       merged.telegram_token, merged.telegram_active, merged.meta_token, merged.meta_page_id, merged.meta_active,
       merged.ig_token, merged.ig_account_id, merged.ig_active,
-      merged.wa_phone_id, merged.wa_account_id, merged.wa_token, merged.wa_active, merged.wa_qr_active,
+      merged.wa_phone_id, merged.wa_account_id, merged.wa_token, merged.wa_active, merged.wa_verify_token, merged.wa_qr_active,
       merged.welcome_active, merged.welcome_message, merged.away_active, merged.away_message
     );
     res.json({ ok: true });

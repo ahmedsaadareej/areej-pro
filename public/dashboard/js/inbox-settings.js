@@ -332,9 +332,12 @@ async function saveWhatsAppSettingsNew() {
   const statusEl = document.getElementById('wa-status-msg');
   if (!phoneId || !token) { showToast('أدخل Phone Number ID و Access Token'); return; }
   if (statusEl) statusEl.innerHTML = '<span style="color:#6b7280">⏳ جاري الحفظ...</span>';
+  // Generate verify token from display (already shown in UI)
+  const verifyTokenEl = document.getElementById('is-wa-verify-token');
+  const verifyToken = verifyTokenEl ? verifyTokenEl.textContent.trim() : '';
   const d = await apiFetch('/api/system/inbox/settings', {
     method: 'POST',
-    body: JSON.stringify({ wa_phone_id: phoneId, wa_account_id: accountId, wa_token: token })
+    body: JSON.stringify({ wa_phone_id: phoneId, wa_account_id: accountId, wa_token: token, wa_verify_token: verifyToken })
   });
   if (d && (d.ok || d.settings)) {
     if (statusEl) statusEl.innerHTML = '<span style="color:#16a34a;font-weight:700">✅ تم الحفظ بنجاح</span>';

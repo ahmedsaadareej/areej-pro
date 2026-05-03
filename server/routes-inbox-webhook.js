@@ -298,3 +298,102 @@ router.post('/telegram/:userId', express.json(), async (req, res) => {
 });
 
 module.exports = router;
+
+// ── WHATSAPP API WEBHOOK ──
+// GET /api/webhook/whatsapp/:userId  ← Meta Verification
+router.get('/whatsapp/:userId', (req, res) => {
+  const userId = parseInt(req.params.userId);
+  const mode      = req.query['hub.mode'];
+  const token     = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+
+  if (mode !== 'subscribe' || !token || !challenge) {
+    return res.status(400).send('Bad Request');
+  }
+
+  if (!userId || isNaN(userId)) return res.status(404).send('Not Found');
+  const userExists = master.prepare('SELECT id FROM users WHERE id=? AND status IN (?,?,?)').get(userId, 'active', 'trial', 'grace');
+  if (!userExists) return res.status(404).send('Not Found');
+
+  try {
+    const db = getTenantDb(userId);
+    try { db.prepare('ALTER TABLE inbox_settings ADD COLUMN wa_verify_token TEXT').run(); } catch(e) {}
+    const settings = db.prepare('SELECT wa_verify_token FROM inbox_settings WHERE id=1').get();
+    if (!settings) return res.status(403).send('Forbidden');
+
+    const storedToken = (settings.wa_verify_token || '').trim();
+    if (storedToken && token === storedToken) {
+      console.log('[WA Webhook] Verified userId=' + userId);
+      return res.status(200).send(challenge);
+    }
+    console.warn('[WA Webhook] Token mismatch userId=' + userId + ' got=' + token + ' expected=' + storedToken);
+    return res.status(403).send('Forbidden');
+  } catch(e) {
+    console.error('[WA Webhook GET]', e.message);
+    return res.status(500).send('Error');
+  }
+});
+
+// POST /api/webhook/whatsapp/:userId  ← Incoming Messages
+router.post('/whatsapp/:userId', express.json(), async (req, res) => {
+  res.status(200).send('OK'); // رد فوري لـ Meta
+  const userId = parseInt(req.params.userId);
+  const body = req.body;
+  if (!body || body.object !== 'whatsapp_business_account') return;
+
+  if (!userId || isNaN(userId)) return;
+  const userExists = master.prepare('SELECT id FROM users WHERE id=?').get(userId);
+  if (!userExists) return;
+
+  try {
+    const db = getTenantDb(userId);
+    ensureMediaColumns(db);
+    const settings = db.prepare('SELECT wa_active, wa_phone_id, wa_token FROM inbox_settings WHERE id=1').get();
+    if (!settings || !settings.wa_active) return;
+
+    for (const entry of (body.entry || [])) {
+      for (const change of (entry.changes || [])) {
+        if (change.field !== 'messages') continue;
+        const val = change.value || {};
+        for (const msg of (val.messages || [])) {
+          const senderId   = msg.from;
+          const senderName = (val.contacts || []).find(c => c.wa_id === senderId)?.profile?.name || senderId;
+          const msgId      = msg.id;
+          const ts         = parseInt(msg.timestamp) || Math.floor(Date.now()/1000);
+
+          let content = '';
+          let mediaType = null;
+
+          if (msg.type === 'text') {
+            content = msg.text?.body || '';
+          } else if (['image','audio','video','document','sticker'].includes(msg.type)) {
+            const mediaObj = msg[msg.type] || {};
+            mediaType = msg.type;
+            content   = mediaObj.caption || ('[' + msg.type + ']');
+          } else if (msg.type === 'location') {
+            content = '📍 موقع: ' + msg.location?.latitude + ', ' + msg.location?.longitude;
+          } else {
+            content = '[' + msg.type + ']';
+          }
+
+          // Upsert conversation
+          let conv = db.prepare('SELECT id FROM inbox_conversations WHERE platform=? AND sender_id=?').get('whatsapp', senderId);
+          if (!conv) {
+            db.prepare("INSERT INTO inbox_conversations (platform, sender_id, sender_name, unread_count, last_message_at, created_at) VALUES ('whatsapp', ?, ?, 1, datetime('now'), datetime('now'))").run(senderId, senderName);
+            conv = db.prepare('SELECT id FROM inbox_conversations WHERE platform=? AND sender_id=?').get('whatsapp', senderId);
+          } else {
+            db.prepare("UPDATE inbox_conversations SET unread_count=unread_count+1, last_message_at=datetime('now'), sender_name=? WHERE id=?").run(senderName, conv.id);
+          }
+
+          // Insert message — avoid duplicates
+          const exists = db.prepare('SELECT id FROM inbox_messages WHERE external_id=?').get(msgId);
+          if (!exists) {
+            db.prepare("INSERT INTO inbox_messages (conversation_id, direction, content, media_type, is_read, external_id, created_at) VALUES (?, 'in', ?, ?, 0, ?, datetime(?, 'unixepoch'))").run(conv.id, content, mediaType, msgId, ts);
+          }
+        }
+      }
+    }
+  } catch(e) {
+    console.error('[WA Webhook POST]', e.message);
+  }
+});
