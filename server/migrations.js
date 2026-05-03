@@ -239,6 +239,150 @@ const TENANT_MIGRATIONS = [
     )`,
   ]},
 
+  // ══════════════════════════════════════════════════════════════
+  // INBOX v4 MIGRATIONS (v18–v24)
+  // ══════════════════════════════════════════════════════════════
+
+  // v18: inbox_conversations_v4 — جدول المحادثات الجديد
+  { version: 18, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_conversations_v4 (
+      id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+      platform             TEXT NOT NULL,
+      sender_id            TEXT NOT NULL,
+      sender_name          TEXT,
+      sender_phone         TEXT,
+      sender_avatar        TEXT,
+      status               TEXT NOT NULL DEFAULT 'open',
+      priority             TEXT NOT NULL DEFAULT 'normal',
+      assigned_to_id       INTEGER,
+      assigned_team_id     INTEGER,
+      master_contact_id    INTEGER,
+      label_id             INTEGER,
+      unread_count         INTEGER NOT NULL DEFAULT 0,
+      unread_agent_count   INTEGER NOT NULL DEFAULT 0,
+      snooze_until         INTEGER,
+      first_message_at     INTEGER,
+      first_response_at    INTEGER,
+      last_message_at      INTEGER,
+      last_message_text    TEXT,
+      last_message_dir     TEXT,
+      resolved_at          INTEGER,
+      csat_sent            INTEGER NOT NULL DEFAULT 0,
+      csat_token           TEXT,
+      csat_score           INTEGER,
+      csat_sent_at         INTEGER,
+      source_platform      TEXT,
+      channel_override     TEXT,
+      metadata             TEXT,
+      created_at           INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at           INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_conv_v4_status   ON inbox_conversations_v4(status)`,
+    `CREATE INDEX IF NOT EXISTS idx_conv_v4_platform ON inbox_conversations_v4(platform)`,
+    `CREATE INDEX IF NOT EXISTS idx_conv_v4_assigned ON inbox_conversations_v4(assigned_to_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_conv_v4_label    ON inbox_conversations_v4(label_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_conv_v4_snooze   ON inbox_conversations_v4(snooze_until) WHERE snooze_until IS NOT NULL`,
+    `CREATE INDEX IF NOT EXISTS idx_conv_v4_last_msg ON inbox_conversations_v4(last_message_at DESC)`,
+  ]},
+
+  // v19: inbox_messages_v4 — جدول الرسائل الجديد
+  { version: 19, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_messages_v4 (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      conversation_id  INTEGER NOT NULL REFERENCES inbox_conversations_v4(id) ON DELETE CASCADE,
+      platform         TEXT NOT NULL,
+      direction        TEXT NOT NULL,
+      content          TEXT,
+      content_type     TEXT NOT NULL DEFAULT 'text',
+      media_url        TEXT,
+      media_type       TEXT,
+      media_size       INTEGER,
+      media_filename   TEXT,
+      platform_msg_id  TEXT,
+      quoted_msg_id    INTEGER REFERENCES inbox_messages_v4(id),
+      sender_id        TEXT,
+      sender_name      TEXT,
+      agent_id         INTEGER,
+      is_read          INTEGER NOT NULL DEFAULT 0,
+      delivered_at     INTEGER,
+      read_at          INTEGER,
+      status           TEXT NOT NULL DEFAULT 'sent',
+      metadata         TEXT,
+      sent_at          INTEGER NOT NULL DEFAULT (unixepoch()),
+      created_at       INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_msg_v4_conv        ON inbox_messages_v4(conversation_id, sent_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_msg_v4_platform_id ON inbox_messages_v4(platform, platform_msg_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_msg_v4_unread      ON inbox_messages_v4(conversation_id, is_read) WHERE is_read = 0`,
+  ]},
+
+  // v20: inbox_timeline_v4 — سجل أحداث المحادثة
+  { version: 20, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_timeline_v4 (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      conversation_id  INTEGER NOT NULL REFERENCES inbox_conversations_v4(id) ON DELETE CASCADE,
+      event_type       TEXT NOT NULL,
+      actor_id         INTEGER,
+      actor_name       TEXT,
+      data             TEXT,
+      created_at       INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_timeline_v4_conv ON inbox_timeline_v4(conversation_id, created_at DESC)`,
+  ]},
+
+  // v21: inbox_agent_status — تحديث لـ v4 (بديل عن الـ v3 inline version)
+  // ملاحظة: inbox_agent_status اتعملت في v17 بـ schema مختلف — v4 يستخدم agent_id كـ PK مباشرةً
+  { version: 21, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_agent_status_v4 (
+      agent_id   INTEGER PRIMARY KEY REFERENCES tenant_users(id) ON DELETE CASCADE,
+      status     TEXT NOT NULL DEFAULT 'offline',
+      updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+  ]},
+
+  // v22: inbox_conversation_labels — many-to-many جديد
+  { version: 22, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_conversation_labels (
+      conversation_id  INTEGER NOT NULL REFERENCES inbox_conversations_v4(id) ON DELETE CASCADE,
+      label_id         INTEGER NOT NULL REFERENCES inbox_labels(id) ON DELETE CASCADE,
+      added_at         INTEGER NOT NULL DEFAULT (unixepoch()),
+      PRIMARY KEY (conversation_id, label_id)
+    )`,
+  ]},
+
+  // v23: inbox_channel_settings_v4 — بدل جدول inbox_settings الضخم
+  { version: 23, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_channel_settings_v4 (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      channel    TEXT NOT NULL UNIQUE,
+      config     TEXT NOT NULL DEFAULT '{}',
+      active     INTEGER NOT NULL DEFAULT 0,
+      updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+    // seed القنوات الافتراضية
+    `INSERT OR IGNORE INTO inbox_channel_settings_v4 (channel) VALUES
+      ('telegram'),
+      ('whatsapp_qr'),
+      ('whatsapp_api'),
+      ('instagram'),
+      ('messenger'),
+      ('email')`,
+  ]},
+
+  // v24: inbox_automation_v4 — قواعد الأتمتة
+  { version: 24, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_automation_v4 (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      type       TEXT NOT NULL,
+      name       TEXT,
+      config     TEXT NOT NULL DEFAULT '{}',
+      active     INTEGER NOT NULL DEFAULT 1,
+      priority   INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+  ]},
+
   // أضف migrations جديدة هنا دايماً — لا تعدّل القديمة أبداً
 ];
 
