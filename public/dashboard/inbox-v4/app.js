@@ -1,6 +1,6 @@
 /**
  * app.js — Inbox v4 Entry Point
- * آخر تحديث: 2026-05-03 (P8-3 WA Catalog Products)
+ * آخر تحديث: 2026-05-03 (P8-4 Broadcast V2)
  *
  * يُشغَّل آخر script في index.html بعد تحميل:
  *   store.js → api.js → stream.js → [conv-list.js → chat.js → ...] → app.js
@@ -244,6 +244,9 @@
 
     // Phase 8-3 — WA Catalog Products
     if (typeof InboxCatalog !== 'undefined') InboxCatalog.init();           // P8-3 ✅
+
+    // Phase 8-4 — Broadcast V2
+    if (typeof InboxBroadcast !== 'undefined') InboxBroadcast.init();       // P8-4 ✅
 
     // expose showInboxToast globally (for team.js + other modules)
     window.showInboxToast = toast;

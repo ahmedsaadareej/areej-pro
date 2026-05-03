@@ -1,6 +1,6 @@
 /**
  * Inbox v4 Routes — /api/inbox/*
- * آخر تحديث: 2026-05-03 (P7-1 AI Suggestions)
+ * آخر تحديث: 2026-05-03 (P8-4 Broadcast V2)
  *
  * مسجّل في app.js كـ:
  *   app.use('/api/inbox', require('./routes/inbox/index'))
@@ -56,6 +56,9 @@ router.use('/analytics', require('./analytics'));
 
 // Phase 7 — AI Features (P7-1)
 router.use('/', require('./ai'));
+
+// Phase 8-4 — Broadcast V2
+router.use('/', require('./broadcast'));
 
 // [Phase 6] Settings
 // router.use('/', require('./settings'));

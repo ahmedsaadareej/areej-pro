@@ -475,6 +475,44 @@ const TENANT_MIGRATIONS = [
 
   // أضف migrations جديدة هنا دايماً — لا تعدّل القديمة أبداً
 
+  // v30: inbox_broadcasts_v4 (P8-4 Broadcast V2)
+  { version: 30, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_broadcasts_v4 (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id        INTEGER NOT NULL,
+      name             TEXT    NOT NULL,
+      message          TEXT    NOT NULL,
+      media_url        TEXT,
+      content_type     TEXT    NOT NULL DEFAULT 'text',
+      platforms        TEXT    NOT NULL DEFAULT '[]',
+      audience_filter  TEXT    NOT NULL DEFAULT '{}',
+      status           TEXT    NOT NULL DEFAULT 'draft',
+      total            INTEGER NOT NULL DEFAULT 0,
+      sent             INTEGER NOT NULL DEFAULT 0,
+      failed           INTEGER NOT NULL DEFAULT 0,
+      scheduled_at     INTEGER,
+      started_at       INTEGER,
+      finished_at      INTEGER,
+      created_by       INTEGER,
+      created_at       INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+    `CREATE TABLE IF NOT EXISTS inbox_broadcast_recipients_v4 (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      broadcast_id  INTEGER NOT NULL REFERENCES inbox_broadcasts_v4(id) ON DELETE CASCADE,
+      tenant_id     INTEGER NOT NULL,
+      contact_phone TEXT    NOT NULL,
+      contact_name  TEXT,
+      platform      TEXT    NOT NULL,
+      status        TEXT    NOT NULL DEFAULT 'pending',
+      sent_at       INTEGER,
+      error_msg     TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_bc_v4_tenant   ON inbox_broadcasts_v4(tenant_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_bc_v4_status   ON inbox_broadcasts_v4(status)`,
+    `CREATE INDEX IF NOT EXISTS idx_bcr_v4_bc      ON inbox_broadcast_recipients_v4(broadcast_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_bcr_v4_pending ON inbox_broadcast_recipients_v4(broadcast_id, status) WHERE status = 'pending'`,
+  ]},
+
   // v29: inbox_scheduled_messages_v4 (P4-5 Scheduled Messages)
   { version: 29, sqls: [
     `CREATE TABLE IF NOT EXISTS inbox_scheduled_messages_v4 (

@@ -433,15 +433,37 @@ const InboxAPI = (() => {
   // ─── Broadcast ────────────────────────────────────────────────────────
 
   const broadcast = {
-    list() {
-      return _get('/inbox/broadcast/campaigns');
+    /** قائمة الـ broadcasts */
+    list({ status, page = 1, limit = 20 } = {}) {
+      return _get('/inbox/broadcasts', { status, page, limit });
     },
-
-    send({ platform, contactIds, message, templateName, templateVars } = {}) {
-      return _post('/inbox/broadcast/send', {
-        platform, contact_ids: contactIds,
-        message, template_name: templateName, template_vars: templateVars,
-      });
+    /** إنشاء broadcast جديد (draft) */
+    create(opts) {
+      return _post('/inbox/broadcasts', opts);
+    },
+    /** تفاصيل broadcast */
+    get(id) {
+      return _get(`/inbox/broadcasts/${id}`);
+    },
+    /** تعديل broadcast (مسودة فقط) */
+    update(id, opts) {
+      return _put(`/inbox/broadcasts/${id}`, opts);
+    },
+    /** حذف broadcast */
+    delete(id) {
+      return _delete(`/inbox/broadcasts/${id}`);
+    },
+    /** بدء الإرسال */
+    send(id) {
+      return _post(`/inbox/broadcasts/${id}/send`, {});
+    },
+    /** إلغاء الإرسال */
+    cancel(id) {
+      return _post(`/inbox/broadcasts/${id}/cancel`, {});
+    },
+    /** قائمة المستلمين مع حالة الإرسال */
+    recipients(id, { status, page = 1, limit = 50 } = {}) {
+      return _get(`/inbox/broadcasts/${id}/recipients`, { status, page, limit });
     },
   };
 
