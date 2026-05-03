@@ -456,6 +456,23 @@ const TENANT_MIGRATIONS = [
     )`,
   ]},
 
+  // v28: inbox_auto_close_v4 (P4-4 Auto-Close)
+  { version: 28, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_auto_close_v4 (
+      id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id            INTEGER NOT NULL UNIQUE,
+      enabled              INTEGER NOT NULL DEFAULT 0,
+      idle_minutes         INTEGER NOT NULL DEFAULT 1440,
+      status_filter        TEXT    NOT NULL DEFAULT 'open,waiting',
+      send_warning         INTEGER NOT NULL DEFAULT 1,
+      warning_minutes      INTEGER NOT NULL DEFAULT 60,
+      warning_message      TEXT    NOT NULL DEFAULT '',
+      close_message        TEXT    NOT NULL DEFAULT '',
+      send_close_msg       INTEGER NOT NULL DEFAULT 0,
+      updated_at           INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+  ]},
+
   // أضف migrations جديدة هنا دايماً — لا تعدّل القديمة أبداً
 ];
 

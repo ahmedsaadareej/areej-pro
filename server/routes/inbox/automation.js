@@ -650,6 +650,188 @@ function _isAwayNow(cfg) {
 }
 
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// P4-4 Auto-Close
+// ══════════════════════════════════════════════════════════════════════════════
+
+function _ensureAutoClose(db, tenantId) {
+  db.prepare(`INSERT OR IGNORE INTO inbox_auto_close_v4 (tenant_id) VALUES (?)`).run(tenantId);
+  return db.prepare('SELECT * FROM inbox_auto_close_v4 WHERE tenant_id = ?').get(tenantId);
+}
+
+function _fmtAC(r) {
+  if (!r) return null;
+  return {
+    ...r,
+    enabled        : r.enabled         === 1,
+    send_warning   : r.send_warning     === 1,
+    send_close_msg : r.send_close_msg   === 1,
+    status_filter  : _safeParse(r.status_filter, ['open', 'waiting']),
+  };
+}
+
+// GET /api/inbox/automation/auto-close
+router.get('/automation/auto-close', (req, res) => {
+  try {
+    res.json({ ok: true, settings: _fmtAC(_ensureAutoClose(req.db, req.user.id)) });
+  } catch (err) {
+    console.error('[automation] get auto-close:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/inbox/automation/auto-close
+router.put('/automation/auto-close', (req, res) => {
+  try {
+    _ensureAutoClose(req.db, req.user.id);
+
+    const {
+      enabled, idle_minutes, status_filter,
+      send_warning, warning_minutes, warning_message,
+      close_message, send_close_msg,
+    } = req.body;
+
+    const sets = [], params = [];
+
+    if (enabled         !== undefined) { sets.push('enabled = ?');          params.push(enabled         ? 1 : 0); }
+    if (idle_minutes    !== undefined) { sets.push('idle_minutes = ?');     params.push(Math.max(1, parseInt(idle_minutes) || 1440)); }
+    if (status_filter   !== undefined) { sets.push('status_filter = ?');   params.push(JSON.stringify(status_filter)); }
+    if (send_warning    !== undefined) { sets.push('send_warning = ?');     params.push(send_warning    ? 1 : 0); }
+    if (warning_minutes !== undefined) { sets.push('warning_minutes = ?'); params.push(Math.max(1, parseInt(warning_minutes) || 60)); }
+    if (warning_message !== undefined) { sets.push('warning_message = ?'); params.push(warning_message ?? ''); }
+    if (close_message   !== undefined) { sets.push('close_message = ?');   params.push(close_message   ?? ''); }
+    if (send_close_msg  !== undefined) { sets.push('send_close_msg = ?');  params.push(send_close_msg  ? 1 : 0); }
+
+    if (!sets.length) return res.json({ ok: true, changed: false });
+
+    sets.push('updated_at = unixepoch()');
+    params.push(req.user.id);
+
+    req.db.prepare(`UPDATE inbox_auto_close_v4 SET ${sets.join(', ')} WHERE tenant_id = ?`).run(...params);
+
+    res.json({ ok: true, settings: _fmtAC(req.db.prepare('SELECT * FROM inbox_auto_close_v4 WHERE tenant_id = ?').get(req.user.id)) });
+  } catch (err) {
+    console.error('[automation] put auto-close:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/inbox/automation/auto-close/run  — تشغيل يدوي فوري
+router.post('/automation/auto-close/run', async (req, res) => {
+  try {
+    const result = await runAutoClose(req.db, req.user.id);
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('[automation] run auto-close:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * runAutoClose — يُشغَّل دورياً (كل 15 دقيقة مثلاً) لإغلاق المحادثات الخاملة
+ * يُستدعى من:
+ *   1) POST /api/inbox/automation/auto-close/run (يدوي)
+ *   2) Cron job (يُضاف في المستقبل)
+ *
+ * @param {object} db        - tenant DB
+ * @param {number} tenantId
+ * @returns {{ warned: number, closed: number }}
+ */
+async function runAutoClose(db, tenantId) {
+  const cfg = db.prepare('SELECT * FROM inbox_auto_close_v4 WHERE tenant_id = ?').get(tenantId);
+  if (!cfg || !cfg.enabled) return { warned: 0, closed: 0 };
+
+  const dispatch  = _getDispatch();
+  const broadcast = _getBroadcast();
+
+  const idleSec    = (parseInt(cfg.idle_minutes)    || 1440) * 60;
+  const warnSec    = (parseInt(cfg.warning_minutes) || 60)   * 60;
+  const nowSec     = Math.floor(Date.now() / 1000);
+
+  // parse status_filter
+  const rawFilter  = typeof cfg.status_filter === 'string'
+    ? _safeParse(cfg.status_filter, ['open','waiting'])
+    : (cfg.status_filter || ['open','waiting']);
+  const statuses   = Array.isArray(rawFilter) ? rawFilter : ['open','waiting'];
+
+  if (!statuses.length) return { warned: 0, closed: 0 };
+
+  const placeholders = statuses.map(() => '?').join(',');
+  const convs = db.prepare(`
+    SELECT id, platform, sender_id, last_message_at, last_message_dir, status
+    FROM inbox_conversations_v4
+    WHERE status IN (${placeholders})
+      AND last_message_at IS NOT NULL
+    ORDER BY last_message_at ASC
+  `).all(...statuses);
+
+  let warned = 0, closed = 0;
+
+  for (const conv of convs) {
+    const idleSince = nowSec - (conv.last_message_at || nowSec);
+
+    // ── إغلاق: تجاوز idle_minutes
+    if (idleSince >= idleSec) {
+      // رسالة الإغلاق (اختياري)
+      if (cfg.send_close_msg && cfg.close_message && dispatch) {
+        try {
+          await dispatch(db, conv, {
+            id           : require('crypto').randomUUID(),
+            direction    : 'outbound',
+            message_type : 'text',
+            content      : cfg.close_message,
+            sender_name  : 'Bot',
+            sent_at      : Date.now(),
+          });
+        } catch (_) {}
+      }
+
+      db.prepare(`
+        UPDATE inbox_conversations_v4
+        SET status = 'closed', resolved_at = ?, updated_at = ?
+        WHERE id = ?
+      `).run(nowSec, nowSec, conv.id);
+
+      if (broadcast) broadcast(tenantId, 'conv_update', { id: conv.id, status: 'closed' });
+      closed++;
+      continue;
+    }
+
+    // ── تحذير: اقترب من حد الإغلاق (idle >= idleSec - warnSec)
+    if (cfg.send_warning && cfg.warning_message && dispatch) {
+      const warnThreshold = idleSec - warnSec;
+      if (idleSince >= warnThreshold) {
+        // تأكد إننا ما بعتناش تحذير قبل كده لنفس المحادثة في هذا الدور
+        // نتحقق: آخر رسالة صادرة من البوت خلال آخر warnSec
+        const lastBotMsg = db.prepare(`
+          SELECT id FROM inbox_messages_v4
+          WHERE conversation_id = ? AND direction = 'outbound'
+            AND sender_name = 'Bot' AND sent_at > ?
+          LIMIT 1
+        `).get(conv.id, (nowSec - warnSec) * 1000);
+
+        if (!lastBotMsg) {
+          try {
+            await dispatch(db, conv, {
+              id           : require('crypto').randomUUID(),
+              direction    : 'outbound',
+              message_type : 'text',
+              content      : cfg.warning_message,
+              sender_name  : 'Bot',
+              sent_at      : Date.now(),
+            });
+            warned++;
+          } catch (_) {}
+        }
+      }
+    }
+  }
+
+  return { warned, closed };
+}
+
 module.exports                    = router;
 module.exports.processAutoReply   = processAutoReply;
 module.exports.processWelcomeAway = processWelcomeAway;
+module.exports.runAutoClose       = runAutoClose;

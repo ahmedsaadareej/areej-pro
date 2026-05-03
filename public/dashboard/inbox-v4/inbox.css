@@ -4252,3 +4252,57 @@
   .iv4-auto-status-preview { background: #0f172a; border-color: #334155; }
   .iv4-auto-day { border-color: #334155; color: #e2e8f0; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   P4-4 Auto-Close
+   ═══════════════════════════════════════════════════════════════ */
+
+.iv4-ac-duration-row {
+  display: flex; align-items: center; gap: .5rem;
+}
+.iv4-ac-num-input {
+  width: 90px !important; text-align: center;
+}
+.iv4-ac-unit {
+  font-size: .85rem; color: var(--iv4-text-muted,#6b7280); white-space: nowrap;
+}
+.iv4-ac-hint-inline {
+  font-size: .8rem; color: #3b82f6; font-weight: 600;
+  background: #eff6ff; padding: .2rem .5rem; border-radius: 5px;
+  white-space: nowrap;
+}
+
+.iv4-ac-checks { display: flex; flex-wrap: wrap; gap: .5rem; }
+.iv4-ac-check {
+  display: flex; align-items: center; gap: .4rem;
+  cursor: pointer; font-size: .87rem;
+  padding: .35rem .65rem;
+  border: 1px solid var(--iv4-border,#e5e7eb); border-radius: 7px;
+  transition: border-color .15s;
+}
+.iv4-ac-check:has(input:checked) { border-color: #3b82f6; background: #eff6ff; }
+.iv4-ac-check input { accent-color: #3b82f6; }
+
+.iv4-ac-run-row {
+  display: flex; align-items: center; gap: .75rem;
+  padding-top: .5rem; margin-top: .25rem;
+  border-top: 1px dashed var(--iv4-border,#e5e7eb);
+}
+.iv4-ac-run-btn {
+  background: #f3f4f6; color: #374151;
+  border: 1px solid var(--iv4-border,#d1d5db);
+  padding: .4rem .9rem; border-radius: 7px;
+  font-size: .84rem; font-weight: 600; cursor: pointer;
+  transition: all .15s;
+}
+.iv4-ac-run-btn:hover:not(:disabled) { background: #e5e7eb; }
+.iv4-ac-run-btn:disabled { opacity: .6; cursor: default; }
+.iv4-ac-run-result { font-size: .82rem; color: #374151; }
+
+@media (prefers-color-scheme: dark) {
+  .iv4-ac-check { border-color: #334155; color: #e2e8f0; }
+  .iv4-ac-check:has(input:checked) { background: #1e3a5f; border-color: #3b82f6; }
+  .iv4-ac-run-btn { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+  .iv4-ac-run-btn:hover:not(:disabled) { background: #334155; }
+  .iv4-ac-hint-inline { background: #1e3a5f; }
+}

@@ -33,7 +33,8 @@ const InboxAutomation = (() => {
   ];
 
   // ── State ──────────────────────────────────────────────────────────────────
-  let _settings = null;
+  let _settings   = null;
+  let _acSettings = null;
 
   // ── Init ───────────────────────────────────────────────────────────────────
   function init() {
@@ -71,8 +72,12 @@ const InboxAutomation = (() => {
     const body = document.getElementById('iv4-auto-body');
     if (!body) return;
     try {
-      const data = await InboxAPI.welcomeAway.get();
-      _settings  = data.settings || {};
+      const [waData, acData] = await Promise.all([
+        InboxAPI.welcomeAway.get(),
+        InboxAPI.autoClose.get(),
+      ]);
+      _settings   = waData.settings || {};
+      _acSettings = acData.settings || {};
       _render(body);
     } catch (err) {
       body.innerHTML = `<div class="iv4-auto-error">خطأ: ${_esc(err.message)}</div>`;
@@ -81,10 +86,18 @@ const InboxAutomation = (() => {
 
   // ── رسم الـ UI ────────────────────────────────────────────────────────────
   function _render(container) {
-    const s = _settings;
+    const s  = _settings;
+    const ac = _acSettings || {};
     const workDays = Array.isArray(s.work_days) ? s.work_days : [1,2,3,4,5];
 
-    container.innerHTML = `
+    container.innerHTML = _buildHTML(s, ac);
+    _bindEvents(container);
+    _updateStatusPreview();
+    _bindAutoCloseEvents(container);
+  }
+
+  function _buildHTML(s, ac) {
+    return `
       <div class="iv4-auto-sections">
 
         <!-- ══ Welcome Message ══ -->
@@ -203,6 +216,96 @@ const InboxAutomation = (() => {
           </div>
         </section>
 
+
+        <!-- ══ Auto-Close ══ -->
+        <section class="iv4-auto-section">
+          <div class="iv4-auto-section-header">
+            <div class="iv4-auto-section-title">
+              <span>🔒</span>
+              <div>
+                <strong>الإغلاق التلقائي</strong>
+                <p>إغلاق المحادثات الخاملة بعد مدة محددة</p>
+              </div>
+            </div>
+            <label class="iv4-auto-toggle-wrap">
+              <input type="checkbox" id="iv4-ac-enabled" ${ac.enabled ? 'checked' : ''}>
+              <span class="iv4-auto-toggle-slider"></span>
+            </label>
+          </div>
+          <div class="iv4-auto-section-body" id="iv4-ac-body" ${!ac.enabled ? 'style="display:none"' : ''}>
+
+            <!-- وقت الخمول -->
+            <div class="iv4-auto-form-row">
+              <label>إغلاق المحادثة بعد خمول</label>
+              <div class="iv4-ac-duration-row">
+                <input type="number" id="iv4-ac-idle" class="iv4-auto-input iv4-ac-num-input"
+                  min="30" max="43200" value="${ac.idle_minutes || 1440}" placeholder="1440">
+                <span class="iv4-ac-unit">دقيقة</span>
+                <span class="iv4-ac-hint-inline" id="iv4-ac-idle-hint">${_minutesToHuman(ac.idle_minutes || 1440)}</span>
+              </div>
+            </div>
+
+            <!-- حالات المحادثة المستهدفة -->
+            <div class="iv4-auto-form-row">
+              <label>تطبيق على المحادثات بحالة</label>
+              <div class="iv4-ac-checks">
+                <label class="iv4-ac-check">
+                  <input type="checkbox" name="ac-status" value="open" ${(ac.status_filter||[]).includes('open')?'checked':''}>
+                  <span>🟢 مفتوحة</span>
+                </label>
+                <label class="iv4-ac-check">
+                  <input type="checkbox" name="ac-status" value="waiting" ${(ac.status_filter||[]).includes('waiting')?'checked':''}>
+                  <span>🟡 في الانتظار</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- رسالة الإغلاق -->
+            <div class="iv4-auto-form-row">
+              <label>
+                <input type="checkbox" id="iv4-ac-send-close" ${ac.send_close_msg ? 'checked' : ''}>
+                إرسال رسالة عند الإغلاق (اختياري)
+              </label>
+              <textarea id="iv4-ac-close-msg" class="iv4-auto-textarea" rows="2"
+                ${!ac.send_close_msg ? 'style="display:none"' : ''}
+                placeholder="مثال: تم إغلاق المحادثة بسبب عدم النشاط. يمكنك التواصل معنا في أي وقت 😊"
+              >${_esc(ac.close_message || '')}</textarea>
+            </div>
+
+            <!-- تحذير قبل الإغلاق -->
+            <div class="iv4-auto-form-row">
+              <label>
+                <input type="checkbox" id="iv4-ac-send-warn" ${ac.send_warning ? 'checked' : ''}>
+                إرسال تحذير قبل الإغلاق
+              </label>
+            </div>
+            <div id="iv4-ac-warn-body" ${!ac.send_warning ? 'style="display:none"' : ''}>
+              <div class="iv4-auto-form-row">
+                <label>إرسال التحذير قبل الإغلاق بـ</label>
+                <div class="iv4-ac-duration-row">
+                  <input type="number" id="iv4-ac-warn-min" class="iv4-auto-input iv4-ac-num-input"
+                    min="5" max="1440" value="${ac.warning_minutes || 60}" placeholder="60">
+                  <span class="iv4-ac-unit">دقيقة</span>
+                  <span class="iv4-ac-hint-inline" id="iv4-ac-warn-hint">${_minutesToHuman(ac.warning_minutes || 60)}</span>
+                </div>
+              </div>
+              <div class="iv4-auto-form-row">
+                <label>نص رسالة التحذير</label>
+                <textarea id="iv4-ac-warn-msg" class="iv4-auto-textarea" rows="2"
+                  placeholder="مثال: سيتم إغلاق محادثتك خلال ساعة لعدم النشاط. هل تحتاج مساعدة؟"
+                >${_esc(ac.warning_message || '')}</textarea>
+              </div>
+            </div>
+
+            <!-- Run Manual -->
+            <div class="iv4-ac-run-row">
+              <button class="iv4-auto-btn iv4-ac-run-btn" id="iv4-ac-run-now">▶ تشغيل الآن</button>
+              <span class="iv4-ac-run-result" id="iv4-ac-run-result"></span>
+            </div>
+
+          </div>
+        </section>
+
       </div>
 
       <!-- Footer -->
@@ -213,9 +316,6 @@ const InboxAutomation = (() => {
         <button class="iv4-auto-btn iv4-auto-btn--primary" id="iv4-auto-save">💾 حفظ الإعدادات</button>
       </div>
     `;
-
-    _bindEvents(container);
-    _updateStatusPreview();
   }
 
   // ── ربط الأحداث ───────────────────────────────────────────────────────────
@@ -264,7 +364,7 @@ const InboxAutomation = (() => {
 
     // Save
     const saveBtn = container.querySelector('#iv4-auto-save');
-    if (saveBtn) saveBtn.onclick = _save;
+    if (saveBtn) saveBtn.onclick = () => _saveAll();
   }
 
   // ── معاينة الحالة الحالية ─────────────────────────────────────────────────
@@ -374,6 +474,113 @@ const InboxAutomation = (() => {
     document.body.appendChild(t);
     setTimeout(() => t.classList.add('iv4-auto-toast--show'), 10);
     setTimeout(() => { t.classList.remove('iv4-auto-toast--show'); setTimeout(() => t.remove(), 300); }, 3200);
+  }
+
+  // ── _minutesToHuman — تحويل الدقائق لنص مقروء ─────────────────────────────
+  function _minutesToHuman(min) {
+    min = parseInt(min) || 0;
+    if (min < 60)   return `${min} دقيقة`;
+    if (min < 1440) return `${(min/60).toFixed(min%60===0?0:1)} ساعة`;
+    return `${(min/1440).toFixed(min%1440===0?0:1)} يوم`;
+  }
+
+  // ── _bindAutoCloseEvents ──────────────────────────────────────────────
+  function _bindAutoCloseEvents(container) {
+    // Toggle enabled
+    const enabledCb = container.querySelector('#iv4-ac-enabled');
+    if (enabledCb) {
+      enabledCb.onchange = e => {
+        const body = document.getElementById('iv4-ac-body');
+        if (body) body.style.display = e.target.checked ? '' : 'none';
+      };
+    }
+
+    // Toggle send close message
+    const sendCloseCb = container.querySelector('#iv4-ac-send-close');
+    if (sendCloseCb) {
+      sendCloseCb.onchange = e => {
+        const msg = document.getElementById('iv4-ac-close-msg');
+        if (msg) msg.style.display = e.target.checked ? '' : 'none';
+      };
+    }
+
+    // Toggle warning
+    const sendWarnCb = container.querySelector('#iv4-ac-send-warn');
+    if (sendWarnCb) {
+      sendWarnCb.onchange = e => {
+        const body = document.getElementById('iv4-ac-warn-body');
+        if (body) body.style.display = e.target.checked ? '' : 'none';
+      };
+    }
+
+    // Live hint for idle minutes
+    const idleInput = container.querySelector('#iv4-ac-idle');
+    if (idleInput) {
+      idleInput.oninput = () => {
+        const hint = document.getElementById('iv4-ac-idle-hint');
+        if (hint) hint.textContent = _minutesToHuman(idleInput.value);
+      };
+    }
+
+    // Live hint for warning minutes
+    const warnInput = container.querySelector('#iv4-ac-warn-min');
+    if (warnInput) {
+      warnInput.oninput = () => {
+        const hint = document.getElementById('iv4-ac-warn-hint');
+        if (hint) hint.textContent = _minutesToHuman(warnInput.value);
+      };
+    }
+
+    // Run now
+    const runBtn = container.querySelector('#iv4-ac-run-now');
+    if (runBtn) {
+      runBtn.onclick = async () => {
+        runBtn.disabled = true;
+        runBtn.textContent = 'جاري التشغيل…';
+        const result = document.getElementById('iv4-ac-run-result');
+        try {
+          const data = await InboxAPI.autoClose.run();
+          if (result) result.textContent = `✅ تم تحذير ${data.warned || 0} وإغلاق ${data.closed || 0} محادثة`;
+        } catch (err) {
+          if (result) result.textContent = '❌ ' + err.message;
+        } finally {
+          runBtn.disabled = false;
+          runBtn.textContent = '▶ تشغيل الآن';
+        }
+      };
+    }
+  }
+
+  // ── تحديث _save ليشمل auto-close ─────────────────────────────────
+  // (تم تعديل _save بال monkey-patch أدناه)
+  const _saveOriginal = _save;
+  async function _saveAll() {
+    // حفظ Welcome/Away
+    await _saveOriginal();
+    // حفظ Auto-Close
+    try {
+      const acEnabled    = document.getElementById('iv4-ac-enabled')?.checked    || false;
+      const acIdle       = parseInt(document.getElementById('iv4-ac-idle')?.value)    || 1440;
+      const acStatuses   = Array.from(document.querySelectorAll('input[name="ac-status"]:checked')).map(x => x.value);
+      const acSendClose  = document.getElementById('iv4-ac-send-close')?.checked  || false;
+      const acCloseMsg   = document.getElementById('iv4-ac-close-msg')?.value.trim()  || '';
+      const acSendWarn   = document.getElementById('iv4-ac-send-warn')?.checked   || false;
+      const acWarnMin    = parseInt(document.getElementById('iv4-ac-warn-min')?.value) || 60;
+      const acWarnMsg    = document.getElementById('iv4-ac-warn-msg')?.value.trim()    || '';
+
+      await InboxAPI.autoClose.update({
+        enabled        : acEnabled,
+        idle_minutes   : acIdle,
+        status_filter  : acStatuses.length ? acStatuses : ['open'],
+        send_close_msg : acSendClose,
+        close_message  : acCloseMsg,
+        send_warning   : acSendWarn,
+        warning_minutes: acWarnMin,
+        warning_message: acWarnMsg,
+      });
+    } catch (err) {
+      _showToast('❌ خطأ في حفظ Auto-Close: ' + err.message);
+    }
   }
 
   return { init, open };

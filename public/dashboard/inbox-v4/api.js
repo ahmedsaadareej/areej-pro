@@ -510,6 +510,14 @@ const InboxAPI = (() => {
     update : (data) => _put('/inbox/automation/welcome-away', data),
   };
 
+
+  // ─── Auto-Close (P4-4) ────────────────────────────────────────────────
+  const autoClose = {
+    get    : ()     => _get('/inbox/automation/auto-close'),
+    update : (data) => _put('/inbox/automation/auto-close', data),
+    run    : ()     => _post('/inbox/automation/auto-close/run', {}),
+  };
+
   // ─── Chatbot Flows (P4-2) ──────────────────────────────────────────────
   const chatbot = {
     list       : ()          => _get('/inbox/chatbot/flows'),
@@ -544,6 +552,7 @@ const InboxAPI = (() => {
     context,
     chatbot,
     welcomeAway,
+    autoClose,
     // expose للـ debugging
     _fetch,
     _get,
