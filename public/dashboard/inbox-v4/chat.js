@@ -399,8 +399,24 @@ const InboxChat = (() => {
   function _renderAudio(msg) {
     const url = _escHtml(msg.media_url || '');
     if (!url) return _renderText(msg);
+
+    // فحص metadata لو كان فيه transcript محفوظ
+    let cachedTranscript = '';
+    try {
+      const meta = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata || '{}') : (msg.metadata || {});
+      if (meta.transcript) cachedTranscript = meta.transcript;
+    } catch (_) {}
+
+    const transcriptHtml = cachedTranscript
+      ? `<div class="iv4-audio-transcript iv4-audio-transcript--visible">
+           <span class="iv4-audio-transcript-text">${_escHtml(cachedTranscript)}</span>
+         </div>`
+      : `<div class="iv4-audio-transcript" style="display:none">
+           <span class="iv4-audio-transcript-text"></span>
+         </div>`;
+
     return `
-<div class="iv4-msg-audio">
+<div class="iv4-msg-audio" data-msg-id-audio="${_escHtml(String(msg.id || ''))}">
   <button class="iv4-audio-play-btn" data-audio-url="${url}" aria-label="تشغيل">
     <span class="iv4-audio-icon">▶</span>
   </button>
@@ -409,7 +425,11 @@ const InboxChat = (() => {
   </div>
   <span class="iv4-audio-duration">--:--</span>
   <audio class="iv4-audio-el" preload="none" src="${url}"></audio>
-</div>`.trim();
+  <button class="iv4-audio-transcript-btn" title="تحويل لنص" aria-label="نص"${cachedTranscript ? ' data-done="1"' : ''}>
+    🎤
+  </button>
+</div>
+${transcriptHtml}`.trim();
   }
 
   /** ملف */
@@ -883,6 +903,11 @@ const InboxChat = (() => {
       btn.addEventListener('click', () => _toggleAudio(btn, audioEl));
     });
 
+    // Transcript button (P7-5)
+    container.querySelectorAll('.iv4-audio-transcript-btn').forEach(btn => {
+      btn.addEventListener('click', () => _requestTranscript(btn));
+    });
+
     // Quote click — scroll للرسالة المقتبسة
     container.querySelectorAll('.iv4-msg-quote[data-quoted-id]').forEach(q => {
       q.style.cursor = 'pointer';
@@ -1001,6 +1026,57 @@ const InboxChat = (() => {
   }
 
   // ─── Scroll To Message ────────────────────────────────────────────────────
+
+  /**
+   * طلب تحويل voice note إلى نص عبر Whisper (P7-5)
+   * يجلب النص من API ويعرضه تحت بطاقة الصوت
+   * @param {HTMLButtonElement} btn - زر 🎤
+   */
+  async function _requestTranscript(btn) {
+    const audioWrap = btn.closest('.iv4-msg-audio');
+    if (!audioWrap) return;
+
+    const msgId  = audioWrap.dataset.msgIdAudio;
+    const convId = InboxStore.state.activeConvId;
+    if (!msgId || !convId) return;
+
+    // لو كان معروضاً بالفعل — toggle visibility
+    const transcriptEl = audioWrap.nextElementSibling;
+    if (btn.dataset.done === '1' && transcriptEl) {
+      const visible = transcriptEl.classList.contains('iv4-audio-transcript--visible');
+      transcriptEl.classList.toggle('iv4-audio-transcript--visible', !visible);
+      transcriptEl.style.display = !visible ? '' : 'none';
+      return;
+    }
+
+    // حالة loading
+    btn.disabled   = true;
+    btn.textContent = '⏳';
+
+    try {
+      const res = await InboxAPI.messages.transcript(convId, msgId);
+      if (!res || !res.transcript) throw new Error('لم يتم استخراج أي نص');
+
+      // عرض النص
+      if (transcriptEl) {
+        const textEl = transcriptEl.querySelector('.iv4-audio-transcript-text');
+        if (textEl) textEl.textContent = res.transcript;
+        transcriptEl.classList.add('iv4-audio-transcript--visible');
+        transcriptEl.style.display = '';
+      }
+
+      btn.dataset.done  = '1';
+      btn.textContent   = '🎤';
+      btn.title         = res.cached ? 'نص محفوظ (اضغط للإخفاء)' : 'نص جديد (اضغط للإخفاء)';
+
+    } catch (e) {
+      btn.textContent = '🎤';
+      btn.title       = 'خطأ: ' + (e.message || 'تعذر تحويل الصوت');
+      btn.style.opacity = '0.5';
+    } finally {
+      btn.disabled = false;
+    }
+  }
 
   /**
    * الـ scroll لرسالة معينة وتمييزها

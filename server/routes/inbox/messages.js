@@ -3,6 +3,7 @@
  * آخر تحديث: 2026-05-03
  *
  * Endpoints:
+ *   POST /api/inbox/conversations/:id/messages/:msgId/transcript — تحويل voice note إلى نص (Whisper)
  *   POST /api/inbox/conversations/:id/messages  — إرسال رسالة أو ملاحظة
  *   POST /api/inbox/conversations/:id/messages/media — رفع ميديا + إرسال
  *
@@ -24,7 +25,17 @@ const router   = express.Router();
 const multer   = require('multer');
 const path     = require('path');
 const fs       = require('fs');
+const https    = require('https');
+const http     = require('http');
 const { v4: uuidv4 } = require('uuid');
+
+// ─── Whisper Config ───────────────────────────────────────────────────────────
+// يستخدم نفس الـ OPENAI_API_KEY الموجود في .env
+// Genspark لا يدعم /audio/transcriptions — نستخدم OpenAI مباشرة إن توفر WHISPER_API_KEY
+// وإلا نحاول عبر OPENAI_BASE_URL مع fallback لـ api.openai.com
+const WHISPER_KEY  = process.env.WHISPER_API_KEY  || process.env.OPENAI_API_KEY  || '';
+const WHISPER_BASE = (process.env.WHISPER_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
+const WHISPER_MODEL = process.env.WHISPER_MODEL || 'whisper-1';
 
 // ─── Multer Config (upload الميديا مؤقتاً) ───────────────────────────────────
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/inbox-media');
@@ -623,6 +634,197 @@ router.post(
     }
   }
 );
+
+// ─── POST /conversations/:id/messages/:msgId/transcript ─────────────────────
+// يحوّل voice note إلى نص عبر Whisper API
+// - يحفظ النتيجة في metadata الرسالة لتجنب إعادة الحساب
+// - يرجع { transcript, cached } — cached=true لو كان محفوظاً مسبقاً
+router.post('/conversations/:id/messages/:msgId/transcript', async (req, res) => {
+  const { id: convId, msgId } = req.params;
+
+  try {
+    const db = req.db;
+
+    // ── جلب الرسالة ──────────────────────────────────────────────────────
+    const msg = await new Promise((resolve, reject) => {
+      db.get(
+        `SELECT id, content_type, media_url, metadata FROM inbox_messages_v4
+         WHERE id = ? AND conversation_id = ?`,
+        [msgId, convId],
+        (err, row) => { if (err) return reject(err); resolve(row || null); }
+      );
+    });
+
+    if (!msg) return res.status(404).json({ error: 'الرسالة غير موجودة' });
+    if (msg.content_type !== 'audio') {
+      return res.status(400).json({ error: 'الرسالة ليست voice note' });
+    }
+    if (!msg.media_url) return res.status(400).json({ error: 'لا يوجد ملف صوتي' });
+
+    // ── فحص cache في metadata ────────────────────────────────────────────
+    let meta = {};
+    try { meta = JSON.parse(msg.metadata || '{}'); } catch (_) {}
+
+    if (meta.transcript) {
+      return res.json({ transcript: meta.transcript, cached: true });
+    }
+
+    if (!WHISPER_KEY) {
+      return res.status(503).json({ error: 'WHISPER_API_KEY غير محدد في .env' });
+    }
+
+    // ── تحميل ملف الصوت مؤقتاً ───────────────────────────────────────────
+    const tmpPath = path.join(UPLOAD_DIR, `whisper_${uuidv4()}.tmp`);
+    await _downloadFile(msg.media_url, tmpPath);
+
+    // ── إرسال لـ Whisper API ──────────────────────────────────────────────
+    let transcript;
+    try {
+      transcript = await _callWhisper(tmpPath, msg.media_url);
+    } finally {
+      // حذف الملف المؤقت دائماً
+      fs.unlink(tmpPath, () => {});
+    }
+
+    // ── حفظ في metadata ──────────────────────────────────────────────────
+    meta.transcript = transcript;
+    await new Promise((resolve, reject) => {
+      db.run(
+        `UPDATE inbox_messages_v4 SET metadata = ? WHERE id = ?`,
+        [JSON.stringify(meta), msgId],
+        (err) => { if (err) return reject(err); resolve(); }
+      );
+    });
+
+    return res.json({ transcript, cached: false });
+
+  } catch (e) {
+    console.error('[messages.js] transcript error:', e.message);
+    return res.status(500).json({ error: e.message || 'خطأ داخلي في الخادم' });
+  }
+});
+
+/**
+ * تحميل ملف من URL إلى مسار مؤقت
+ */
+function _downloadFile(fileUrl, destPath) {
+  return new Promise((resolve, reject) => {
+    const parsed   = new URL(fileUrl);
+    const protocol = parsed.protocol === 'https:' ? https : http;
+    const file     = fs.createWriteStream(destPath);
+
+    const doRequest = (url) => {
+      protocol.get(url, (response) => {
+        // دعم الـ redirect
+        if ([301, 302, 307, 308].includes(response.statusCode) && response.headers.location) {
+          file.close();
+          return doRequest(response.headers.location);
+        }
+        if (response.statusCode !== 200) {
+          file.close();
+          return reject(new Error(`فشل تحميل الملف: HTTP ${response.statusCode}`));
+        }
+        response.pipe(file);
+        file.on('finish', () => file.close(() => resolve()));
+        file.on('error', (err) => { fs.unlink(destPath, () => {}); reject(err); });
+      }).on('error', (err) => { fs.unlink(destPath, () => {}); reject(err); });
+    };
+
+    doRequest(fileUrl);
+  });
+}
+
+/**
+ * استدعاء Whisper API بـ multipart/form-data
+ * @param {string} filePath - المسار المحلي للملف
+ * @param {string} originalUrl - URL الأصلي لاستنتاج الامتداد
+ * @returns {Promise<string>} النص المستخرج
+ */
+function _callWhisper(filePath, originalUrl) {
+  return new Promise((resolve, reject) => {
+    // اكتشاف امتداد الملف من الـ URL
+    const ext = path.extname(new URL(originalUrl).pathname).toLowerCase() || '.ogg';
+    const filename = `audio${ext}`;
+
+    const fileBuffer  = fs.readFileSync(filePath);
+    const boundary    = `----WhisperBoundary${Date.now()}`;
+
+    // بناء multipart body يدوياً
+    const CRLF   = '\r\n';
+    let bodyParts = [];
+
+    // حقل model
+    bodyParts.push(
+      Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name="model"${CRLF}${CRLF}${WHISPER_MODEL}${CRLF}`)
+    );
+
+    // حقل language (عربي كـ hint مع fallback)
+    bodyParts.push(
+      Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name="language"${CRLF}${CRLF}ar${CRLF}`)
+    );
+
+    // حقل الملف
+    const mimeType = _extToMime(ext);
+    bodyParts.push(
+      Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name="file"; filename="${filename}"${CRLF}Content-Type: ${mimeType}${CRLF}${CRLF}`)
+    );
+    bodyParts.push(fileBuffer);
+    bodyParts.push(Buffer.from(`${CRLF}--${boundary}--${CRLF}`));
+
+    const body = Buffer.concat(bodyParts);
+
+    const parsed  = new URL(`${WHISPER_BASE}/audio/transcriptions`);
+    const options = {
+      hostname: parsed.hostname,
+      port:     parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+      path:     parsed.pathname + (parsed.search || ''),
+      method:   'POST',
+      headers: {
+        'Authorization':  `Bearer ${WHISPER_KEY}`,
+        'Content-Type':   `multipart/form-data; boundary=${boundary}`,
+        'Content-Length': body.length,
+      },
+    };
+
+    const lib = parsed.protocol === 'https:' ? https : http;
+    const reqW = lib.request(options, (resp) => {
+      let data = '';
+      resp.on('data', (c) => { data += c; });
+      resp.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          if (json.text) return resolve(json.text.trim());
+          if (json.error) return reject(new Error(json.error.message || JSON.stringify(json.error)));
+          reject(new Error('استجابة غير متوقعة من Whisper: ' + data.slice(0, 200)));
+        } catch (_) {
+          reject(new Error('فشل تحليل استجابة Whisper: ' + data.slice(0, 200)));
+        }
+      });
+    });
+
+    reqW.on('error', reject);
+    // timeout 60 ثانية
+    reqW.setTimeout(60000, () => { reqW.destroy(); reject(new Error('Whisper API timeout')); });
+    reqW.write(body);
+    reqW.end();
+  });
+}
+
+/**
+ * تحويل امتداد ملف صوتي إلى MIME type
+ */
+function _extToMime(ext) {
+  const MAP = {
+    '.ogg': 'audio/ogg', '.oga': 'audio/ogg',
+    '.mp3': 'audio/mpeg', '.mpeg': 'audio/mpeg',
+    '.mp4': 'audio/mp4', '.m4a': 'audio/mp4',
+    '.wav': 'audio/wav',
+    '.aac': 'audio/aac',
+    '.flac': 'audio/flac',
+    '.webm': 'audio/webm',
+  };
+  return MAP[ext] || 'audio/ogg';
+}
 
 module.exports = router;
 

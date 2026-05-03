@@ -197,6 +197,14 @@ const InboxAPI = (() => {
     markRead(convId) {
       return _post(`/inbox/conversations/${convId}/read`);
     },
+
+    /**
+     * تحويل voice note إلى نص عبر Whisper
+     * يُعيد { transcript, cached }
+     */
+    transcript(convId, msgId) {
+      return _post(`/inbox/conversations/${convId}/messages/${msgId}/transcript`, {});
+    },
   };
 
   // ─── Labels ───────────────────────────────────────────────────────────
