@@ -3155,6 +3155,67 @@ router.post('/inbox/new-conversation', requireAuth, async (req, res) => {
         req2.end(tgPayload);
       });
 
+    } else if (platform === 'whatsapp') {
+      // WhatsApp Business API — Template Message للرسالة الأولى
+      const settings = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get();
+      if (!settings?.wa_active || !settings?.wa_token || !settings?.wa_phone_id) {
+        return res.json({ ok: false, error: 'WhatsApp Business API غير مفعّل — تأكد من الإعدادات' });
+      }
+      const tplName = req.body.template_name || 'hello_world';
+      const waBody = {
+        messaging_product: 'whatsapp',
+        to: senderId.replace(/\D/g,''),
+        type: 'template',
+        template: {
+          name: tplName,
+          language: { code: 'ar' },
+          components: message ? [{ type: 'body', parameters: [{ type: 'text', text: message }] }] : []
+        }
+      };
+      const waRes = await fetch(`https://graph.facebook.com/v19.0/${settings.wa_phone_id}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${settings.wa_token}` },
+        body: JSON.stringify(waBody)
+      });
+      const waData = await waRes.json();
+      if (!waData.messages?.[0]) {
+        return res.json({ ok: false, error: waData.error?.message || 'WhatsApp API error — تأكد من اسم الـ Template والرقم' });
+      }
+      senderId = senderId.replace(/\D/g,'');
+      message = `[Template: ${tplName}]${message ? ' — ' + message : ''}`;
+
+    } else if (platform === 'messenger') {
+      // Meta Messenger — يرسل للـ PSID
+      const settings = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get();
+      if (!settings?.meta_active || !settings?.meta_token || !settings?.meta_page_id) {
+        return res.json({ ok: false, error: 'Meta Messenger غير مفعّل — تأكد من الإعدادات' });
+      }
+      const fbRes = await fetch(`https://graph.facebook.com/v19.0/me/messages?access_token=${settings.meta_token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipient: { id: senderId }, message: { text: message } })
+      });
+      const fbData = await fbRes.json();
+      if (fbData.error) {
+        return res.json({ ok: false, error: fbData.error.message || 'Messenger API error' });
+      }
+
+    } else if (platform === 'instagram') {
+      // Instagram DM — يرسل للـ Instagram User ID
+      const settings = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get();
+      if (!settings?.ig_active || !settings?.ig_token || !settings?.ig_account_id) {
+        return res.json({ ok: false, error: 'Instagram غير مفعّل — تأكد من الإعدادات' });
+      }
+      const igRes = await fetch(`https://graph.facebook.com/v19.0/${settings.ig_account_id}/messages?access_token=${settings.ig_token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipient: { id: senderId }, message: { text: message } })
+      });
+      const igData = await igRes.json();
+      if (igData.error) {
+        return res.json({ ok: false, error: igData.error.message || 'Instagram API error — تأكد أن المستخدم بدأ المحادثة أولاً' });
+      }
+
     } else {
       return res.json({ ok: false, error: `المنصة ${platform} لا تدعم بدء محادثة جديدة` });
     }

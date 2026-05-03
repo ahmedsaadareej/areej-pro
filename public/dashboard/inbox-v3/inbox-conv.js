@@ -715,13 +715,36 @@ async function iv3RunBulkAction(ids, action, payload, successMsg) {
 // ══════════════════════════════════════════════════════════════════
 
 const IV3_NEW_CONV_PLATFORMS = {
-  'whatsapp-qr': { label: '📱 واتساب QR',  placeholder: 'رقم الهاتف (مثال: 201012345678)',  hint: 'رقم دولي بدون +' },
-  'telegram':    { label: '✈️ تيليجرام',    placeholder: 'Chat ID أو @username',             hint: 'مثال: 123456789 أو @username' },
+  'whatsapp-qr': { label: '📱 واتساب QR',    placeholder: 'رقم الهاتف (مثال: 201012345678)',  hint: 'رقم دولي بدون +' },
+  'whatsapp':    { label: '📲 واتساب API',   placeholder: 'رقم الهاتف (مثال: 201012345678)',  hint: 'رقم دولي بدون + — يستخدم Template Message' },
+  'telegram':    { label: '✈️ تيليجرام',     placeholder: 'Chat ID أو @username',              hint: 'مثال: 123456789 أو @username' },
+  'instagram':   { label: '📸 إنستجرام',    placeholder: 'Instagram User ID (رقم فقط)',        hint: 'لازم المستخدم يبدأ المحادثة أولاً — فقط للـ Replies' },
+  'messenger':   { label: '💬 ماسنجر',      placeholder: 'Page-Scoped User ID (PSID)',         hint: 'PSID من webhook — لازم المستخدم يبدأ المحادثة أولاً' },
 };
 
-function iv3OpenNewConvModal() {
+// Smart Default: يحدد المنصة الافتراضية بناءً على ما هو مفعّل في الإعدادات
+function iv3GetDefaultPlatform() {
+  // يحاول يقرأ الحالة من data attributes موجودة في DOM
+  const s = window._iv3Settings || {};
+  if (s.wa_active && s.wa_phone_id)   return 'whatsapp';
+  if (s.wa_qr_active)                  return 'whatsapp-qr';
+  if (s.telegram_active)               return 'telegram';
+  if (s.ig_active)                     return 'instagram';
+  if (s.meta_active)                   return 'messenger';
+  return 'whatsapp-qr'; // fallback
+}
+
+async function iv3OpenNewConvModal() {
   const modal = document.getElementById('iv3-new-conv-modal');
   if (!modal) return;
+
+  // جلب الـ settings لو مش محملة (Smart Default)
+  if (!window._iv3Settings) {
+    try {
+      const sd = await apiFetch('/api/system/inbox/settings');
+      if (sd) window._iv3Settings = sd;
+    } catch(e) { /* نكمل بدون */ }
+  }
 
   // بناء أزرار المنصات
   const btns = document.getElementById('iv3-new-plat-btns');
@@ -736,14 +759,26 @@ function iv3OpenNewConvModal() {
   // reset
   const recip = document.getElementById('iv3-new-recipient');
   const msg   = document.getElementById('iv3-new-message');
+  const tpl   = document.getElementById('iv3-new-template');
+  const tplN  = document.getElementById('iv3-new-tpl-name');
   const err   = document.getElementById('iv3-new-conv-err');
+  const hint  = document.getElementById('iv3-new-plat-hint');
   if (recip) { recip.value = ''; recip.placeholder = 'اختر المنصة أولاً...'; }
   if (msg)   msg.value = '';
+  if (tpl)   tpl.value = '';
+  if (tplN)  tplN.value = '';
   if (err)   { err.style.display = 'none'; err.textContent = ''; }
+  if (hint)  { hint.style.display = 'none'; hint.textContent = ''; }
   modal._selectedPlat = '';
 
   modal.style.display = 'flex';
-  setTimeout(() => { document.getElementById('iv3-new-plat-btns')?.querySelector('button')?.click(); }, 50);
+  // Smart Default: اختار المنصة الافتراضية تلقائياً
+  const defaultPlat = iv3GetDefaultPlatform();
+  setTimeout(() => {
+    const defaultBtn = document.querySelector(`#iv3-new-plat-btns button[data-plat="${defaultPlat}"]`);
+    if (defaultBtn) defaultBtn.click();
+    else document.getElementById('iv3-new-plat-btns')?.querySelector('button')?.click();
+  }, 50);
 }
 
 function iv3SelectNewConvPlat(plat, btn) {
@@ -753,15 +788,39 @@ function iv3SelectNewConvPlat(plat, btn) {
 
   // تمييز الزر المختار
   document.querySelectorAll('#iv3-new-plat-btns button').forEach(b => {
-    b.style.background = b.dataset.plat === plat ? '#1B5E30' : '#fff';
-    b.style.color = b.dataset.plat === plat ? '#fff' : '#374151';
+    b.style.background  = b.dataset.plat === plat ? '#1B5E30' : '#fff';
+    b.style.color       = b.dataset.plat === plat ? '#fff'    : '#374151';
     b.style.borderColor = b.dataset.plat === plat ? '#1B5E30' : '#e5e7eb';
   });
 
-  // تحديث placeholder الـ recipient
-  const info = IV3_NEW_CONV_PLATFORMS[plat];
+  // تحديث placeholder + hint
+  const info  = IV3_NEW_CONV_PLATFORMS[plat];
   const recip = document.getElementById('iv3-new-recipient');
+  const hint  = document.getElementById('iv3-new-plat-hint');
   if (recip && info) recip.placeholder = info.placeholder;
+  if (hint && info) {
+    if (info.hint) {
+      hint.textContent = '💡 ' + info.hint;
+      hint.style.display = 'block';
+    } else {
+      hint.style.display = 'none';
+    }
+  }
+
+  // Instagram + Messenger: الرسالة الأولى لازم تكون template → نظهر تحذير
+  const msgWrap = document.getElementById('iv3-new-msg-wrap');
+  const tplWrap = document.getElementById('iv3-new-tpl-wrap');
+  if (plat === 'instagram' || plat === 'messenger') {
+    if (msgWrap) msgWrap.style.display = 'none';
+    if (tplWrap) tplWrap.style.display = 'block';
+  } else if (plat === 'whatsapp') {
+    // WA Business API: لازم template للرسالة الأولى
+    if (msgWrap) msgWrap.style.display = 'none';
+    if (tplWrap) tplWrap.style.display = 'block';
+  } else {
+    if (msgWrap) msgWrap.style.display = 'block';
+    if (tplWrap) tplWrap.style.display = 'none';
+  }
 }
 
 function iv3CloseNewConvModal() {
@@ -773,29 +832,42 @@ async function iv3SendNewConversation() {
   const modal   = document.getElementById('iv3-new-conv-modal');
   const plat    = modal?._selectedPlat;
   const recip   = document.getElementById('iv3-new-recipient')?.value.trim();
-  const msg     = document.getElementById('iv3-new-message')?.value.trim();
   const err     = document.getElementById('iv3-new-conv-err');
   const sendBtn = document.getElementById('iv3-new-conv-send-btn');
+
+  // نقرأ الرسالة من المكان الصح حسب نوع المنصة
+  const isTpl = (plat === 'whatsapp' || plat === 'instagram' || plat === 'messenger');
+  const msg = isTpl
+    ? document.getElementById('iv3-new-template')?.value.trim()
+    : document.getElementById('iv3-new-message')?.value.trim();
+  const tplName = isTpl ? document.getElementById('iv3-new-tpl-name')?.value.trim() : null;
 
   const showErr = (txt) => { if (err) { err.textContent = txt; err.style.display = 'block'; } };
 
   if (!plat)  return showErr('⚠️ اختر المنصة أولاً');
   if (!recip) return showErr('⚠️ أدخل رقم الهاتف أو الـ ID');
-  if (!msg)   return showErr('⚠️ اكتب رسالة أولاً');
+  if (!msg && !tplName) return showErr('⚠️ اكتب رسالة أو اختر Template');
+
+  // Validation بسيط لرقم الهاتف لـ WA
+  if ((plat === 'whatsapp-qr' || plat === 'whatsapp') && !/^\d{7,15}$/.test(recip.replace(/\D/g,''))) {
+    return showErr('⚠️ رقم الهاتف لازم يكون أرقام فقط (7-15 رقم)');
+  }
 
   if (err) err.style.display = 'none';
   if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = '⏳ جاري الإرسال...'; }
 
   try {
+    const body = { platform: plat, recipient: recip, message: msg || '' };
+    if (tplName) body.template_name = tplName;
+
     const res = await apiFetch('/api/system/inbox/new-conversation', {
       method: 'POST',
-      body: JSON.stringify({ platform: plat, recipient: recip, message: msg }),
+      body: JSON.stringify(body),
     });
 
     if (res?.ok) {
       iv3CloseNewConvModal();
       if (typeof iv3Toast === 'function') iv3Toast('✅ تم إرسال الرسالة وإنشاء المحادثة', 'success');
-      // تحديث القائمة وفتح المحادثة الجديدة
       await iv3LoadConvs(true);
       if (res.conversation_id && typeof iv3OpenConv === 'function') {
         setTimeout(() => iv3OpenConv(res.conversation_id), 400);
