@@ -1948,6 +1948,24 @@ router.get('/inbox/analytics/advanced', requireAuth, (req, res) => {
     
     // Open vs closed
     const statusBreakdown = db.prepare(`SELECT COALESCE(status,'open') as status, COUNT(*) as count FROM inbox_conversations GROUP BY COALESCE(status,'open')`).all();
+
+    // Top customers by message count
+    const topCustomers = db.prepare(`
+      SELECT c.sender_name, c.platform, c.sender_phone,
+             COUNT(m.id) as msg_count
+      FROM inbox_conversations c
+      JOIN inbox_messages m ON m.conversation_id = c.id
+      WHERE m.sent_at >= datetime('now', '-${days} days')
+        AND m.direction = 'in'
+      GROUP BY c.id
+      ORDER BY msg_count DESC
+      LIMIT 5
+    `).all();
+
+    // Resolution rate (closed / total)
+    const closedCount = statusBreakdown.find(s => s.status === 'closed')?.count || 0;
+    const totalAll    = statusBreakdown.reduce((s, r) => s + r.count, 0);
+    const resolutionRate = totalAll > 0 ? Math.round((closedCount / totalAll) * 100) : 0;
     
     res.json({ ok: true, analytics: {
       period_days: days,
@@ -1956,10 +1974,12 @@ router.get('/inbox/analytics/advanced', requireAuth, (req, res) => {
       incoming_messages: inMessages,
       outgoing_messages: outMessages,
       avg_response_minutes: Math.round(avgResponseTime),
+      resolution_rate: resolutionRate,
       by_platform: byPlatform,
       daily_trend: dailyTrend,
       top_keywords: topKeywords,
-      status_breakdown: statusBreakdown
+      status_breakdown: statusBreakdown,
+      top_customers: topCustomers
     }});
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });

@@ -3004,46 +3004,144 @@ async function saveSLASettings() {
 
 // ── Analytics ──
 async function loadInboxAnalytics() {
-  const from = document.getElementById('analytics-from')?.value || '';
-  const to   = document.getElementById('analytics-to')?.value || '';
-  let url = '/api/system/inbox/analytics';
-  if (from || to) url += '?from='+from+'&to='+to;
-  const d = await apiFetch(url);
-  if (!d.ok) return;
+  const from   = document.getElementById('analytics-from')?.value || '';
+  const to     = document.getElementById('analytics-to')?.value   || '';
+  const content = document.getElementById('analytics-content');
+  if (content) content.innerHTML = '<div style="text-align:center;padding:20px;color:#9ca3af;font-size:12px">جاري تحميل التقرير...</div>';
+
+  // نحسب عدد الأيام من from/to أو 30 يوم افتراضيًا
+  let days = 30;
+  if (from && to) {
+    const diff = Math.ceil((new Date(to) - new Date(from)) / 86400000);
+    if (diff > 0) days = Math.min(diff + 1, 365);
+  } else if (from) {
+    days = Math.ceil((new Date() - new Date(from)) / 86400000) + 1;
+  }
+
+  const d = await apiFetch('/api/system/inbox/analytics/advanced?days=' + days);
+  if (!d?.ok || !content) return;
   const a = d.analytics;
-  const cardsEl = document.getElementById('analytics-cards');
-  const platEl  = document.getElementById('analytics-platforms');
-  const dailyEl = document.getElementById('analytics-daily');
-  if (cardsEl) {
-    cardsEl.innerHTML = [
-      { label:'💬 المحادثات', val: a.total_conversations, color:'#1B5E30' },
-      { label:'📥 وارد', val: a.incoming, color:'#3b82f6' },
-      { label:'📤 صادر', val: a.outgoing, color:'#F5A623' },
-    ].map(c =>
-      '<div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;padding:10px;text-align:center">'
-      +'<div style="font-size:11px;color:#9ca3af">'+c.label+'</div>'
-      +'<div style="font-size:20px;font-weight:900;color:'+c.color+'">'+c.val+'</div>'
-      +'</div>'
-    ).join('');
+
+  // دوال مساعدة
+  const platIcon = p => ({ telegram:'✈️', 'whatsapp-qr':'📱', whatsapp:'💬', messenger:'💬', instagram:'📸' }[p] || '💬');
+  const fmtMin   = m => m >= 60 ? Math.round(m/60) + ' س' : (m || 0) + ' د';
+  const esc2     = s => String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  // ── KPI Cards ──────────────────────────────────────────────
+  const kpis = [
+    { icon:'💬', label:'محادثات',     val: a.total_conversations,   color:'#1B5E30' },
+    { icon:'📩', label:'رسائل واردة',   val: a.incoming_messages,     color:'#3b82f6' },
+    { icon:'📨', label:'رسائل صادرة',   val: a.outgoing_messages,     color:'#f59e0b' },
+    { icon:'⏱️', label:'متوسط الرد',     val: fmtMin(a.avg_response_minutes), color:'#8b5cf6' },
+    { icon:'✅', label:'معدل الحل', val: (a.resolution_rate || 0) + '%', color:'#10b981' },
+    { icon:'📊', label:'إجمالي الرسائل', val: a.total_messages, color:'#6366f1' },
+  ];
+  const cardsHtml = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+      ${kpis.map(k => `
+        <div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;padding:10px;text-align:center">
+          <div style="font-size:16px;margin-bottom:2px">${k.icon}</div>
+          <div style="font-size:18px;font-weight:900;color:${k.color}">${k.val}</div>
+          <div style="font-size:10px;color:#9ca3af;margin-top:2px">${k.label}</div>
+        </div>`).join('')}
+    </div>`;
+
+  // ── Platform Breakdown ─────────────────────────────────────
+  const totalPlat = a.by_platform?.reduce((s,p) => s + p.count, 0) || 1;
+  const platColors = { telegram:'#229ED9', 'whatsapp-qr':'#25D366', whatsapp:'#128C7E', messenger:'#0099FF', instagram:'#E1306C' };
+  const platHtml = a.by_platform?.length ? `
+    <div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:800;color:#374151;margin-bottom:10px">📱 توزيع المنصات</div>
+      ${a.by_platform.map(p => {
+        const pct = Math.round((p.count / totalPlat) * 100);
+        const col = platColors[p.platform] || '#6366f1';
+        return `<div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+            <span>${platIcon(p.platform)} ${esc2(p.platform)}</span>
+            <span style="font-weight:700">${p.count} (${pct}%)</span>
+          </div>
+          <div style="background:#f3f4f6;border-radius:4px;height:6px">
+            <div style="background:${col};border-radius:4px;height:6px;width:${pct}%;transition:width .4s"></div>
+          </div></div>`;
+      }).join('')}
+    </div>` : '';
+
+  // ── Daily Trend Mini Chart ─────────────────────────────────
+  let trendHtml = '';
+  if (a.daily_trend?.length) {
+    const maxV = Math.max(...a.daily_trend.map(d => d.conversations), 1);
+    trendHtml = `
+      <div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:800;color:#374151;margin-bottom:10px">📈 محادثات يومية</div>
+        <div style="display:flex;gap:3px;align-items:flex-end;height:64px">
+          ${a.daily_trend.map(d => {
+            const h = Math.max(4, Math.round((d.conversations / maxV) * 52));
+            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px" title="${d.date}: ${d.conversations}">
+              <div style="background:#1B5E30;border-radius:2px 2px 0 0;width:100%;height:${h}px"></div>
+              <div style="font-size:8px;color:#9ca3af;writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap">${d.date?.slice(5)||''}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
   }
-  if (platEl && a.by_platform?.length) {
-    platEl.innerHTML = '<div style="font-size:11px;font-weight:700;color:#9ca3af;margin-bottom:6px">توزيع المنصات</div>'
-      + a.by_platform.map(p =>
-        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0">'
-        +'<span>'+esc(p.platform||'')+'</span><span style="font-weight:700">'+p.c+'</span></div>'
-      ).join('');
+
+  // ── Top Customers ──────────────────────────────────────────
+  let topHtml = '';
+  if (a.top_customers?.length) {
+    topHtml = `
+      <div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:800;color:#374151;margin-bottom:8px">🏆 أكثر العملاء تواصلاً</div>
+        ${a.top_customers.map((c, i) => `
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i<a.top_customers.length-1?'border-bottom:1px solid #f3f4f6':''}">
+            <div style="width:20px;height:20px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#6366f1">${i+1}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc2(c.sender_name||c.sender_phone||'غير معروف')}</div>
+              <div style="font-size:10px;color:#9ca3af">${platIcon(c.platform)} ${esc2(c.platform)}</div>
+            </div>
+            <div style="font-size:13px;font-weight:900;color:#1B5E30">${c.msg_count}</div>
+          </div>`).join('')}
+      </div>`;
   }
-  if (dailyEl && a.daily_last_7_days?.length) {
-    const max = Math.max(...a.daily_last_7_days.map(d=>d.c), 1);
-    dailyEl.innerHTML = '<div style="font-size:11px;font-weight:700;color:#9ca3af;margin-bottom:6px">آخر 7 أيام</div>'
-      +'<div style="display:flex;gap:4px;align-items:flex-end;height:60px">'
-      +a.daily_last_7_days.map(d =>
-        '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">'
-        +'<div style="background:var(--brand,#1B5E30);border-radius:3px 3px 0 0;width:100%;height:'+Math.round((d.c/max)*50)+'px" title="'+d.day+': '+d.c+'"></div>'
-        +'<div style="font-size:9px;color:#9ca3af">'+d.day.slice(5)+'</div>'
-        +'</div>'
-      ).join('')+'</div>';
+
+  // ── Keywords Cloud ─────────────────────────────────────────
+  let kwHtml = '';
+  if (a.top_keywords?.length) {
+    const maxKw = a.top_keywords[0]?.count || 1;
+    kwHtml = `
+      <div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:800;color:#374151;margin-bottom:8px">💬 أكثر الكلمات تكراراً</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${a.top_keywords.map(k => {
+            const sz = 10 + Math.round((k.count / maxKw) * 8);
+            return `<span style="background:#eef2ff;color:#4338ca;border-radius:20px;padding:3px 10px;font-size:${sz}px;font-weight:600">${esc2(k.word)}<sup style="font-size:8px;color:#9ca3af;margin-right:2px">${k.count}</sup></span>`;
+          }).join('')}
+        </div>
+      </div>`;
   }
+
+  // ── Status Breakdown ───────────────────────────────────────
+  const statusLabels = { open:'🟢 مفتوحة', waiting:'🟡 انتظار', closed:'⚪ مغلقة' };
+  let statusHtml = '';
+  if (a.status_breakdown?.length) {
+    const totalSt = a.status_breakdown.reduce((s,r) => s + r.count, 0) || 1;
+    statusHtml = `
+      <div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:800;color:#374151;margin-bottom:8px">📌 حالة المحادثات</div>
+        ${a.status_breakdown.map(s => {
+          const pct = Math.round((s.count / totalSt) * 100);
+          return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:4px 0">
+            <span>${statusLabels[s.status] || s.status}</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <div style="background:#f3f4f6;border-radius:4px;height:5px;width:80px">
+                <div style="background:#6366f1;border-radius:4px;height:5px;width:${pct}%"></div>
+              </div>
+              <span style="font-weight:700;min-width:26px;text-align:left">${s.count}</span>
+            </div></div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  content.innerHTML = cardsHtml + platHtml + trendHtml + topHtml + kwHtml + statusHtml;
 }
 
 async function saveChatbotSettings() {
