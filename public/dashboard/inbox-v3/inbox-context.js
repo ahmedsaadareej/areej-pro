@@ -1,5 +1,5 @@
 /**
- * inbox-context.js — Areej Pro Inbox v3
+ * inbox-context.js - Areej Pro Inbox v3
  * Contact Panel: بيانات العميل، فواتيره، أوردراته، Labels، Notes، تحويل لأوردر
  * آخر تحديث: 2026-05-02
  */
@@ -63,7 +63,7 @@ function iv3RenderContactInfo(conv) {
   const detailsEl = document.getElementById('iv3-ctx-details');
   if (detailsEl) {
     const phoneEl = document.getElementById('iv3-ctx-phone');
-    if (phoneEl) phoneEl.textContent = iv3ExtractPhone(conv.sender_id) || '—';
+    if (phoneEl) phoneEl.textContent = iv3ExtractPhone(conv.sender_id) || '-';
     detailsEl.style.display = '';
   }
 
@@ -88,33 +88,22 @@ async function iv3LoadCustomerContext(conv) {
   try {
     const queryParam = phone
       ? `phone=${encodeURIComponent(phone)}`
-      : `phone=${encodeURIComponent(cleanName)}`; // fallback — API بيدعم بحث بالاسم عبر LIKE
+      : `phone=${encodeURIComponent(cleanName)}`; // fallback - API بيدعم بحث بالاسم عبر LIKE
     const res = await apiFetch(`/api/crm/contacts/by-phone?${queryParam}`);
     if (!res || !res.ok || !res.contact) throw new Error('not found');
 
     const contact = res.contact;
 
-    // جلب الفواتير الأخيرة للعميل
-    let recentInvoices = [];
-    let recentOrders   = [];
-    try {
-      const invData = await apiFetch(`/api/system/invoices?search=${encodeURIComponent(contact.name || '')}&limit=4`);
-      recentInvoices = (invData?.data || []).filter(i => i.contact_id === contact.id).slice(0, 4);
-      // تحويل الحقول للصيغة المتوقعة
-      recentInvoices = recentInvoices.map(i => ({
-        id:     i.id,
-        number: i.invoice_no,
-        total:  i.total,
-        status: i.status
-      }));
-    } catch (_) {}
+    // البيانات الكاملة الآن تأتي مباشرة من الـ API (recent_invoices + recent_orders + total_paid + total_invoiced)
+    const recentInvoices = contact.recent_invoices || [];
+    const recentOrders   = contact.recent_orders   || [];
 
     // حفظ contact id + بيانات كاملة في IV3
-    IV3._ctxContactId = contact.id || null;
-    IV3._ctxCrmContact = contact;
+    IV3._ctxContactId      = contact.id || null;
+    IV3._ctxCrmContact     = contact;
     IV3._ctxRecentInvoices = recentInvoices;
 
-    iv3RenderCustomerERP({ ...contact, invoice_count: contact.invoice_count || 0, recent_invoices: recentInvoices, recent_orders: recentOrders });
+    iv3RenderCustomerERP(contact);
 
     // إخفاء زر "إضافة" لأنه موجود
     const addBtn = document.getElementById('iv3-ctx-add-btn');
@@ -137,24 +126,57 @@ async function iv3LoadCustomerContext(conv) {
   }
 }
 
+const IV3_ORDER_STATUS = {
+  new:        { label: 'جديد',       color: '#F59E0B' },
+  preparing:  { label: 'جاري التحضير', color: '#3B82F6' },
+  production: { label: 'إنتاج',     color: '#8B5CF6' },
+  ready:      { label: 'جاهز',       color: '#10B981' },
+  shipped:    { label: 'مشحون',     color: '#6366F1' },
+  delivered:  { label: 'تم التسليم', color: '#10B981' },
+  cancelled:  { label: 'ملغي',      color: '#EF4444' },
+};
+
+const IV3_INV_STATUS = {
+  pending:   { label: 'معلقة', color: '#F59E0B' },
+  paid:      { label: 'مدفوعة', color: '#10B981' },
+  cancelled: { label: 'ملغية',  color: '#EF4444' },
+};
+
 function iv3RenderCustomerERP(customer) {
-  // ── CLV Badge — عدد الفواتير + إجمالي المدفوع ──
+  // ── تحديث الإيميل والمدينة في view mode ──
+  const emailEl = document.getElementById('iv3-ctx-email');
+  const cityEl  = document.getElementById('iv3-ctx-city');
+  if (emailEl) emailEl.textContent = customer.email || '—';
+  if (cityEl)  cityEl.textContent  = customer.city  || '—';
+
+  // ── CLV Badge — بيانات حقيقية كاملة ──
   const clvEl = document.getElementById('iv3-ctx-clv');
   if (clvEl) {
-    const invCount   = customer.invoice_count  || 0;
-    const totalPaid  = customer.total_paid     || 0;
-    const totalInv   = customer.total_invoiced || 0;
+    const invCount  = customer.invoice_count  || 0;
+    const totalPaid = customer.total_paid     || 0;
+    const totalInv  = customer.total_invoiced || 0;
+    const ordCount  = (customer.recent_orders || []).length;
     if (invCount > 0 || totalPaid > 0) {
+      const debt = Math.max(0, totalInv - totalPaid);
       clvEl.innerHTML = `
-        <div style="display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px;margin-bottom:8px">
-          <span style="font-size:20px">🏆</span>
-          <div style="flex:1">
-            <div style="font-size:11px;color:#166534;font-weight:700;margin-bottom:2px">قيمة العميل الكاملة</div>
-            <div style="display:flex;gap:12px;flex-wrap:wrap">
-              <span style="font-size:12px;color:#15803d;font-weight:700">${invCount} فاتورة</span>
-              <span style="font-size:12px;color:#166534">|  مدفوع: <strong>${Number(totalPaid).toLocaleString('ar-EG')} ج.م</strong></span>
-              ${totalInv > totalPaid ? `<span style="font-size:11px;color:#6b7280">(إجمالي: ${Number(totalInv).toLocaleString('ar-EG')} ج.م)</span>` : ''}
+        <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span style="font-size:16px">🏆</span>
+            <span style="font-size:11px;color:#166534;font-weight:800">قيمة العميل</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div style="background:#fff;border-radius:7px;padding:6px 8px;text-align:center">
+              <div style="font-size:15px;font-weight:800;color:#1B5E30">${invCount}</div>
+              <div style="font-size:10px;color:#6b7280">فاتورة</div>
             </div>
+            <div style="background:#fff;border-radius:7px;padding:6px 8px;text-align:center">
+              <div style="font-size:13px;font-weight:800;color:#15803d">${Number(totalPaid).toLocaleString('ar-EG')}</div>
+              <div style="font-size:10px;color:#6b7280">ج.م مدفوع</div>
+            </div>
+            ${debt > 0 ? `
+            <div style="background:#FEF2F2;border-radius:7px;padding:6px 8px;text-align:center;grid-column:1/-1">
+              <div style="font-size:12px;font-weight:800;color:#EF4444">⚠️ ذمم: ${Number(debt).toLocaleString('ar-EG')} ج.م</div>
+            </div>` : ''}
           </div>
         </div>`;
       clvEl.style.display = '';
@@ -164,22 +186,17 @@ function iv3RenderCustomerERP(customer) {
   }
 
   // ── الرصيد ──
-  const balanceEl = document.getElementById('iv3-ctx-balance');
+  const balanceEl    = document.getElementById('iv3-ctx-balance');
   const balanceInner = document.getElementById('iv3-balance-inner');
-  if (balanceEl && balanceInner && customer.balance !== undefined) {
-    const isDebt = customer.balance > 0;
-    balanceInner.innerHTML = `
-      <span style="color:${isDebt ? '#EF4444' : '#10B981'}">
-        ${isDebt ? '⚠️' : '✓'} الذمم: <strong>${customer.balance} ج.م</strong>
-      </span>`;
-    balanceEl.style.display = '';
+  if (balanceEl && balanceInner) {
+    const bal = customer.balance || 0;
+    if (bal > 0) {
+      balanceInner.innerHTML = `<span style="color:#EF4444">⚠️ ذمم متأخر: <strong>${Number(bal).toLocaleString('ar-EG')} ج.م</strong></span>`;
+      balanceEl.style.display = '';
+    } else {
+      balanceEl.style.display = 'none';
+    }
   }
-
-  // ── الإيميل والمدينة ──
-  const emailEl = document.getElementById('iv3-ctx-email');
-  const cityEl  = document.getElementById('iv3-ctx-city');
-  if (emailEl) emailEl.textContent = customer.email || '—';
-  if (cityEl)  cityEl.textContent  = customer.city  || '—';
 
   // ── الفواتير ──
   const invSection = document.getElementById('iv3-ctx-invoices');
@@ -187,14 +204,17 @@ function iv3RenderCustomerERP(customer) {
   if (invSection && invList) {
     const invoices = customer.recent_invoices || [];
     if (invoices.length) {
-      invList.innerHTML = invoices.slice(0, 4).map(inv => `
-        <div class="iv3-erp-row">
-          <span class="iv3-erp-label">#${inv.number}</span>
-          <span class="iv3-erp-val" style="color:${inv.status === 'paid' ? '#10B981' : '#EF4444'}">
-            ${inv.total} ج — ${inv.status === 'paid' ? '✓' : '⏳'}
-          </span>
-        </div>`).join('');
+      invList.innerHTML = invoices.slice(0, 4).map(inv => {
+        const st = IV3_INV_STATUS[inv.status] || { label: inv.status, color: '#9CA3AF' };
+        return `<div class="iv3-erp-row" style="cursor:pointer" onclick="window.open('/dashboard#p=invoices','_blank')">
+          <span class="iv3-erp-label">#${inv.number || inv.id}</span>
+          <span class="iv3-erp-val">${Number(inv.total||0).toLocaleString('ar-EG')} ج.م</span>
+          <span style="font-size:10px;font-weight:700;color:${st.color};flex-shrink:0">${st.label}</span>
+        </div>`;
+      }).join('');
       invSection.style.display = '';
+    } else {
+      invSection.style.display = 'none';
     }
   }
 
@@ -204,12 +224,17 @@ function iv3RenderCustomerERP(customer) {
   if (ordSection && ordList) {
     const orders = customer.recent_orders || [];
     if (orders.length) {
-      ordList.innerHTML = orders.slice(0, 4).map(ord => `
-        <div class="iv3-erp-row">
-          <span class="iv3-erp-label">#${ord.number}</span>
-          <span class="iv3-erp-val">${iv3EscHtml(ord.status_label || ord.status || '')}</span>
-        </div>`).join('');
+      ordList.innerHTML = orders.slice(0, 4).map(ord => {
+        const st = IV3_ORDER_STATUS[ord.status] || { label: ord.status || '—', color: '#9CA3AF' };
+        return `<div class="iv3-erp-row" style="cursor:pointer" onclick="window.open('/dashboard#p=orders','_blank')">
+          <span class="iv3-erp-label">#${ord.number || ord.id}</span>
+          <span class="iv3-erp-val">${Number(ord.total||0).toLocaleString('ar-EG')} ج.م</span>
+          <span style="font-size:10px;font-weight:700;color:${st.color};flex-shrink:0">${st.label}</span>
+        </div>`;
+      }).join('');
       ordSection.style.display = '';
+    } else {
+      ordSection.style.display = 'none';
     }
   }
 }
@@ -232,7 +257,7 @@ async function iv3OpenLabels() {
           <span class="iv3-label-dot" style="background:${l.color || '#9CA3AF'}"></span>
           ${iv3EscHtml(l.name)}
         </div>`).join('')
-    : '<div class="iv3-dropdown-empty">لا توجد تسميات — أضف من الإعدادات</div>';
+    : '<div class="iv3-dropdown-empty">لا توجد تسميات - أضف من الإعدادات</div>';
 
   const html = `
     <div class="iv3-modal-overlay" id="iv3-labels-modal" onclick="iv3CloseModal('iv3-labels-modal')">
@@ -279,7 +304,7 @@ async function iv3SendInvoice() {
     const items = invoices.map(inv => `
       <div class="iv3-dropdown-item" onclick="iv3ConfirmSendInvoice(${inv.id})">
         <strong>فاتورة #${inv.number || inv.id}</strong>
-        <span>${(inv.total || 0).toLocaleString('ar-EG')} ج — ${iv3EscHtml(inv.customer_name || '')}</span>
+        <span>${(inv.total || 0).toLocaleString('ar-EG')} ج - ${iv3EscHtml(inv.customer_name || '')}</span>
       </div>`).join('');
 
     const html = `
@@ -317,7 +342,7 @@ function iv3CtxOpenProfile(customerId) {
     // فتح صفحة CRM وافتح بروفايل العميل مباشرةً
     window.open(`/dashboard#p=crm&open=${id}`, '_blank');
   } else {
-    // عميل مش موجود — افتح edit mode للإضافة
+    // عميل مش موجود - افتح edit mode للإضافة
     iv3CtxToggleTab('contact');
     setTimeout(() => iv3OpenContactEdit(), 150);
   }
@@ -427,7 +452,7 @@ async function iv3SubmitOrder(contactId) {
       client_phone: phone || null,
       order_type:   type,
       total,
-      notes: notes || `تحويل من محادثة ${IV3.activeConv?.platform || ''} — ${IV3.activeConv?.sender_name || ''}`,
+      notes: notes || `تحويل من محادثة ${IV3.activeConv?.platform || ''} - ${IV3.activeConv?.sender_name || ''}`,
     };
     if (contactId) payload.contact_id = contactId;
 
@@ -537,7 +562,7 @@ async function iv3SubmitPayLink() {
     // 1. إنشاء رابط الدفع عبر API
     const result = await IV3_API.createPaymentLink({
       amount,
-      description:     desc  || `دفعة من محادثة ${IV3.activeConv?.platform || ''} — ${IV3.activeConv?.sender_name || ''}`,
+      description:     desc  || `دفعة من محادثة ${IV3.activeConv?.platform || ''} - ${IV3.activeConv?.sender_name || ''}`,
       client_name:     name  || '',
       client_phone:    phone || '',
       conversation_id: IV3.activeConvId || null,
@@ -557,7 +582,7 @@ ${result.link}`;
       textarea.focus();
     }
 
-    iv3Toast(`✅ تم إنشاء رابط الدفع — انسخ الرسالة وأرسلها`, 'success');
+    iv3Toast(`✅ تم إنشاء رابط الدفع - انسخ الرسالة وأرسلها`, 'success');
 
   } catch(e) {
     if (errEl) { errEl.textContent = e.message; errEl.style.display = ''; }
@@ -683,7 +708,7 @@ async function iv3SaveContactEdit() {
         // لو الرقم موجود مسبقاً
         if (res?.existing_id) {
           IV3._ctxContactId = res.existing_id;
-          iv3Toast(`الرقم مسجّل مسبقاً لـ ${res.existing_name || ''} — تم الربط`, 'info');
+          iv3Toast(`الرقم مسجّل مسبقاً لـ ${res.existing_name || ''} - تم الربط`, 'info');
         } else {
           throw new Error(res?.error || 'فشل الإضافة');
         }
@@ -700,9 +725,9 @@ async function iv3SaveContactEdit() {
     const phoneEl = document.getElementById('iv3-ctx-phone');
     const emailEl = document.getElementById('iv3-ctx-email');
     const cityEl  = document.getElementById('iv3-ctx-city');
-    if (phoneEl) phoneEl.textContent = phoneVal || '—';
-    if (emailEl) emailEl.textContent = emailVal || '—';
-    if (cityEl)  cityEl.textContent  = cityVal  || '—';
+    if (phoneEl) phoneEl.textContent = phoneVal || '-';
+    if (emailEl) emailEl.textContent = emailVal || '-';
+    if (cityEl)  cityEl.textContent  = cityVal  || '-';
     // تحديث الاسم
     const nameEl2 = document.getElementById('iv3-ctx-name');
     if (nameEl2 && nameVal) nameEl2.textContent = nameVal;
@@ -718,7 +743,7 @@ async function iv3SaveContactEdit() {
   }
 }
 
-// مساعد — استخراج الاسم النظيف بدون @ و JID
+// مساعد - استخراج الاسم النظيف بدون @ و JID
 function iv3CleanSenderName(name, id) {
   if (name && !name.includes('@')) return name;
   if (id) {
@@ -754,7 +779,7 @@ function iv3CtxToggleTab(tab) {
   const flyout = document.getElementById('iv3-ctx-flyout');
   if (!flyout) return;
 
-  // لو نفس التاب — أغلق الـ flyout
+  // لو نفس التاب - أغلق الـ flyout
   if (_iv3ActiveTab === tab && flyout.classList.contains('open')) {
     flyout.classList.remove('open');
     _iv3ActiveTab = null;
@@ -797,7 +822,7 @@ function iv3CtxCloseFlyout() {
 }
 
 function iv3ToggleContext() {
-  // legacy toggle — بيفتح/يغلق تاب contact
+  // legacy toggle - بيفتح/يغلق تاب contact
   iv3CtxToggleTab('contact');
 }
 

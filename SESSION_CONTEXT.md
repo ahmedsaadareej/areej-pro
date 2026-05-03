@@ -1,3 +1,22 @@
+## Session 2026-05-03 (13:20 → 13:40 UTC) — مهمة 2 مكتملة
+- الحالة: تم الإكمال (مهمة 2 من 5)
+- ما تم إنجازه:
+  - تعديل بيانات العميل inline: زر "تعديل" في section title يفتح form مباشرة
+  - iv3OpenContactEdit(): prefill تلقائي من (WA sender_name/sender_id) + CRM
+  - iv3SaveContactEdit(): PUT لو موجود / POST إضافة جديد + معالجة duplicate
+  - إصلاح إضافة للـ CRM: بدل window.open → يفتح edit mode في نفس الصفحة
+  - إصلاح بروفايل العميل: openClientProfile() مع hash open=ID
+  - IV3._ctxCrmContact: يُحفظ عند تحميل من CRM للـ prefill
+  - Reset تلقائي لـ edit state عند تغيير المحادثة
+  - cache-bust → v=1777814679
+- قرارات تقنية:
+  - Edit form يحتوي: اسم + تليفون + إيميل + مدينة + ملاحظات
+  - تمييز بصري للـ edit mode (زر يتحول لأحمر "× إلغاء")
+  - Duplicate phone: يربط بالعميل الموجود بدل إظهار error
+  - بروفايل: window.open لـ /dashboard#p=crm&open=ID + loadCRM() تقرأ الـ hash
+- آخر Commit: 03facd9
+- نقطة البداية القادمة: مهمة 3 — أوردرات العميل في Context Panel + CLV كامل (total_paid/total_invoiced)
+
 ## Session 2026-05-03 (13:10 → 13:30 UTC) — مهمة 1 مكتملة
 - الحالة: تم الإكمال (مهمة 1 من 5)
 - ما تم إنجازه:

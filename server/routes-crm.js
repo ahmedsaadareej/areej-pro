@@ -103,13 +103,54 @@ router.get('/contacts/by-phone', requireAuth, (req, res) => {
       row = db.prepare('SELECT * FROM crm_contacts WHERE name LIKE ?').get('%'+raw+'%');
     }
     if (!row) return res.json({ ok: false, contact: null });
-    // عدد الفواتير من sys_invoices
-    let invoice_count = 0;
+
+    // إحصائيات الفواتير
+    let invoice_count = 0, total_paid = 0, total_invoiced = 0, recent_invoices = [];
     try {
-      const cnt = db.prepare('SELECT COUNT(*) as cnt FROM sys_invoices WHERE contact_id=?').get(row.id);
-      invoice_count = cnt?.cnt || 0;
+      const invStats = db.prepare(`
+        SELECT COUNT(*) as cnt,
+               COALESCE(SUM(CASE WHEN status='paid' THEN total ELSE 0 END), 0) as paid,
+               COALESCE(SUM(total), 0) as invoiced
+        FROM sys_invoices WHERE contact_id=?
+      `).get(row.id);
+      invoice_count   = invStats?.cnt      || 0;
+      total_paid      = invStats?.paid     || 0;
+      total_invoiced  = invStats?.invoiced || 0;
+
+      // آخر 4 فواتير
+      recent_invoices = db.prepare(`
+        SELECT id, invoice_no as number, total, status, created_at
+        FROM sys_invoices WHERE contact_id=?
+        ORDER BY created_at DESC LIMIT 4
+      `).all(row.id);
     } catch (_) {}
-    res.json({ ok: true, contact: { ...row, invoice_count } });
+
+    // آخر أوردرات
+    let recent_orders = [];
+    try {
+      recent_orders = db.prepare(`
+        SELECT id, order_no as number, total, status, created_at
+        FROM sys_orders WHERE contact_id=?
+        ORDER BY created_at DESC LIMIT 4
+      `).all(row.id);
+    } catch (_) {}
+
+    // رصيد العميل (balance)
+    let balance = 0;
+    try {
+      const bal = db.prepare(`SELECT COALESCE(SUM(total),0) - COALESCE(SUM(CASE WHEN status='paid' THEN total ELSE 0 END),0) as bal FROM sys_invoices WHERE contact_id=?`).get(row.id);
+      balance = bal?.bal || 0;
+    } catch (_) {}
+
+    res.json({ ok: true, contact: {
+      ...row,
+      invoice_count,
+      total_paid,
+      total_invoiced,
+      balance,
+      recent_invoices,
+      recent_orders,
+    } });
   } catch(e) { res.json({ ok: false }); }
 });
 
