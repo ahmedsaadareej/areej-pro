@@ -152,6 +152,17 @@ function iv3InitSound() {
     IV3._audioCtx = null;
   }
 
+  // resume AudioContext عند أول تفاعل — مطلوب في Chrome/Safari
+  const resumeOnce = () => {
+    if (IV3._audioCtx && IV3._audioCtx.state === 'suspended') {
+      IV3._audioCtx.resume().catch(() => {});
+    }
+    document.removeEventListener('click', resumeOnce);
+    document.removeEventListener('keydown', resumeOnce);
+  };
+  document.addEventListener('click', resumeOnce);
+  document.addEventListener('keydown', resumeOnce);
+
   // تحميل الإعداد المحفوظ
   const saved = localStorage.getItem('iv3_sound');
   IV3.soundEnabled = saved !== 'off';
@@ -162,15 +173,36 @@ function iv3PlayNotifSound() {
   if (!IV3.soundEnabled || !IV3._audioCtx) return;
   try {
     const ctx = IV3._audioCtx;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 800;
-    gain.gain.setValueAtTime(0.15, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.3);
+    // resume لو suspended (قد يحدث بعد idle طويل)
+    if (ctx.state === 'suspended') ctx.resume();
+
+    const now = ctx.currentTime;
+
+    // نغمة أولى (bing)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.type = 'sine';
+    osc1.frequency.value = 880;
+    gain1.gain.setValueAtTime(0, now);
+    gain1.gain.linearRampToValueAtTime(0.2, now + 0.02);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    osc1.start(now);
+    osc1.stop(now + 0.35);
+
+    // نغمة ثانية بعد 180ms (bing bing)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.type = 'sine';
+    osc2.frequency.value = 1100;
+    gain2.gain.setValueAtTime(0, now + 0.18);
+    gain2.gain.linearRampToValueAtTime(0.18, now + 0.20);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+    osc2.start(now + 0.18);
+    osc2.stop(now + 0.55);
   } catch (e) { /* تجاهل */ }
 }
 
@@ -179,13 +211,23 @@ function iv3ToggleSound() {
   localStorage.setItem('iv3_sound', IV3.soundEnabled ? 'on' : 'off');
   iv3UpdateSoundIcon();
   iv3Toast(IV3.soundEnabled ? '🔔 الصوت مفعّل' : '🔕 الصوت مكتوم', 'info');
+  // تشغيل صوت تجريبي عند التفعيل فقط
+  if (IV3.soundEnabled) iv3PlayNotifSound();
 }
+
+// SVG لأيقونة الصوت المفعّل
+const _IV3_SOUND_ON_SVG = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>`;
+// SVG لأيقونة الصوت المكتوم
+const _IV3_SOUND_OFF_SVG = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>`;
 
 function iv3UpdateSoundIcon() {
   const btn = document.getElementById('iv3-sound-btn');
   if (!btn) return;
-  btn.title = IV3.soundEnabled ? 'إيقاف الصوت' : 'تفعيل الصوت';
-  btn.style.opacity = IV3.soundEnabled ? '1' : '0.4';
+  const on = IV3.soundEnabled;
+  btn.title = on ? 'إيقاف الصوت' : 'تفعيل الصوت';
+  btn.style.opacity = on ? '1' : '0.5';
+  const icon = btn.querySelector('svg');
+  if (icon) icon.innerHTML = on ? _IV3_SOUND_ON_SVG : _IV3_SOUND_OFF_SVG;
 }
 
 // ── Unread Badge ────────────────────────────────────────────
