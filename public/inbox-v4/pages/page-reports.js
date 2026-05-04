@@ -1,13 +1,14 @@
 /* ============================================================
    Inbox v4 — Page Module: Reports
-   يُغلّف InboxAnalytics.open() كـ Page Module
+   يُغلّف InboxAnalytics.mount() كـ Page Module معياري
    آخر تحديث: 2026-05-04
    ============================================================ */
 
 const PageReports = (() => {
+
   return {
     mount(container, params) {
-      // لو InboxAnalytics غير محمَّل → placeholder
+      // لو InboxAnalytics غير محمَّل → placeholder مع retry
       if (typeof InboxAnalytics === 'undefined') {
         container.innerHTML = `
           <div style="padding: 40px; text-align: center; color: #6b7280;">
@@ -19,25 +20,19 @@ const PageReports = (() => {
         return;
       }
 
-      // حقن container مناسب
+      // حقن container داخلي
       container.innerHTML = `<div id="iv4-analytics-container" style="height:100%;overflow:auto;"></div>`;
 
-      // تمرير section لو موجود
-      const section = (params && params.section) || 'overview';
-      const userRoleId = InboxStore.state?.currentUser?.inbox_role_id;
+      const section     = (params && params.section) || 'overview';
+      const anchorEl    = document.getElementById('iv4-analytics-container');
 
-      // InboxAnalytics.open() يعرض الـ overlay في الـ DOM الحالي
-      // في Phase 10 يُحوَّل لـ mount/unmount كامل (D-031)
-      InboxAnalytics.open({
-        container: document.getElementById('iv4-analytics-container'),
-        section,
-        userRoleId
-      });
+      // استخدام mount() الرسمي (D-031)
+      InboxAnalytics.mount(anchorEl, { section });
     },
 
     unmount() {
-      if (typeof InboxAnalytics !== 'undefined' && InboxAnalytics.close) {
-        InboxAnalytics.close();
+      if (typeof InboxAnalytics !== 'undefined' && InboxAnalytics.unmount) {
+        InboxAnalytics.unmount();
       }
     }
   };

@@ -96,8 +96,42 @@
   </div><!-- #shell-root -->
 
   <!-- ترتيب الـ scripts إلزامي -->
+  <!-- Core (مطلوبة قبل كل شيء) -->
   <script src="/dashboard/inbox-v4/store.js"></script>
   <script src="/dashboard/inbox-v4/api.js"></script>
+  <script src="/dashboard/inbox-v4/stream.js"></script>
+
+  <!-- Inbox Modules (يُحمَّلون مرة واحدة — Page Inbox يستخدمهم) -->
+  <script src="/dashboard/inbox-v4/conv-list.js"></script>
+  <script src="/dashboard/inbox-v4/chat.js"></script>
+  <script src="/dashboard/inbox-v4/reply.js"></script>
+  <script src="/dashboard/inbox-v4/team.js"></script>
+  <script src="/dashboard/inbox-v4/context.js"></script>
+  <script src="/dashboard/inbox-v4/labels.js"></script>
+  <script src="/dashboard/inbox-v4/search.js"></script>
+  <script src="/dashboard/inbox-v4/chatbot.js"></script>
+  <script src="/dashboard/inbox-v4/automation.js"></script>
+  <script src="/dashboard/inbox-v4/scheduled.js"></script>
+  <script src="/dashboard/inbox-v4/ai.js"></script>
+  <script src="/dashboard/inbox-v4/interactive.js"></script>
+  <script src="/dashboard/inbox-v4/catalog.js"></script>
+  <script src="/dashboard/inbox-v4/broadcast.js"></script>
+  <script src="/dashboard/inbox-v4/email.js"></script>
+
+  <!-- Analytics Module -->
+  <script src="/dashboard/inbox-v4/analytics.js"></script>
+
+  <!-- Settings Modules (ترتيب مهم: sub-modules أولاً) -->
+  <script src="/dashboard/inbox-v4/settings/roles.js"></script>
+  <script src="/dashboard/inbox-v4/settings/users.js"></script>
+  <script src="/dashboard/inbox-v4/settings/org.js"></script>
+  <script src="/dashboard/inbox-v4/settings/channels.js"></script>
+  <script src="/dashboard/inbox-v4/settings/inbox-settings.js"></script>
+  <script src="/dashboard/inbox-v4/settings/team.js"></script>
+  <script src="/dashboard/inbox-v4/settings/automation-hub.js"></script>
+  <script src="/dashboard/inbox-v4/settings/settings-page.js"></script>
+
+  <!-- Router + Page Modules + Shell (الترتيب إلزامي) -->
   <script src="/inbox-v4/router.js"></script>
   <script src="/inbox-v4/pages/page-inbox.js"></script>
   <script src="/inbox-v4/pages/page-contacts.js"></script>

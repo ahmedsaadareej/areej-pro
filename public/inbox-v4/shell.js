@@ -71,17 +71,21 @@ const InboxShell = (() => {
     content.innerHTML = '<div class="shell-loading"><div class="shell-spinner"></div></div>';
 
     const factory = pageModules[page];
-    if (!factory) return;
+    if (!factory) {
+      content.innerHTML = `<div style="padding:40px;text-align:center;color:#9ca3af">الصفحة "${page}" غير معرّفة</div>`;
+      return;
+    }
     const mod = factory();
     if (!mod) {
-      content.innerHTML = `<div style="padding:40px;text-align:center;color:#9ca3af">الصفحة غير متاحة</div>`;
+      content.innerHTML = `<div style="padding:40px;text-align:center;color:#9ca3af">Page Module غير محمَّل (${page})</div>`;
       return;
     }
 
     currentModule  = mod;
     currentPageKey = page;
     content.innerHTML = '';
-    mod.mount(content, params);
+    // requestAnimationFrame يضمن أن الـ DOM نظيف قبل mount
+    requestAnimationFrame(() => mod.mount(content, params));
   }
 
   // ── تحديث الـ active state في الـ sidebar ─────────────────────────────
