@@ -32,12 +32,14 @@ const InboxStream = (() => {
     _es.addEventListener('open', () => {
       InboxStore.set('sseConnected', true);
       InboxStore.set('sseReconnectAttempts', 0);
+      InboxStore.emit('sse:connected');
       console.log('[InboxStream] متصل ✅');
     });
 
     // ─── error ───
     _es.addEventListener('error', () => {
       InboxStore.set('sseConnected', false);
+      InboxStore.emit('sse:disconnected');
       _es.close();
       _es = null;
       _scheduleReconnect();
@@ -324,8 +326,17 @@ const InboxStream = (() => {
     // ما نقطعه عشان نضمن استقبال الرسائل في الخلفية
   });
 
+  // ─── init() — يُستدعى من InboxShell.init() (D-028 + D-029) ─────────────
+  let _initialized = false;
+
+  function init() {
+    if (_initialized) return;  // D-029: منع double-init
+    _initialized = true;
+    connect();
+  }
+
   // ─── Public API ───────────────────────────────────────────────────────
-  return { connect, disconnect };
+  return { connect, disconnect, init };
 })();
 
 window.InboxStream = InboxStream;

@@ -180,6 +180,9 @@ app.get('/pay/:token/result',  (req, res) => res.sendFile(path.join(__dirname, '
 app.get('/track/:waybill',    (req, res) => res.sendFile(path.join(__dirname, '../public/track/index.html')));
 app.get('/order-form/:token', (req, res) => res.sendFile(path.join(__dirname, '../public/order-form/index.html')));
 app.get('/landing*', (req, res) => res.sendFile(path.join(__dirname, '../public/landing/index.html')));
+// T19+T20: App Shell (Inbox SPA) — يجب أن تكون قبل /dashboard*
+app.get('/inbox*',    (req, res) => res.sendFile(path.join(__dirname, '../public/inbox-v4/index.html')));
+app.get(['/contacts*', '/reports*', '/settings*'], (req, res) => res.sendFile(path.join(__dirname, '../public/inbox-v4/index.html')));
 app.get('/dashboard*', (req, res) => res.sendFile(path.join(__dirname, '../public/dashboard/index.html')));
 app.get('/my*', (req, res) => res.sendFile(path.join(__dirname, '../public/my/index.html')));
 app.get('/admin*',     (req, res) => res.sendFile(path.join(__dirname, '../public/admin/index.html')));

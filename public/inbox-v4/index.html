@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<!-- Inbox v4 — App Shell | آخر تحديث: 2026-05-04 -->
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inbox — أريج</title>
+  <link rel="stylesheet" href="/dashboard/inbox-v4/inbox.css">
+  <link rel="stylesheet" href="/inbox-v4/shell.css">
+</head>
+<body>
+  <div id="shell-root">
+
+    <!-- Topbar -->
+    <header id="shell-topbar" class="shell-topbar">
+      <div class="shell-topbar-start">
+        <span class="shell-logo">أريج</span>
+        <span class="shell-breadcrumb" id="shellBreadcrumb"></span>
+      </div>
+      <div class="shell-topbar-end">
+        <span class="shell-user-name" id="shellUserName"></span>
+        <button class="shell-btn-icon" id="shellLogoutBtn" title="تسجيل الخروج">⏻</button>
+      </div>
+    </header>
+
+    <div class="shell-body">
+
+      <!-- Sidebar -->
+      <nav id="shell-sidebar" class="shell-sidebar">
+
+        <!-- التنقل الرئيسي -->
+        <div class="shell-nav-main">
+          <a href="/inbox" class="shell-nav-item" data-page="inbox">
+            <span class="shell-nav-icon">📥</span>
+            <span class="shell-nav-label">الـ Inbox</span>
+            <span class="shell-badge" id="shellUnreadBadge" style="display:none"></span>
+          </a>
+          <a href="/contacts" class="shell-nav-item" data-page="contacts">
+            <span class="shell-nav-icon">👥</span>
+            <span class="shell-nav-label">جهات الاتصال</span>
+          </a>
+          <a href="/reports" class="shell-nav-item" data-page="reports">
+            <span class="shell-nav-icon">📊</span>
+            <span class="shell-nav-label">التقارير</span>
+          </a>
+          <a href="/settings" class="shell-nav-item" data-page="settings">
+            <span class="shell-nav-icon">⚙️</span>
+            <span class="shell-nav-label">الإعدادات</span>
+          </a>
+        </div>
+
+        <!-- أدوات الـ Inbox -->
+        <div class="shell-nav-tools">
+          <button class="shell-nav-collapse-toggle" id="shellToolsToggle">
+            أدوات الـ Inbox <span class="shell-toggle-arrow">▾</span>
+          </button>
+          <div class="shell-nav-tools-items" id="shellToolsItems">
+            <a href="/inbox/broadcast" class="shell-nav-item shell-nav-sub" data-page="broadcast">
+              <span class="shell-nav-icon">📢</span>
+              <span class="shell-nav-label">البث الجماعي</span>
+            </a>
+            <a href="/inbox/scheduled" class="shell-nav-item shell-nav-sub" data-page="scheduled">
+              <span class="shell-nav-icon">🕐</span>
+              <span class="shell-nav-label">المجدولة</span>
+            </a>
+            <a href="/inbox/chatbot" class="shell-nav-item shell-nav-sub" data-page="chatbot">
+              <span class="shell-nav-icon">🤖</span>
+              <span class="shell-nav-label">Chatbot</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- حالة الموظف -->
+        <div class="shell-agent-status" id="shellAgentStatus">
+          <span class="shell-status-dot" id="shellAgentStatusDot"></span>
+          <select id="shellAgentStatusSelect" class="shell-status-select">
+            <option value="online">متاح</option>
+            <option value="busy">مشغول</option>
+            <option value="away">غائب</option>
+            <option value="offline">غير متاح</option>
+          </select>
+          <span class="shell-sse-dot" id="shellSseDot" title="اتصال مباشر"></span>
+        </div>
+
+      </nav>
+
+      <!-- محتوى الصفحة الرئيسي -->
+      <main id="shell-content" class="shell-content">
+        <div id="shell-loading" class="shell-loading">
+          <div class="shell-spinner"></div>
+          <span>جاري التحميل...</span>
+        </div>
+      </main>
+
+    </div><!-- .shell-body -->
+  </div><!-- #shell-root -->
+
+  <!-- ترتيب الـ scripts إلزامي -->
+  <script src="/dashboard/inbox-v4/store.js"></script>
+  <script src="/dashboard/inbox-v4/api.js"></script>
+  <script src="/inbox-v4/router.js"></script>
+  <script src="/inbox-v4/pages/page-inbox.js"></script>
+  <script src="/inbox-v4/pages/page-contacts.js"></script>
+  <script src="/inbox-v4/pages/page-reports.js"></script>
+  <script src="/inbox-v4/pages/page-settings.js"></script>
+  <script src="/inbox-v4/shell.js"></script>
+</body>
+</html>

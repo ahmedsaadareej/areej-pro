@@ -40,6 +40,47 @@ router.use(loadInboxPermissions);
 
 // ─── Routes ───────────────────────────────────────────────────────────────
 
+// GET /api/inbox/me — بيانات المستخدم الحالي للـ App Shell
+router.get('/me', (req, res) => {
+  const u = req.inboxUser;
+  res.json({
+    id          : u.id,
+    name        : u.name,
+    email       : u.email,
+    inbox_role_id: u.inbox_role_id,
+    permissions : u.permissions || {},
+    has_erp     : u.has_erp,
+    has_payment : u.has_payment
+  });
+});
+
+// PUT /api/inbox/me/status — تحديث حالة الموظف من الـ Shell
+router.put('/me/status', async (req, res) => {
+  const { status } = req.body;
+  const validStatuses = ['online', 'busy', 'away', 'offline'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ ok: false, error: 'حالة غير صالحة' });
+  }
+  try {
+    req.db.prepare(
+      `UPDATE inbox_agent_status_v4 SET status=?, updated_at=CURRENT_TIMESTAMP
+       WHERE tenant_user_id=?`
+    ).run(status, req.inboxUser.inbox_user_id);
+    // لو السجل غير موجود → أنشئه
+    const exists = req.db.prepare(
+      `SELECT id FROM inbox_agent_status_v4 WHERE tenant_user_id=?`
+    ).get(req.inboxUser.inbox_user_id);
+    if (!exists) {
+      req.db.prepare(
+        `INSERT OR IGNORE INTO inbox_agent_status_v4 (tenant_user_id, status) VALUES (?, ?)`
+      ).run(req.inboxUser.inbox_user_id, status);
+    }
+    res.json({ ok: true, status });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // SSE stream
 const { router: streamRouter } = require('./stream');
 router.use('/', streamRouter);
