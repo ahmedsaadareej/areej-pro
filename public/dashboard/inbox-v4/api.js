@@ -412,14 +412,54 @@ const InboxAPI = (() => {
 
   // ─── Settings ─────────────────────────────────────────────────────────
 
-  const settings = {
-    get() {
-      return _get('/inbox/settings');
-    },
+  // ─ M2 Settings namespace ──────────────────────────────────────────
+const settings = {
+    // --- Legacy (backward compat) ---
+    get:    ()           => _get('/inbox/settings'),
+    update: (ch, data)  => _put(`/inbox/settings/${ch}`, data),
 
-    update(channel, config) {
-      return _put(`/inbox/settings/${channel}`, config);
-    },
+    // --- Org ---
+    getOrg:    ()       => _get('/inbox/settings/org'),
+    updateOrg: (data)   => _put('/inbox/settings/org', data),
+
+    // --- Business Hours ---
+    getHours:    ()     => _get('/inbox/settings/business-hours'),
+    updateHours: (data) => _put('/inbox/settings/business-hours', data),
+
+    // --- Canned Responses ---
+    getCanned:    ()       => _get('/inbox/settings/canned'),
+    searchCanned: (q)      => _get('/inbox/settings/canned/search', { q }),
+    createCanned: (data)   => _post('/inbox/settings/canned', data),
+    updateCanned: (id, d)  => _put(`/inbox/settings/canned/${id}`, d),
+    deleteCanned: (id)     => _delete(`/inbox/settings/canned/${id}`),
+
+    // --- Custom Attrs ---
+    getAttrs:     (type)       => _get(`/inbox/settings/attrs/${type}`),
+    createAttr:   (type, data) => _post(`/inbox/settings/attrs/${type}`, data),
+    updateAttr:   (type, id, d)=> _put(`/inbox/settings/attrs/${type}/${id}`, d),
+    deleteAttr:   (type, id)   => _delete(`/inbox/settings/attrs/${type}/${id}`),
+    reorderAttrs: (type, ord)  => _put(`/inbox/settings/attrs/${type}/reorder`, { order: ord }),
+
+    // --- SLA ---
+    getSLA:       ()     => _get('/inbox/settings/sla'),
+    createSLA:    (data) => _post('/inbox/settings/sla', data),
+    updateSLA:    (id,d) => _put(`/inbox/settings/sla/${id}`, d),
+    deleteSLA:    (id)   => _delete(`/inbox/settings/sla/${id}`),
+    setDefaultSLA:(id)   => _put(`/inbox/settings/sla/${id}/set-default`),
+
+    // --- CSAT ---
+    getCSAT:    ()     => _get('/inbox/settings/csat'),
+    updateCSAT: (data) => _put('/inbox/settings/csat', data),
+
+    // --- Appearance ---
+    getAppearance:    ()     => _get('/inbox/settings/appearance'),
+    updateAppearance: (data) => _put('/inbox/settings/appearance', data),
+
+    // --- Channels ---
+    getChannels:   ()          => _get('/inbox/settings/channels'),
+    getChannel:    (ch)        => _get(`/inbox/settings/channels/${ch}`),
+    updateChannel: (ch, data)  => _put(`/inbox/settings/channels/${ch}`, data),
+    testChannel:   (ch)        => _post(`/inbox/settings/channels/${ch}/test`),
   };
 
   // ─── CRM & ERP (للـ Context Panel) ───────────────────────────────────

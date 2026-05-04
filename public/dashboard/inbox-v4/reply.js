@@ -585,6 +585,8 @@ const InboxReply = (() => {
         }
       } else {
         _hideMentionDropdown();
+        // ── Canned Responses trigger ("/") (T48) ──────────────────
+        _handleCannedTrigger(textarea);
       }
     });
 
@@ -747,6 +749,58 @@ const InboxReply = (() => {
     toolbar.insertBefore(span, toolbar.firstChild);
   }
 
+
+  // ─── Canned Responses (T48) ─────────────────────────────────────────────
+  // trigger "/" في بداية السطر يفتح قائمة ردود جاهزة
+
+  let _cannedDropdown = null;
+
+  function _handleCannedTrigger(textarea) {
+    const val    = textarea.value;
+    const cursor = textarea.selectionStart;
+    const match  = val.slice(0, cursor).match(/^\/([^\s]*)$/);
+    if (!match) { _hideCannedDropdown(); return; }
+    _fetchAndShowCanned(match[1], textarea);
+  }
+
+  async function _fetchAndShowCanned(q, textarea) {
+    try {
+      const res   = await InboxAPI.settings.searchCanned(q || '');
+      const items = res.canned || [];
+      if (!items.length) { _hideCannedDropdown(); return; }
+      _showCannedDropdown(items, textarea);
+    } catch (e) { _hideCannedDropdown(); }
+  }
+
+  function _showCannedDropdown(items, textarea) {
+    _hideCannedDropdown();
+    const dropdown = document.createElement('div');
+    dropdown.className = 'iv4-canned-dropdown';
+    items.forEach(c => {
+      const el = document.createElement('div');
+      el.className = 'iv4-canned-item';
+      el.innerHTML =
+        `<span class="iv4-canned-sc">/${c.shortcut}</span>` +
+        `<span class="iv4-canned-name">${c.name}</span>` +
+        `<span class="iv4-canned-text">${c.content.slice(0, 60)}</span>`;
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        textarea.value = c.content;
+        textarea.dispatchEvent(new Event('input'));
+        _hideCannedDropdown();
+        textarea.focus();
+      });
+      dropdown.appendChild(el);
+    });
+    const replyBox = textarea.closest('.iv4-reply-box') || textarea.parentElement;
+    if (replyBox) { replyBox.style.position = 'relative'; replyBox.appendChild(dropdown); }
+    _cannedDropdown = dropdown;
+  }
+
+  function _hideCannedDropdown() {
+    if (_cannedDropdown) { _cannedDropdown.remove(); _cannedDropdown = null; }
+  }
+
   // ─── Public API ───────────────────────────────────────────────────────────
   return {
     init,
@@ -759,4 +813,3 @@ const InboxReply = (() => {
 
 })();
 
-window.InboxReply = InboxReply;

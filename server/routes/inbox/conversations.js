@@ -555,8 +555,23 @@ const SLA_THRESHOLDS_SEC = {
  *   - resolution_status     : 'met' | 'breached' | 'pending'
  *   - first_response_pct    : نسبة الوقت المستهلك من الـ threshold (للـ UI)
  */
-function _computeSLA(conv) {
-  const threshold = SLA_THRESHOLDS_SEC[conv.priority] || SLA_THRESHOLDS_SEC.normal;
+function _computeSLA(conv, db) {
+  // T50: نحاول قراءة السياسة من inbox_sla_policies_v4 أولاً
+  let threshold = SLA_THRESHOLDS_SEC[conv.priority] || SLA_THRESHOLDS_SEC.normal;
+  let resolutionMinutes = null;
+  if (db) {
+    try {
+      // نبحث عن سياسة تطابق الـ priority أولاً، ثم 'all', ثم is_default
+      const policy =
+        db.prepare('SELECT * FROM inbox_sla_policies_v4 WHERE priority=? LIMIT 1').get(conv.priority) ||
+        db.prepare('SELECT * FROM inbox_sla_policies_v4 WHERE priority=\'all\' LIMIT 1').get() ||
+        db.prepare('SELECT * FROM inbox_sla_policies_v4 WHERE is_default=1 LIMIT 1').get();
+      if (policy) {
+        threshold        = policy.first_response * 60;  // دقائق → ثوانٍ
+        resolutionMinutes = policy.resolution_time;
+      }
+    } catch (_) { /* fallback للـ hardcoded */ }
+  }
   const now       = Math.floor(Date.now() / 1000);
 
   // ── وقت أول رد ──────────────────────────────────────────────────────────────
@@ -577,7 +592,8 @@ function _computeSLA(conv) {
 
   // ── وقت الإغلاق (Resolution) ─────────────────────────────────────────────────
   // نستخدم threshold مضاعف × 3 للإغلاق (ضبط افتراضي)
-  const resolutionThreshold = threshold * 3;
+  // T50: resolution من SLA Policy لو متاح — وإلا threshold × 3
+  const resolutionThreshold = resolutionMinutes ? resolutionMinutes * 60 : threshold * 3;
   let resolutionSec    = null;
   let resolutionStatus = 'pending';
   let resolutionPct    = null;

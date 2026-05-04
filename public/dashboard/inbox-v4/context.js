@@ -251,6 +251,9 @@ const InboxContext = (() => {
 
       html += `</div>`;
 
+      // حقول مخصصة للاتصال (T49) — تُحمَّل بعد render
+      html += `<div id="iv4-ctx-contact-attrs" class="iv4-ctx-attrs-section"></div>`;
+
       // زر إلغاء الربط + زر فتح صفحة CRM
       html += `
         <div class="iv4-ctx-actions">
@@ -1293,3 +1296,33 @@ const InboxContext = (() => {
   };
 
 })();
+
+// ─── Custom Attrs Loader (T49) ────────────────────────────────────────────
+// يُستدعى بعد render لعرض الحقول المخصصة لجهة الاتصال
+async function _loadContactAttrs(contactId) {
+  const el = document.getElementById('iv4-ctx-contact-attrs');
+  if (!el) return;
+  try {
+    const [attrsRes, valsRes] = await Promise.all([
+      InboxAPI.settings.getAttrs('contact'),
+      fetch(`/api/inbox/settings/attrs/contact/${contactId}/values`).then(r => r.json()).catch(() => ({ values: [] })),
+    ]);
+    const attrs  = attrsRes.attrs || [];
+    const values = {};
+    (valsRes.values || []).forEach(v => { values[v.attr_id] = v.value; });
+    if (!attrs.length) { el.innerHTML = ''; return; }
+    const rows = attrs.map(a => {
+      const val = values[a.id] || '';
+      return `
+        <div class="iv4-ctx-attr-row">
+          <span class="iv4-ctx-attr-label">${a.label}</span>
+          <span class="iv4-ctx-attr-val">${val || '<em>—</em>'}</span>
+        </div>`;
+    }).join('');
+    el.innerHTML = `<div class="iv4-ctx-attrs-title">📋 حقول مخصصة</div>${rows}`;
+  } catch (e) {
+    el.innerHTML = '';
+  }
+}
+// نُصدّر للاستدعاء بعد render
+window._loadContactAttrs = _loadContactAttrs;
