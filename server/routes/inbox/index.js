@@ -1,6 +1,6 @@
 /**
  * Inbox v4 Routes — /api/inbox/*
- * آخر تحديث: 2026-05-04 (M1 T07 — loadInboxPermissions + requirePermission)
+ * آخر تحديث: 2026-05-04 (M5 T13 — inboxAuthAdapter مُفعَّل قبل loadInboxPermissions)
  *
  * مسجّل في app.js كـ:
  *   app.use('/api/inbox', require('./routes/inbox/index'))
@@ -20,6 +20,7 @@ const router         = express.Router();
 const { requireAuth }  = require('../../auth-middleware');
 const { getTenantDb }  = require('../../db-tenant');
 const { loadInboxPermissions, requirePermission } = require('./permissions');
+const inboxAuthAdapter = require('../../inbox-auth-adapter');
 
 // ─── Auth + Tenant DB ─────────────────────────────────────────────────────
 router.use(requireAuth);
@@ -28,8 +29,13 @@ router.use((req, res, next) => {
   next();
 });
 
+// ─── Auth Adapter (M5 T13) ───────────────────────────────────────────────
+// يبني req.inboxUser قبل loadInboxPermissions
+// الترتيب: getTenantDb → inboxAuthAdapter → loadInboxPermissions
+router.use(inboxAuthAdapter);
+
 // ─── Inbox Permissions (M1 T07) ──────────────────────────────────────────
-// يُحقن req.inboxUser.permissions على كل request بعد req.db
+// لو req.inboxUser موجود (من inboxAuthAdapter) → تُكمّل permissions فقط
 router.use(loadInboxPermissions);
 
 // ─── Routes ───────────────────────────────────────────────────────────────
