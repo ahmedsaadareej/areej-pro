@@ -66,8 +66,15 @@ const InboxStore = (() => {
     searchOpen: false,
     bulkSelected: new Set(),    // IDs المحادثات المحددة
 
-    // الـ current user (يُملأ عند init)
-    currentUser: null,
+    // الـ current user (يُملأ عند init) — M1 T08
+    currentUser: {
+      id:            null,
+      name:          '',
+      email:         '',
+      role_name:     '',
+      inbox_role_id: null,
+      permissions:   {},   // { team_manage: true, reports_full: true, ... }
+    },
   };
 
   // ─── نظام الأحداث ───────────────────────────────────────────────────
@@ -296,6 +303,23 @@ const InboxStore = (() => {
     emit('store:reset', null);
   }
 
+  // ─── Permissions Helper (M1 T08) ──────────────────────────────────────
+  /**
+   * تحقق سريع من صلاحية واحدة
+   * @param {string} key - مفتاح الصلاحية (e.g. 'team_manage', 'reports_full')
+   * @returns {boolean}
+   */
+  function can(key) {
+    return req.inboxUser
+      ? false
+      : state.currentUser && state.currentUser.permissions[key] === true;
+  }
+
+  // نسخة صحيحة — تقرأ من state.currentUser.permissions
+  function canDo(key) {
+    return !!(state.currentUser && state.currentUser.permissions[key] === true);
+  }
+
   // ─── Public API ───────────────────────────────────────────────────────
   return {
     state,
@@ -315,6 +339,7 @@ const InboxStore = (() => {
     clearBulkSelect,
     selectAllVisible,
     reset,
+    can: canDo,   // InboxStore.can('team_manage') → true/false
   };
 })();
 

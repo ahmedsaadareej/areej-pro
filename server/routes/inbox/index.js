@@ -1,6 +1,6 @@
 /**
  * Inbox v4 Routes — /api/inbox/*
- * آخر تحديث: 2026-05-03 (P8-4 Broadcast V2)
+ * آخر تحديث: 2026-05-04 (M1 T07 — loadInboxPermissions + requirePermission)
  *
  * مسجّل في app.js كـ:
  *   app.use('/api/inbox', require('./routes/inbox/index'))
@@ -19,6 +19,7 @@ const express        = require('express');
 const router         = express.Router();
 const { requireAuth }  = require('../../auth-middleware');
 const { getTenantDb }  = require('../../db-tenant');
+const { loadInboxPermissions, requirePermission } = require('./permissions');
 
 // ─── Auth + Tenant DB ─────────────────────────────────────────────────────
 router.use(requireAuth);
@@ -26,6 +27,10 @@ router.use((req, res, next) => {
   req.db = getTenantDb(req.user.id);
   next();
 });
+
+// ─── Inbox Permissions (M1 T07) ──────────────────────────────────────────
+// يُحقن req.inboxUser.permissions على كل request بعد req.db
+router.use(loadInboxPermissions);
 
 // ─── Routes ───────────────────────────────────────────────────────────────
 
@@ -52,7 +57,8 @@ router.use('/', require('./chatbot'));
 router.use('/', require('./context'));
 
 // Phase 3 cont. — Analytics + SLA (P3-6)
-router.use('/analytics', require('./analytics'));
+// requirePermission('reports_self') = أدنى مستوى — Agent وما فوقه
+router.use('/analytics', requirePermission('reports_self'), require('./analytics'));
 
 // Phase 7 — AI Features (P7-1)
 router.use('/', require('./ai'));
@@ -63,7 +69,7 @@ router.use('/', require('./broadcast'));
 // Phase 8-1 — Email Channel
 router.use('/', require('./email'));
 
-// [Phase 6] Settings
-// router.use('/', require('./settings'));
+// Phase 10 M1 — Settings (Roles + Users)
+router.use('/settings', require('./settings'));
 
 module.exports = router;

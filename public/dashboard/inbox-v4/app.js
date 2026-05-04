@@ -201,7 +201,52 @@
   });
 
   // ─── Init ────────────────────────────────────────────────────────────────
+  // ─── Route Guards (M1 T09) ───────────────────────────────────────────────
+  /**
+   * يتحقق من صلاحية قبل فتح أي section
+   * @param {string} permKey - مفتاح الصلاحية
+   * @param {string} [msg]   - رسالة خطأ مخصصة
+   * @returns {boolean}
+   */
+  function guardRoute(permKey, msg) {
+    if (!InboxStore.can(permKey)) {
+      const errorMsg = msg || 'ليس لديك صلاحية للوصول لهذا القسم';
+      if (typeof toast === 'function') toast(errorMsg, 'error');
+      else if (typeof window.showInboxToast === 'function') window.showInboxToast(errorMsg, 'error');
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * تحميل بيانات المستخدم الحالي وصلاحياته في InboxStore
+   * يُستدعى مرة واحدة عند init
+   */
+  async function loadCurrentUser() {
+    try {
+      const res = await fetch('/api/user/me');
+      if (!res.ok) return;
+      const data = await res.json();
+      // data قد يحتوي على: id, name, email, inbox_role_id, role_name, permissions
+      if (data && data.id) {
+        InboxStore.set('currentUser', {
+          id:            data.id,
+          name:          data.name          || '',
+          email:         data.email         || '',
+          role_name:     data.role_name     || '',
+          inbox_role_id: data.inbox_role_id || null,
+          permissions:   data.permissions   || {},
+        });
+      }
+    } catch (_) {
+      // silent — يُطبق الـ DEFAULT_PERMISSIONS في الـ backend
+    }
+  }
+
   function init() {
+    // تحميل بيانات المستخدم وصلاحياته (M1 T09)
+    loadCurrentUser();
+
     // اتصل بـ SSE
     InboxStream.connect();
 
@@ -223,7 +268,10 @@
     if (typeof InboxAnalytics !== 'undefined') {
       const analyticsBtn = $('iv4-analytics-btn');
       if (analyticsBtn) {
-        analyticsBtn.addEventListener('click', () => InboxAnalytics.open());
+        analyticsBtn.addEventListener('click', () => {
+          if (!guardRoute('reports_self', 'ليس لديك صلاحية لعرض التقارير')) return;
+          InboxAnalytics.open();
+        });
       }
     }
 
@@ -254,8 +302,9 @@
     // Phase 8-1 — Email Channel
     if (typeof InboxEmail !== 'undefined') InboxEmail.init();               // P8-1 ✅
 
-    // expose showInboxToast globally (for team.js + other modules)
+    // expose showInboxToast + guardRoute globally (for modules)
     window.showInboxToast = toast;
+    window.inboxGuard = guardRoute;
 
     console.log('[Inbox v4] ✅ جاهز');
   }
