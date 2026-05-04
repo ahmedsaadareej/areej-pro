@@ -1,5 +1,6 @@
 'use strict';
 const { CronJob } = require('cron');
+const { runScheduledReports } = require('./inbox-scheduled-reports');
 
 async function sendTrialReminder(user, sendMail) {
   const slug = user.slug || '';
@@ -22,7 +23,7 @@ async function sendTrialReminder(user, sendMail) {
   });
 }
 
-function startCronJobs(masterDb, sendMail) {
+function startCronJobs(masterDb, sendMail, getTenantDb) {
   // Trial expiry reminder — daily at 9 AM Cairo time
   new CronJob('0 9 * * *', async () => {
     try {
@@ -39,6 +40,21 @@ function startCronJobs(masterDb, sendMail) {
       }
     } catch(e) { console.error('[Cron] Trial reminder error:', e.message); }
   }, null, true, 'Africa/Cairo');
+
+  // Inbox Scheduled Reports — كل ساعة عند الدقيقة 5
+  // آخر تحديث: 2026-05-04 — P11-E1
+  if (getTenantDb) {
+    new CronJob('5 * * * *', async () => {
+      try {
+        await runScheduledReports(getTenantDb, masterDb);
+      } catch (e) {
+        console.error('[Cron] Scheduled reports error:', e.message);
+      }
+    }, null, true, 'UTC');
+    console.log('[Cron] Inbox scheduled reports: مُفعَّل (كل ساعة)');
+  } else {
+    console.warn('[Cron] Inbox scheduled reports: غير مُفعَّل (getTenantDb غير متاح)');
+  }
 
   console.log('[Cron] Jobs started');
 }

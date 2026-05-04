@@ -204,10 +204,12 @@ app.get('*',           (req, res) => res.sendFile(path.join(__dirname, '../publi
 app.use(errorHandler);
 
 // Start background cron jobs
+// آخر تحديث: 2026-05-04 — P11-E1 (تمرير getTenantDb لـ scheduled reports)
 try {
-  const masterDb = require('./db-master');
-  const { sendMail } = require('./email');
-  require('./cron-jobs').startCronJobs(masterDb, sendMail);
+  const masterDb        = require('./db-master');
+  const { sendMail }    = require('./email');
+  const { getTenantDb } = require('./db-tenant');
+  require('./cron-jobs').startCronJobs(masterDb, sendMail, getTenantDb);
 } catch(e) { console.error('Cron start error:', e.message); }
 
 // ── Start ─────────────────────────────────────────────────────────────────
