@@ -1,3 +1,19 @@
+## جلسة 2026-05-04 16:36 UTC — M5 كامل: Auth Adapter (T12→T18)
+- الحالة: مكتملة ✅
+- ما تم:
+  - T12+T13: `server/inbox-auth-adapter.js` (جديد) + تفعيل في `inbox/index.js`
+  - T14: `context.js` — ERP Plugin Guard (`erpGuard` middleware) + هجرة كاملة لـ `req.inboxUser`
+  - T15: `team.js` — `req.user.role` → `permissions.team_manage` + `req.inboxUser`
+  - T16: `conversations.js` — هجرة `req.inboxUser`
+  - T17 [1-9/10]: stream, messages, automation, broadcast, chatbot, email, labels, search, ai — كلها `req.inboxUser`
+  - T17 settings.js: كان نظيفاً من M1 — لا تغيير
+  - T18: `public/dashboard/inbox-v4/api.js` — `InboxConfig` object (تمهيد Standalone)
+- قرارات: لا جديد (D-042→D-046 موثقة مسبقاً)
+- آخر commit: 0b26b5d
+- المهمة القادمة: M3 Shell — `inbox-v4/execution/EX-M3-shell.md`
+
+---
+
 ## جلسة 2026-05-04 — M1 كامل: نظام الصلاحيات (T01→T11)
 - الحالة: مكتملة ✅
 - ما تم:
