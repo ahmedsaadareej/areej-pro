@@ -1,6 +1,6 @@
 /**
  * InboxAPI — كل الـ fetch calls لـ Inbox v4
- * آخر تحديث: 2026-05-03
+ * آخر تحديث: 2026-05-04
  *
  * كل method ترجع Promise<{ data, error }>
  * لا تُطلق exceptions — الأخطاء في { error }
@@ -19,11 +19,22 @@ const InboxAPI = (() => {
    * @param {RequestInit} options
    * @returns {Promise<{ data: any, error: string|null }>}
    */
+  /** جلب الـ Bearer token من localStorage أو parent window */
+  function _getToken() {
+    try {
+      return localStorage.getItem('pro_token') ||
+             (window.parent !== window && window.parent.localStorage.getItem('pro_token')) ||
+             '';
+    } catch (_) { return ''; }
+  }
+
   async function _fetch(path, options = {}) {
     try {
+      const token = _getToken();
       const res = await fetch(`/api${path}`, {
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
           ...(options.headers || {}),
         },
         ...options,

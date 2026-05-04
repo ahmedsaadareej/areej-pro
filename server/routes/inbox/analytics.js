@@ -500,7 +500,7 @@ router.get('/agents/:id', (req, res) => {
 
     // ─ آخر 10 محادثات ─────────────────────────────────────────────
     const recentConvs = db.prepare(`
-      SELECT id, contact_name, platform, status, priority,
+      SELECT id, sender_name, platform, status, priority,
              first_message_at, resolved_at, created_at
       FROM inbox_conversations_v4
       WHERE assigned_to_id = ?
@@ -673,7 +673,7 @@ router.get('/sla/detail', (req, res) => {
 
     // ── أسوأ 10 محادثات (أطول وقت استجابة) ──────────────────────────────────
     const worst = db.prepare(`
-      SELECT id, contact_name, platform, priority,
+      SELECT id, sender_name, platform, priority,
              (first_response_at - first_message_at) AS response_sec
       FROM inbox_conversations_v4
       WHERE created_at BETWEEN ? AND ?
@@ -839,7 +839,7 @@ router.get('/sentiment', async (req, res) => {
       SELECT
         m.id, m.conversation_id, m.content, m.created_at,
         m.metadata,
-        c.contact_name
+        c.sender_name
       FROM inbox_messages_v4 m
       JOIN inbox_conversations_v4 c ON c.id = m.conversation_id
       WHERE m.direction = 'inbound'
@@ -1030,12 +1030,12 @@ router.get('/sentiment', async (req, res) => {
 
     const topNegConvs = topNegIds.map(convId => {
       const conv = db.prepare(`
-        SELECT id, contact_name, platform, status, created_at
+        SELECT id, sender_name, platform, status, created_at
         FROM inbox_conversations_v4 WHERE id = ?
       `).get(convId);
       return conv ? {
         id:           conv.id,
-        contact_name: conv.contact_name || 'عميل غير محدد',
+        sender_name: conv.sender_name || 'عميل غير محدد',
         platform:     conv.platform,
         status:       conv.status,
         neg_count:    negByConv[convId],

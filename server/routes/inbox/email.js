@@ -27,10 +27,21 @@
 
 'use strict';
 
-const express      = require('express');
-const router       = express.Router();
-const nodemailer   = require('nodemailer');
-const crypto       = require('crypto');
+const express        = require('express');
+const router         = express.Router();
+const nodemailer     = require('nodemailer');
+const crypto         = require('crypto');
+const { requireAuth } = require('../../auth-middleware');
+const { getTenantDb } = require('../../db-tenant');
+
+// حقن requireAuth + req.db على كل routes عدا /email/webhook/:token
+router.use((req, res, next) => {
+  if (req.path.startsWith('/email/webhook/')) return next(); // public
+  requireAuth(req, res, () => {
+    req.db = req.db || getTenantDb(req.user.id);
+    next();
+  });
+});
 
 // imap-simple — تُحمَّل بشكل lazy لتجنب crash لو مش موجودة
 let imapSimple;

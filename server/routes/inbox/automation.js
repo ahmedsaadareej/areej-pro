@@ -28,7 +28,7 @@
  * جدول DB: inbox_automation_v4
  *   id, tenant_id, name, is_enabled, match_type, keywords (JSON),
  *   reply_type, reply_content, reply_delay_sec, platforms (JSON),
- *   apply_once_per_conv, priority_order, created_at, updated_at
+ *   apply_once_per_conv, priority, created_at, updated_at
  */
 
 'use strict';
@@ -124,7 +124,7 @@ async function processAutoReply(db, conv, text, tenantId) {
   const rules = db.prepare(`
     SELECT * FROM inbox_automation_v4
     WHERE is_enabled = 1
-    ORDER BY priority_order ASC, created_at ASC
+    ORDER BY priority ASC, created_at ASC
   `).all();
 
   if (!rules || rules.length === 0) return false;
@@ -239,7 +239,7 @@ router.get('/automation/keywords', (req, res) => {
   try {
     const rows = req.db.prepare(`
       SELECT * FROM inbox_automation_v4
-      ORDER BY priority_order ASC, created_at ASC
+      ORDER BY priority ASC, created_at ASC
     `).all();
 
     // parse JSON fields
@@ -275,9 +275,9 @@ router.post('/automation/keywords', (req, res) => {
     return res.status(400).json({ error: 'reply_content مطلوب' });
 
   try {
-    // حساب آخر priority_order
+    // حساب آخر priority
     const last = req.db.prepare(`
-      SELECT MAX(priority_order) AS mo FROM inbox_automation_v4
+      SELECT MAX(priority) AS mo FROM inbox_automation_v4
     `).get();
     const nextOrder = (last?.mo ?? 0) + 1;
 
@@ -288,7 +288,7 @@ router.post('/automation/keywords', (req, res) => {
       INSERT INTO inbox_automation_v4
         (id, name, is_enabled, match_type, keywords, reply_type,
          reply_content, reply_delay_sec, platforms, apply_once_per_conv,
-         priority_order, created_at, updated_at)
+         priority, created_at, updated_at)
       VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id, name.trim(), match_type,
@@ -393,7 +393,7 @@ router.post('/automation/keywords/reorder', (req, res) => {
   try {
     const now = new Date().toISOString();
     const stmt = req.db.prepare(`
-      UPDATE inbox_automation_v4 SET priority_order = ?, updated_at = ? WHERE id = ?
+      UPDATE inbox_automation_v4 SET priority = ?, updated_at = ? WHERE id = ?
     `);
     const update = req.db.transaction(() => {
       order.forEach((id, idx) => stmt.run(idx + 1, now, id));
@@ -420,7 +420,7 @@ router.post('/automation/test', (req, res) => {
     } else {
       rules = req.db.prepare(`
         SELECT * FROM inbox_automation_v4 WHERE is_enabled = 1
-        ORDER BY priority_order ASC
+        ORDER BY priority ASC
       `).all();
     }
 
