@@ -23,6 +23,8 @@ const InboxStream = (() => {
 
   // ─── Connect ─────────────────────────────────────────────────────────
 
+  let _sseOpenTimer = null; // timeout لكشف Cloudflare buffering
+
   function connect() {
     if (_es && _es.readyState !== EventSource.CLOSED) return; // متصل بالفعل
 
@@ -30,8 +32,21 @@ const InboxStream = (() => {
     const _sseToken = InboxAPI._getToken ? InboxAPI._getToken() : (localStorage.getItem('pro_token') || '');
     _es = new EventSource('/api/inbox/stream' + (_sseToken ? '?_t=' + encodeURIComponent(_sseToken) : ''));
 
+    // timeout: لو SSE لم يُفتح خلال 10s → Cloudflare يُبافِر → انتقل لـ Long Polling
+    if (_sseOpenTimer) clearTimeout(_sseOpenTimer);
+    _sseOpenTimer = setTimeout(() => {
+      if (_es && _es.readyState === EventSource.CONNECTING) {
+        console.warn('[InboxStream] SSE timeout (Cloudflare?) → Long Polling');
+        _es.close();
+        _es = null;
+        InboxStore.set('sseReconnectAttempts', MAX_RECONNECT); // ابدأ fallback مباشرة
+        InboxStore.emit('sse:failed', { reason: 'timeout' });
+      }
+    }, 10000);
+
     // ─── open ───
     _es.addEventListener('open', () => {
+      if (_sseOpenTimer) { clearTimeout(_sseOpenTimer); _sseOpenTimer = null; }
       InboxStore.set('sseConnected', true);
       InboxStore.set('sseReconnectAttempts', 0);
       InboxStore.emit('sse:connected');
@@ -40,6 +55,7 @@ const InboxStream = (() => {
 
     // ─── error ───
     _es.addEventListener('error', () => {
+      if (_sseOpenTimer) { clearTimeout(_sseOpenTimer); _sseOpenTimer = null; }
       InboxStore.set('sseConnected', false);
       InboxStore.emit('sse:disconnected');
       _es.close();
