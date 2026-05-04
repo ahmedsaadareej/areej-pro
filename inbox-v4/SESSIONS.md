@@ -1,3 +1,21 @@
+## جلسة 2026-05-04 18:00 UTC — P11-C: QA + Bugfix (Browser Automation)
+- الحالة: مكتملة ✅
+- ما تم:
+  - **BUG-C1-01**: إصلاح email.js — req.inboxUser.id → req.user.id ✅
+  - **BUG-C1-03**: inbox-auth-adapter fallback لـ platform owner ✅
+  - api.js: تصدير _getToken لـ stream.js ✅
+  - stream.js frontend: SSE token via ?_t= ✅
+  - **Cloudflare SSE buffering**: Cloudflare يحجب SSE (HTTP/2 buffer) — تم تنفيذ Long Polling fallback
+    - stream.js: 10s timeout على SSE CONNECTING → انتقال تلقائي لـ Long Polling
+    - backend /api/inbox/poll: 25s hold + إشعار broadcast+sendToUser waiters
+    - Caddyfile: flush_interval=-1 لـ SSE endpoint
+  - تححق نهائي: sseConnected=true + "متصل" في UI ✅
+- قرارات: لو Cloudflare غيّر إعدادات proxying ليعمل SSE، Long Polling يبقى كـ fallback
+- آخر commit: d60fb2f
+- المهمة القادمة: **P11-D Pilot Migration** — seed العميل الأول + تسليم access
+
+---
+
 ## جلسة 2026-05-04 17:54 UTC — P11-B: Permissions DB
 - الحالة: مكتملة ✅
 - ما تم:
