@@ -1,3 +1,54 @@
+## جلسة 2026-05-04 17:09 UTC — M2 كامل: Settings (T31→T50)
+- الحالة: مكتملة ✅
+- ما تم:
+  - T31-T36: 6 migrations (v36→v41) في `migrations.js`:
+    - `inbox_canned_responses_v4` (shortcut UNIQUE + 2 indexes)
+    - `inbox_sla_policies_v4` (seed سياسة افتراضية)
+    - `inbox_custom_attrs_v4` + `inbox_attr_values_v4` (CASCADE DELETE)
+    - `inbox_appearance_v4` (singleton id=1)
+    - `inbox_business_hours_v4` + `inbox_business_days_v4` (7 أيام seed)
+    - `inbox_csat_settings_v4` (singleton id=1)
+  - T37-T41: `server/routes/inbox/settings.js` — 781 سطر إجمالاً:
+    - org + business-hours API
+    - canned responses CRUD + search
+    - custom attrs CRUD + reorder
+    - SLA policies CRUD + set-default (ترفض حذف is_default=1)
+    - CSAT + appearance + channels (6 قنوات)
+  - `server/routes/inbox/utils/business-hours.js` — helper isBusinessHour()
+  - T42: `api.js` — settings namespace كامل (30+ method)
+  - T43: `settings/settings-page.js` — Shell رئيسي (5 أقسام مع permission guard)
+  - T44: `settings/org.js` — بيانات الشركة + ساعات العمل
+  - T45: `settings/channels.js` — 6 قنوات مع toggle + حفظ + اختبار
+  - T46: `settings/inbox-settings.js` — Canned + SLA + Custom Attrs + CSAT + Appearance (5 tabs)
+  - T47: `settings/team.js` + `settings/automation-hub.js`
+  - T48: `reply.js` — canned responses trigger "/" dropdown
+  - T49: `context.js` — custom attrs display لجهة الاتصال
+  - T50: `conversations.js` — _computeSLA() تستخدم inbox_sla_policies_v4
+- قرارات: لا جديد
+- آخر commit: f98d138
+- المهمة القادمة: M4 Analytics — `inbox-v4/execution/EX-M4-analytics.md`
+---
+## جلسة 2026-05-04 16:49 UTC — M3 كامل: App Shell + Navigation (T19→T30)
+- الحالة: مكتملة ✅
+- ما تم:
+  - T19+T20: `server/app.js` — routes `/inbox*` + `/contacts*` + `/reports*` + `/settings*` (قبل `/dashboard*`)
+  - +endpoint: `GET /api/inbox/me` + `PUT /api/inbox/me/status` في `inbox/index.js`
+  - T21: `public/inbox-v4/index.html` — App Shell HTML (جديد)
+  - T22: `public/inbox-v4/shell.css` — كامل مع Responsive + Dark Mode (جديد، prefix: `shell-*`)
+  - T23: `public/inbox-v4/router.js` — Client-Side Router بـ history.pushState (جديد)
+  - T24: `public/inbox-v4/shell.js` — Shell Controller: auth check → SSE → Router → Pages (جديد)
+  - T25: `stream.js` — إضافة `init()` مع `_initialized` guard (D-029) + emit sse:connected/disconnected
+  - T26: `pages/page-inbox.js` — Page Module (جديد)
+  - T27: `pages/page-contacts.js` — Placeholder (جديد)
+  - T28: `pages/page-reports.js` — يُغلّف InboxAnalytics (جديد)
+  - T29: `pages/page-settings.js` — يُغلّف Roles + Users settings (جديد)
+  - T30: `dashboard/index.html` — استبدال iframe بـ redirect button لـ /inbox
+- قرارات: لا جديد
+- آخر commit: d1401e8
+- المهمة القادمة: M2 Settings أو M4 Analytics — حسب EX files
+
+---
+
 ## جلسة 2026-05-04 16:36 UTC — M5 كامل: Auth Adapter (T12→T18)
 - الحالة: مكتملة ✅
 - ما تم:
