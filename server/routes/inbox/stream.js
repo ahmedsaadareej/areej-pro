@@ -158,9 +158,9 @@ function connectionCount() {
  * يُسجّل أن المستخدم الحالي فتح هذه المحادثة ويُبلّغ باقي الموظفين
  */
 router.post('/stream/viewing', (req, res) => {
-  const userId   = req.user.id;
-  const tenantId = req.user.id;
-  const agentName = req.user.name || req.user.email || `موظف #${userId}`;
+  const userId   = req.inboxUser.id;
+  const tenantId = req.inboxUser.id;
+  const agentName = req.inboxUser.name || req.inboxUser.email || `موظف #${userId}`;
   const convId   = parseInt(req.body.conv_id, 10);
 
   if (!convId) return res.status(400).json({ error: 'conv_id مطلوب' });
@@ -192,8 +192,8 @@ router.post('/stream/viewing', (req, res) => {
  * يُلغي تسجيل مشاهدة المستخدم ويُبلّغ الباقين
  */
 router.delete('/stream/viewing/:convId', (req, res) => {
-  const userId   = req.user.id;
-  const tenantId = req.user.id;
+  const userId   = req.inboxUser.id;
+  const tenantId = req.inboxUser.id;
   const convId   = parseInt(req.params.convId, 10);
 
   if (!convId) return res.status(400).json({ error: 'convId مطلوب' });
@@ -227,8 +227,8 @@ router.get('/stream', (req, res) => {
   res.setHeader('X-Accel-Buffering', 'no'); // لـ Nginx/Caddy
   res.flushHeaders();
 
-  const userId   = req.user.id;
-  const tenantId = req.user.id; // في multi-tenant: كل user = tenant منفصل
+  const userId   = req.inboxUser.id;
+  const tenantId = req.inboxUser.id; // في multi-tenant: كل user = tenant منفصل
 
   const client = _addClient(userId, tenantId, res);
 
