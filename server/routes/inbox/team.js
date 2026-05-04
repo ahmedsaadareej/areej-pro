@@ -58,7 +58,7 @@ function _addTimeline(db, convId, eventType, actor, data = {}) {
 function _broadcastConvUpdate(req, convId, patch) {
   try {
     const { broadcastToUser } = require('./stream');
-    broadcastToUser(req.user.id, 'conv_update', { id: convId, ...patch });
+    broadcastToUser(req.inboxUser.id, 'conv_update', { id: convId, ...patch });
   } catch (e) {
     console.error('[team] broadcast error:', e.message);
   }
@@ -198,7 +198,7 @@ router.get('/team/agents/:agentId', (req, res) => {
 router.put('/team/agents/status', (req, res) => {
   try {
     const db     = req.db;
-    const userId = req.user.id;
+    const userId = req.inboxUser.id;
     const { status } = req.body;
 
     const valid = ['online', 'busy', 'away', 'offline'];
@@ -218,7 +218,7 @@ router.put('/team/agents/status', (req, res) => {
     // بث التحديث لكل المتصلين بالـ SSE
     try {
       const { broadcastToUser } = require('./stream');
-      broadcastToUser(req.user.id, 'agent_status', { agent_id: userId, status });
+      broadcastToUser(req.inboxUser.id, 'agent_status', { agent_id: userId, status });
     } catch (_) {}
 
     return res.json({ ok: true, status });
@@ -241,10 +241,10 @@ router.put('/conversations/:id/assign', (req, res) => {
     if (isNaN(id)) return res.status(400).json({ ok: false, error: 'id غير صالح' });
 
     const agentId = req.body.agent_id != null ? parseInt(req.body.agent_id) : null;
-    const isAdmin = req.user.role === 'owner' || req.user.role === 'admin';
+    const isAdmin = !!(req.inboxUser && req.inboxUser.permissions.team_manage);
 
     // موظف عادي يعيّن لنفسه فقط أو يُلغي تعيينه
-    if (!isAdmin && agentId !== null && agentId !== req.user.id) {
+    if (!isAdmin && agentId !== null && agentId !== req.inboxUser.id) {
       return res.status(403).json({ ok: false, error: 'لا يمكنك التعيين لموظف آخر' });
     }
 
@@ -268,7 +268,7 @@ router.put('/conversations/:id/assign', (req, res) => {
       : null;
 
     // تسجيل في التايملاين
-    _addTimeline(db, id, agentId ? 'assigned' : 'unassigned', req.user, {
+    _addTimeline(db, id, agentId ? 'assigned' : 'unassigned', req.inboxUser, {
       agent_id: agentId,
       agent_name: agentName,
       prev_agent_id: conv.assigned_to_id,
@@ -306,7 +306,7 @@ router.post('/conversations/auto-assign', (req, res) => {
 
     if (!agent) {
       // لا أحد online — يُسجّل محاولة في التايملاين
-      _addTimeline(db, convId, 'assigned', req.user, {
+      _addTimeline(db, convId, 'assigned', req.inboxUser, {
         auto: true,
         failed: true,
         reason: 'no_online_agents',
@@ -318,7 +318,7 @@ router.post('/conversations/auto-assign', (req, res) => {
     db.prepare(`UPDATE inbox_conversations_v4 SET assigned_to_id = ?, updated_at = ? WHERE id = ?`)
       .run(agent.id, now, convId);
 
-    _addTimeline(db, convId, 'assigned', req.user, {
+    _addTimeline(db, convId, 'assigned', req.inboxUser, {
       auto: true,
       agent_id: agent.id,
       agent_name: agent.name,
@@ -344,7 +344,7 @@ router.post('/conversations/auto-assign', (req, res) => {
 router.post('/conversations/auto-assign-all', (req, res) => {
   try {
     const db   = req.db;
-    const user = req.user;
+    const user = req.inboxUser;
 
     if (user.role !== 'owner' && user.role !== 'admin') {
       return res.status(403).json({ ok: false, error: 'للمشرفين فقط' });
@@ -411,10 +411,10 @@ router.post('/conversations/:id/typing', (req, res) => {
     // بث لكل المتصلين بالـ SSE
     try {
       const { broadcastToUser } = require('./stream');
-      broadcastToUser(req.user.id, 'agent_typing', {
+      broadcastToUser(req.inboxUser.id, 'agent_typing', {
         conv_id:    id,
-        agent_id:   req.user.id,
-        agent_name: req.user.name || 'موظف',
+        agent_id:   req.inboxUser.id,
+        agent_name: req.inboxUser.name || 'موظف',
         typing,
       });
     } catch (_) {}
@@ -449,7 +449,7 @@ router.post('/conversations/:id/transfer', (req, res) => {
     const includeContext = req.body.include_context !== false; // default true
 
     // فقط admin / owner
-    const isAdmin = req.user.role === 'owner' || req.user.role === 'admin';
+    const isAdmin = !!(req.inboxUser && req.inboxUser.permissions.team_manage);
     if (!isAdmin) {
       return res.status(403).json({ ok: false, error: 'صلاحية المدير / الإداري فقط' });
     }
@@ -515,13 +515,13 @@ router.post('/conversations/:id/transfer', (req, res) => {
        VALUES (?, ?, 'note', 'text', ?, ?, ?, 'sent', ?)`
     ).run(
       noteId, id, noteContent,
-      req.user.id,
-      req.user.name || req.user.username || 'موظف',
+      req.inboxUser.id,
+      req.inboxUser.name || 'موظف',
       now
     );
 
     // ── 4: timeline event ─────────────────────────────────────────────────────
-    _addTimeline(db, id, 'transferred', req.user, {
+    _addTimeline(db, id, 'transferred', req.inboxUser, {
       from_agent_id:   conv.assigned_to_id,
       from_agent_name: fromAgentName,
       to_agent_id:     toAgentId,
@@ -542,19 +542,19 @@ router.post('/conversations/:id/transfer', (req, res) => {
         conversation_id: id,
         contact_name:    conv.contact_name,
         from_agent_name: fromAgentName,
-        transferred_by:  req.user.name || req.user.username || 'موظف',
+        transferred_by:  req.inboxUser.name || 'موظف',
         note:            contextNote || null,
       });
       // بث النوتس في SSE لكل المتصلين
-      sseBroadcast(req.user.tenant_id, 'message:new', {
+      sseBroadcast(req.inboxUser.tenantUserId, 'message:new', {
         ...{
           id:              noteId,
           conversation_id: id,
           direction:       'note',
           content_type:    'text',
           content:         noteContent,
-          agent_id:        req.user.id,
-          agent_name:      req.user.name || 'موظف',
+          agent_id:        req.inboxUser.id,
+          agent_name:      req.inboxUser.name || 'موظف',
           status:          'sent',
           created_at:      now,
         },
