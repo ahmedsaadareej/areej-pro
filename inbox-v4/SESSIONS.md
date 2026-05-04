@@ -1,3 +1,18 @@
+## جلسة 2026-05-04 17:48 UTC — P11-A: Shell Wiring
+- الحالة: مكتملة ✅
+- ما تم:
+  - A1: `page-reports.js` — استبدال `InboxAnalytics.open()` بـ `mount()` الرسمي
+  - A2: `page-settings.js` — تبسيط كامل: تفويض لـ `InboxSettings.mount()` بدل layout مستقل
+  - A3: `page-inbox.js` — مراجعة + إبقاء (كان سليماً)
+  - A4: `shell.js` — `requestAnimationFrame` قبل `mod.mount()` + رسائل خطأ أوضح
+  - A4: `index.html` — إضافة 33 script (كل الـ dashboard modules في الترتيب الصحيح)
+  - A5: اختبار Deep Links — كل مسارات `/inbox*`, `/reports*`, `/settings*`, `/contacts` ترجع 200 ✅
+  - كل الـ scripts تُخدَّم بـ 200 ✅ + health check نجح ✅
+- قرارات: لا جديد
+- آخر commit: 0db0bed
+- المهمة القادمة: **P11-B Permissions DB** — seed inbox_users + اختبار Permission Guards
+
+---
 ## جلسة 2026-05-04 17:11 UTC — M4 كامل: Analytics (T51→T63)
 - الحالة: مكتملة ✅
 - ما تم:
