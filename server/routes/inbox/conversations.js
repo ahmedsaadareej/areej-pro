@@ -155,7 +155,7 @@ function _buildConvQuery(db, user, filters, page, limit) {
 router.get('/conversations', (req, res) => {
   try {
     const db      = req.db;
-    const user    = req.user;
+    const user    = req.inboxUser;
     const page    = Math.max(1, parseInt(req.query.page)  || 1);
     const limit   = Math.min(Math.max(1, parseInt(req.query.limit) || 30), 100);
 
@@ -243,10 +243,10 @@ router.put('/conversations/:id/status', (req, res) => {
     if (status === 'closed') {
       try {
         const { triggerWebhooks } = require('./automation');
-        triggerWebhooks(db, req.user.id, 'conversation.closed', {
+        triggerWebhooks(db, req.inboxUser.id, 'conversation.closed', {
           conversation_id: id,
           closed_at      : now,
-          closed_by      : req.user.id,
+          closed_by      : req.inboxUser.id,
         });
       } catch (_) {}
     }
@@ -417,7 +417,7 @@ router.post('/conversations/bulk', (req, res) => {
 router.get('/counts', (req, res) => {
   try {
     const db   = req.db;
-    const user = req.user;
+    const user = req.inboxUser;
     const { clause: scopeClause, params: scopeParams } = _scopeClause(user);
 
     const scopeWhere = scopeClause ? 'AND ' + scopeClause.replace(/^AND /, '') : '';
@@ -714,7 +714,7 @@ function _broadcastConvUpdate(req, convId, patch) {
 
     if (conv) {
       // broadcast(tenantId, event, data)
-      broadcast(req.user.id, 'conv_update', {
+      broadcast(req.inboxUser.id, 'conv_update', {
         conv_id: convId,
         conv:    { ...conv, ...patch },
       });
