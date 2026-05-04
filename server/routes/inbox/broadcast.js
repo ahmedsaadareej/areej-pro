@@ -255,7 +255,7 @@ async function _runBroadcast(db, tenantId, broadcast) {
 // قائمة broadcasts (آخر 100) مع إمكانية الفلترة
 router.get('/broadcasts', async (req, res) => {
   const { status, page = 1, limit = 20 } = req.query;
-  const tenantId = req.user.id;
+  const tenantId = req.inboxUser.id;
   const offset   = (parseInt(page, 10) - 1) * parseInt(limit, 10);
 
   try {
@@ -286,7 +286,7 @@ router.get('/broadcasts', async (req, res) => {
 // ─── POST /broadcasts ─────────────────────────────────────────────────────────
 // إنشاء broadcast جديد (draft)
 router.post('/broadcasts', async (req, res) => {
-  const tenantId = req.user.id;
+  const tenantId = req.inboxUser.id;
   const {
     name            = 'رسالة جماعية',
     message         = '',
@@ -315,7 +315,7 @@ router.post('/broadcasts', async (req, res) => {
       media_url || null, content_type,
       JSON.stringify(platforms),
       JSON.stringify(audience_filter),
-      req.user.id,
+      req.inboxUser.id,
     );
     const bc = _getBroadcast(db, insert.lastInsertRowid, tenantId);
     return res.status(201).json({ broadcast: { ...bc, platforms } });
@@ -327,7 +327,7 @@ router.post('/broadcasts', async (req, res) => {
 // ─── GET /broadcasts/:id ──────────────────────────────────────────────────────
 router.get('/broadcasts/:id', async (req, res) => {
   try {
-    const bc = _getBroadcast(req.db, req.params.id, req.user.id);
+    const bc = _getBroadcast(req.db, req.params.id, req.inboxUser.id);
     if (!bc) return res.status(404).json({ error: 'غير موجود' });
     res.json({ broadcast: { ...bc, platforms: _parseJson(bc.platforms, []) } });
   } catch (e) {
@@ -338,7 +338,7 @@ router.get('/broadcasts/:id', async (req, res) => {
 // ─── PUT /broadcasts/:id ──────────────────────────────────────────────────────
 // تعديل (draft فقط)
 router.put('/broadcasts/:id', async (req, res) => {
-  const tenantId = req.user.id;
+  const tenantId = req.inboxUser.id;
   try {
     const db = req.db;
     const bc = _getBroadcast(db, req.params.id, tenantId);
@@ -369,7 +369,7 @@ router.put('/broadcasts/:id', async (req, res) => {
 
 // ─── DELETE /broadcasts/:id ───────────────────────────────────────────────────
 router.delete('/broadcasts/:id', async (req, res) => {
-  const tenantId = req.user.id;
+  const tenantId = req.inboxUser.id;
   try {
     const db = req.db;
     const bc = _getBroadcast(db, req.params.id, tenantId);
@@ -387,7 +387,7 @@ router.delete('/broadcasts/:id', async (req, res) => {
 // ─── POST /broadcasts/:id/send ────────────────────────────────────────────────
 // بناء قائمة المستلمين + بدء الإرسال في الخلفية
 router.post('/broadcasts/:id/send', async (req, res) => {
-  const tenantId = req.user.id;
+  const tenantId = req.inboxUser.id;
   try {
     const db = req.db;
     const bc = _getBroadcast(db, req.params.id, tenantId);
@@ -441,7 +441,7 @@ router.post('/broadcasts/:id/send', async (req, res) => {
 
 // ─── POST /broadcasts/:id/cancel ─────────────────────────────────────────────
 router.post('/broadcasts/:id/cancel', async (req, res) => {
-  const tenantId = req.user.id;
+  const tenantId = req.inboxUser.id;
   try {
     const db = req.db;
     const bc = _getBroadcast(db, req.params.id, tenantId);
@@ -460,7 +460,7 @@ router.post('/broadcasts/:id/cancel', async (req, res) => {
 // ─── GET /broadcasts/:id/recipients ──────────────────────────────────────────
 // قائمة المستلمين مع حالة الإرسال (pagination)
 router.get('/broadcasts/:id/recipients', async (req, res) => {
-  const tenantId = req.user.id;
+  const tenantId = req.inboxUser.id;
   const { status, page = 1, limit = 50 } = req.query;
   const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
 
