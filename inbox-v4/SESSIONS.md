@@ -1,3 +1,25 @@
+## جلسة 2026-05-04 17:11 UTC — M4 كامل: Analytics (T51→T63)
+- الحالة: مكتملة ✅
+- ما تم:
+  - T51+T52: `migrations.js` — v42 (`inbox_scheduled_reports_v4` + index) + v43 (6 analytics indexes)
+  - T53: `analytics.js` backend — `getInboxRole()` + `requireAnalyticsAccess()` + `requireOwnerAdmin()` + `getTeamFilter()`
+  - T54: endpoint جديد `GET /analytics/labels` — تحليل تصنيفات + trend أكثر 5
+  - T55: endpoint جديد `GET /analytics/automation` — chatbot + auto_close + AI + keywords (graceful D-045)
+  - T56: Permission Filtering على `/agents` (owner/admin/supervisor) + `/agents/:id` (agent نفسه)
+  - T57: Scheduled Reports CRUD (GET/POST/PUT/DELETE `/analytics/scheduled`) — owner/admin فقط
+  - T58: `analytics.js` frontend — `mount(container, params)` + `unmount()` — Page Module (D-027)
+  - T59: قسم Labels — جدول + شريط تقدم بالألوان
+  - T60: قسم AI & Automation — KPIs + keywords + Sentiment هنا (D-037)
+  - T61: Live Status Bar — polling 30ث (D-033) — open_now + agents_online
+  - T62: Permission-Aware Rendering — agent → صفحته فقط — canExport — canScheduled
+  - T63: Scheduled Reports UI — جدول + modal إنشاء + toggle + delete — إرسال مؤجل Phase 10+
+  - `inbox.css` — 90+ سطر CSS جديد (`iv4-an-page*` classes)
+  - Backend: live mode لـ `/overview?live=1` — أرقام فورية
+- قرارات: لا جديد
+- آخر commit: 50f792a
+- المهمة القادمة: **Phase 10 مكتملة بالكامل ✅** — خطوات إدارية فقط (راجع أدناه)
+
+---
 ## جلسة 2026-05-04 17:09 UTC — M2 كامل: Settings (T31→T50)
 - الحالة: مكتملة ✅
 - ما تم:
