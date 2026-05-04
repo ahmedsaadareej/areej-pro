@@ -25,7 +25,7 @@ const router  = express.Router();
 function _broadcastConvUpdate(req, convId, patch) {
   try {
     const { broadcastToUser } = require('./stream');
-    broadcastToUser(req.user.id, 'conv_update', { id: convId, ...patch });
+    broadcastToUser(req.inboxUser.id, 'conv_update', { id: convId, ...patch });
   } catch (e) {
     console.error('[labels] broadcast error:', e.message);
   }
@@ -37,7 +37,7 @@ function _broadcastConvUpdate(req, convId, patch) {
 function _broadcastLabelsUpdate(req, action, label) {
   try {
     const { broadcastToUser } = require('./stream');
-    broadcastToUser(req.user.id, 'labels_update', { action, label });
+    broadcastToUser(req.inboxUser.id, 'labels_update', { action, label });
   } catch (e) {
     console.error('[labels] broadcast labels_update error:', e.message);
   }
@@ -222,7 +222,7 @@ router.post('/conversations/:id/labels', (req, res) => {
 
     // timeline log
     _logTimeline(db, convId, 'label_added',
-      req.user.id, req.user.name || req.user.username,
+      req.inboxUser.id, req.inboxUser.name,
       { label_id: labelId, label_name: label.name, color: label.color }
     );
 
@@ -258,7 +258,7 @@ router.delete('/conversations/:id/labels/:labelId', (req, res) => {
 
     // timeline log
     _logTimeline(db, convId, 'label_removed',
-      req.user.id, req.user.name || req.user.username,
+      req.inboxUser.id, req.inboxUser.name,
       { label_id: labelId, label_name: label ? label.name : '' }
     );
 
