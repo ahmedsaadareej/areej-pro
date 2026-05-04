@@ -1,3 +1,21 @@
+## جلسة 2026-05-04 17:54 UTC — P11-B: Permissions DB
+- الحالة: مكتملة ✅
+- ما تم:
+  - B1: تحقق migrations — Tenant 1 و 2 عند v43 ✅، باقي الـ tenants عند v17 (طبيعي)
+  - B1: inbox_roles جاهزة (5 أدوار) + inbox_users + inboxAuthAdapter كلها موجودة ✅
+  - B2: `server/scripts/seed-inbox-users.js` — seed كامل من tenant_users إلى inbox_users
+    - Dry run ✅ ثم Execute ✅ على Tenant 1 (هشام سعد → inbox_role=1 Owner)
+    - --all mode يتعامل مع tenants ناقصة الـ migrations بأمان (skip مع رسالة)
+  - B3: تحقق Permission Guards — `requirePermission` مطبّق على settings routes ✅
+    - Frontend: `_applyPermissionGuards()` في shell.js تخفي روابط بدون صلاحية ✅
+    - Backend: `loadInboxPermissions` + `requirePermission` في permissions.js ✅
+  - B4: Supervisor Team Filter — `getTeamFilter()` في analytics.js موجود ومطبّق ✅
+- قرارات: لا جديد
+- آخر commit: 13c86cc
+- المهمة القادمة: **P11-C QA + Bugfix** — Console Error Audit + SSE Stability + Mobile + Dark Mode
+
+---
+
 ## جلسة 2026-05-04 17:48 UTC — P11-A: Shell Wiring
 - الحالة: مكتملة ✅
 - ما تم:
