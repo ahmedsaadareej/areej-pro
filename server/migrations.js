@@ -687,6 +687,118 @@ const TENANT_MIGRATIONS = [
     `CREATE INDEX IF NOT EXISTS idx_sched_v4_pending ON inbox_scheduled_messages_v4(status, scheduled_at) WHERE status = 'pending'`,
   ]},
 
+  // ══════════════════════════════════════════════════════════════
+  // M2 — Settings (T31→T36)
+  // ══════════════════════════════════════════════════════════════
+
+  // v36 — T31: inbox_canned_responses_v4 (ردود جاهزة مع shortcuts)
+  { version: 36, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_canned_responses_v4 (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      shortcut    TEXT NOT NULL UNIQUE,
+      name        TEXT NOT NULL,
+      content     TEXT NOT NULL,
+      category    TEXT DEFAULT 'عام',
+      platforms   TEXT DEFAULT '[]',
+      created_by  INTEGER,
+      created_at  TEXT DEFAULT (datetime('now')),
+      updated_at  TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_canned_shortcut ON inbox_canned_responses_v4(shortcut)`,
+    `CREATE INDEX IF NOT EXISTS idx_canned_category ON inbox_canned_responses_v4(category)`,
+  ]},
+
+  // v37 — T32: inbox_sla_policies_v4 (سياسات SLA مع priorities)
+  { version: 37, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_sla_policies_v4 (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      name             TEXT NOT NULL,
+      is_default       INTEGER NOT NULL DEFAULT 0,
+      priority         TEXT DEFAULT 'all',
+      first_response   INTEGER NOT NULL DEFAULT 120,
+      resolution_time  INTEGER NOT NULL DEFAULT 480,
+      business_hours   INTEGER NOT NULL DEFAULT 0,
+      escalate_agent   INTEGER DEFAULT NULL,
+      created_at       TEXT DEFAULT (datetime('now'))
+    )`,
+    `INSERT OR IGNORE INTO inbox_sla_policies_v4
+      (id, name, is_default, priority, first_response, resolution_time)
+      VALUES (1, 'الافتراضية', 1, 'all', 120, 480)`,
+  ]},
+
+  // v38 — T33: inbox_custom_attrs_v4 + inbox_attr_values_v4 (حقول مخصصة)
+  { version: 38, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_custom_attrs_v4 (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      attr_type  TEXT NOT NULL CHECK(attr_type IN ('conversation','contact')),
+      key        TEXT NOT NULL,
+      label      TEXT NOT NULL,
+      field_type TEXT NOT NULL DEFAULT 'text',
+      options    TEXT DEFAULT '[]',
+      required   INTEGER DEFAULT 0,
+      sort_order INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_custom_attrs_key ON inbox_custom_attrs_v4(attr_type, key)`,
+    `CREATE TABLE IF NOT EXISTS inbox_attr_values_v4 (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      attr_id     INTEGER NOT NULL REFERENCES inbox_custom_attrs_v4(id) ON DELETE CASCADE,
+      entity_type TEXT NOT NULL CHECK(entity_type IN ('conversation','contact')),
+      entity_id   INTEGER NOT NULL,
+      value       TEXT,
+      updated_at  TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_attr_values_unique
+      ON inbox_attr_values_v4(attr_id, entity_id)`,
+  ]},
+
+  // v39 — T34: inbox_appearance_v4 (إعدادات واجهة المستخدم)
+  { version: 39, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_appearance_v4 (
+      id          INTEGER PRIMARY KEY DEFAULT 1,
+      density     TEXT DEFAULT 'comfy' CHECK(density IN ('comfy','compact')),
+      font_size   INTEGER DEFAULT 14,
+      show_avatar INTEGER DEFAULT 1
+    )`,
+    `INSERT OR IGNORE INTO inbox_appearance_v4 (id) VALUES (1)`,
+  ]},
+
+  // v40 — T35: inbox_business_hours_v4 + inbox_business_days_v4 (ساعات العمل)
+  { version: 40, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_business_hours_v4 (
+      id       INTEGER PRIMARY KEY DEFAULT 1,
+      timezone TEXT DEFAULT 'Africa/Cairo',
+      active   INTEGER DEFAULT 0
+    )`,
+    `INSERT OR IGNORE INTO inbox_business_hours_v4 (id) VALUES (1)`,
+    `CREATE TABLE IF NOT EXISTS inbox_business_days_v4 (
+      day_of_week INTEGER PRIMARY KEY,
+      is_working  INTEGER DEFAULT 1,
+      start_time  TEXT DEFAULT '09:00',
+      end_time    TEXT DEFAULT '17:00'
+    )`,
+    `INSERT OR IGNORE INTO inbox_business_days_v4 (day_of_week, is_working) VALUES (0, 0)`,
+    `INSERT OR IGNORE INTO inbox_business_days_v4 (day_of_week, is_working) VALUES (1, 1)`,
+    `INSERT OR IGNORE INTO inbox_business_days_v4 (day_of_week, is_working) VALUES (2, 1)`,
+    `INSERT OR IGNORE INTO inbox_business_days_v4 (day_of_week, is_working) VALUES (3, 1)`,
+    `INSERT OR IGNORE INTO inbox_business_days_v4 (day_of_week, is_working) VALUES (4, 1)`,
+    `INSERT OR IGNORE INTO inbox_business_days_v4 (day_of_week, is_working) VALUES (5, 1)`,
+    `INSERT OR IGNORE INTO inbox_business_days_v4 (day_of_week, is_working) VALUES (6, 0)`,
+  ]},
+
+  // v41 — T36: inbox_csat_settings_v4 (إعدادات تقييم العملاء)
+  { version: 41, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_csat_settings_v4 (
+      id            INTEGER PRIMARY KEY DEFAULT 1,
+      enabled       INTEGER DEFAULT 0,
+      trigger       TEXT DEFAULT 'on_close' CHECK(trigger IN ('on_close','on_resolve','manual')),
+      delay_minutes INTEGER DEFAULT 0,
+      message       TEXT DEFAULT 'كيف كانت تجربتك معنا؟',
+      scale         INTEGER DEFAULT 5 CHECK(scale IN (3, 5, 10))
+    )`,
+    `INSERT OR IGNORE INTO inbox_csat_settings_v4 (id) VALUES (1)`,
+  ]},
+
 ];
 
 // ══════════════════════════════════════════════════════════════
