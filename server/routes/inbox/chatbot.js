@@ -95,7 +95,7 @@ router.get('/chatbot/flows', (req, res) => {
       FROM inbox_chatbot_flows_v4 f
       WHERE f.tenant_id = ?
       ORDER BY f.updated_at DESC
-    `).all(req.user.id);
+    `).all(req.inboxUser.id);
 
     res.json({ ok: true, flows: rows.map(_fmtFlow) });
   } catch (err) {
@@ -120,7 +120,7 @@ router.post('/chatbot/flows', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?)
     `);
     const result = stmt.run(
-      req.user.id, name.trim(), description,
+      req.inboxUser.id, name.trim(), description,
       trigger_type,
       JSON.stringify(Array.isArray(trigger_data) ? trigger_data : [trigger_data]),
       JSON.stringify(platforms),
@@ -139,7 +139,7 @@ router.get('/chatbot/flows/:id', (req, res) => {
   try {
     const flow = req.db.prepare(
       'SELECT * FROM inbox_chatbot_flows_v4 WHERE id = ? AND tenant_id = ?'
-    ).get(req.params.id, req.user.id);
+    ).get(req.params.id, req.inboxUser.id);
     if (!flow) return res.status(404).json({ error: 'Flow غير موجود' });
 
     const steps = req.db.prepare(
@@ -158,7 +158,7 @@ router.put('/chatbot/flows/:id', (req, res) => {
   try {
     const flow = req.db.prepare(
       'SELECT * FROM inbox_chatbot_flows_v4 WHERE id = ? AND tenant_id = ?'
-    ).get(req.params.id, req.user.id);
+    ).get(req.params.id, req.inboxUser.id);
     if (!flow) return res.status(404).json({ error: 'Flow غير موجود' });
 
     const {
@@ -192,7 +192,7 @@ router.delete('/chatbot/flows/:id', (req, res) => {
   try {
     const flow = req.db.prepare(
       'SELECT id FROM inbox_chatbot_flows_v4 WHERE id = ? AND tenant_id = ?'
-    ).get(req.params.id, req.user.id);
+    ).get(req.params.id, req.inboxUser.id);
     if (!flow) return res.status(404).json({ error: 'Flow غير موجود' });
 
     req.db.prepare('DELETE FROM inbox_chatbot_flows_v4 WHERE id = ?').run(flow.id);
@@ -208,7 +208,7 @@ router.put('/chatbot/flows/:id/toggle', (req, res) => {
   try {
     const flow = req.db.prepare(
       'SELECT * FROM inbox_chatbot_flows_v4 WHERE id = ? AND tenant_id = ?'
-    ).get(req.params.id, req.user.id);
+    ).get(req.params.id, req.inboxUser.id);
     if (!flow) return res.status(404).json({ error: 'Flow غير موجود' });
 
     const newActive = flow.is_active ? 0 : 1;
@@ -232,7 +232,7 @@ router.put('/chatbot/flows/:id/steps', (req, res) => {
   try {
     const flow = req.db.prepare(
       'SELECT * FROM inbox_chatbot_flows_v4 WHERE id = ? AND tenant_id = ?'
-    ).get(req.params.id, req.user.id);
+    ).get(req.params.id, req.inboxUser.id);
     if (!flow) return res.status(404).json({ error: 'Flow غير موجود' });
 
     const { steps = [] } = req.body;
@@ -305,7 +305,7 @@ router.post('/chatbot/flows/:id/test', (req, res) => {
   try {
     const flow = req.db.prepare(
       'SELECT * FROM inbox_chatbot_flows_v4 WHERE id = ? AND tenant_id = ?'
-    ).get(req.params.id, req.user.id);
+    ).get(req.params.id, req.inboxUser.id);
     if (!flow) return res.status(404).json({ error: 'Flow غير موجود' });
 
     const steps = req.db.prepare(
