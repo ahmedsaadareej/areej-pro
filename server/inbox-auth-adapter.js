@@ -92,10 +92,15 @@ async function inboxAuthAdapter(req, res, next) {
     // ── المصدر 2: ERP Owner Fallback ──────────────────────────────────────
     // صاحب الشركة (is_owner أو role_id=1) مسموح له بالدخول مباشرة
     // حتى لو لم يُسجَّل في inbox_users بعد
+    // صاحب الحساب: ERP tenant owner (role=owner/admin) أو Platform account owner
+    // user.role من master.db يكون 'admin' للـ admins أو 'user' لأصحاب الشركات
+    // user.role_id من tenant_users يكون 1 لـ Owner
     const isOwner = user.is_owner === 1
       || user.is_owner === true
       || user.role === 'owner'
-      || user.role_id === 1;
+      || user.role === 'admin'   // platform admin
+      || user.role_id === 1
+      || (!req.tenantUser);      // platform account owner مباشر (مش sub-user)
 
     if (isOwner) {
       req.inboxUser = {

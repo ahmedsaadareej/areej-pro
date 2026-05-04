@@ -38,7 +38,7 @@ const { getTenantDb } = require('../../db-tenant');
 router.use((req, res, next) => {
   if (req.path.startsWith('/email/webhook/')) return next(); // public
   requireAuth(req, res, () => {
-    req.db = req.db || getTenantDb(req.inboxUser.id);
+    req.db = req.db || getTenantDb(req.user.id); // req.user يأتي من requireAuth (owner id)
     next();
   });
 });

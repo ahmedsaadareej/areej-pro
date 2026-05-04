@@ -1,6 +1,6 @@
 /**
  * InboxStream — SSE manager لـ Inbox v4
- * آخر تحديث: 2026-05-03
+ * آخر تحديث: 2026-05-04
  *
  * الأحداث المدعومة:
  *   conv:new | conv:update | conv:removed | message:new
@@ -26,7 +26,9 @@ const InboxStream = (() => {
   function connect() {
     if (_es && _es.readyState !== EventSource.CLOSED) return; // متصل بالفعل
 
-    _es = new EventSource('/api/inbox/stream');
+    // EventSource لا يدعم Authorization header → نمرر الـ token في URL
+    const _sseToken = InboxAPI._getToken ? InboxAPI._getToken() : (localStorage.getItem('pro_token') || '');
+    _es = new EventSource('/api/inbox/stream' + (_sseToken ? '?_t=' + encodeURIComponent(_sseToken) : ''));
 
     // ─── open ───
     _es.addEventListener('open', () => {
@@ -325,6 +327,69 @@ const InboxStream = (() => {
     // لما الـ tab يختفي: EventSource يكمل شغّال (SSE بيدير نفسه)
     // ما نقطعه عشان نضمن استقبال الرسائل في الخلفية
   });
+
+  // ─── Long Polling Fallback (Cloudflare يُبافِر SSE) ─────────────────────
+  // يُفعَّل تلقائياً عندما SSE يفشل بعد MAX_RECONNECT محاولات
+  let _pollActive = false;
+  let _pollTimer  = null;
+  let _pollSince  = Date.now();
+
+  function _startPoll() {
+    if (_pollActive) return;
+    _pollActive = true;
+    InboxStore.set('sseConnected', true); // أظهر للـ UI أن هناك اتصال
+    InboxStore.emit('sse:connected');
+    console.log('[InboxStream] SSE فشل — تحوَّل لـ Long Polling ⇄');
+    _doPoll();
+  }
+
+  function _stopPoll() {
+    _pollActive = false;
+    if (_pollTimer) { clearTimeout(_pollTimer); _pollTimer = null; }
+  }
+
+  async function _doPoll() {
+    if (!_pollActive) return;
+    const token = InboxAPI._getToken ? InboxAPI._getToken() : (localStorage.getItem('pro_token') || '');
+    try {
+      const res = await fetch('/api/inbox/poll?since=' + _pollSince, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        _pollSince = json.t || Date.now();
+        (json.events || []).forEach(ev => _dispatchPollEvent(ev.event, ev.data));
+      }
+    } catch (e) {
+      // شبكة منقطعة — retry بعد 3 ثواني
+    }
+    if (_pollActive) _pollTimer = setTimeout(_doPoll, 1000);
+  }
+
+  // توزيع الـ events الواردة من Long Poll بنفس طريقة SSE handlers
+  function _dispatchPollEvent(event, data) {
+    if (!data) return;
+    if (event === 'conv:new' || event === 'conv:update') {
+      InboxStore.upsertConversation(data);
+    } else if (event === 'conv:removed') {
+      InboxStore.removeConversation(data.id);
+    } else if (event === 'message:new') {
+      if (data.conversation_id === InboxStore.state.activeConvId) InboxStore.addMessage(data);
+      InboxStore.upsertConversation({
+        id: data.conversation_id,
+        last_message_text: data.content,
+        last_message_dir:  data.direction,
+        last_message_at:   data.sent_at
+      });
+    } else if (event === 'counts:update') {
+      InboxStore.updateCounts(data);
+    } else {
+      InboxStore.emit('sse:' + event, data);
+    }
+  }
+
+  // عند فشل SSE نهائياً → ابدأ Long Polling
+  InboxStore.on('sse:failed', () => _startPoll());
 
   // ─── init() — يُستدعى من InboxShell.init() (D-028 + D-029) ─────────────
   let _initialized = false;

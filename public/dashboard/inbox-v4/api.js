@@ -731,6 +731,7 @@ const settings = {
     _post,
     _put,
     _delete,
+    _getToken,  // مطلوب لـ stream.js لإرسال token في SSE URL
   };
 })();
 

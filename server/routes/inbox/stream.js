@@ -127,6 +127,18 @@ function broadcast(tenantId, event, data) {
       }
     });
   });
+  // أيضاً أنبِه الـ long poll waiters في نفس الـ tenant
+  _clients.forEach((clientSet, userId) => {
+    const firstClient = [...clientSet][0];
+    if (firstClient && firstClient.tenantId === tenantId) {
+      const waiters = _pollWaiters.get(userId);
+      if (waiters && waiters.length > 0) {
+        const waiter = waiters.shift();
+        clearTimeout(waiter.timer);
+        waiter.resolve([{ event, data, t: Date.now() }]);
+      }
+    }
+  });
 }
 
 /**
@@ -139,6 +151,13 @@ function sendToUser(userId, event, data) {
   const clientSet = _clients.get(userId);
   if (!clientSet) return;
   clientSet.forEach(client => _send(client.res, event, data));
+  // أيضاً أنبِه long poll waiters لهذا المستخدم
+  const waiters = _pollWaiters.get(userId);
+  if (waiters && waiters.length > 0) {
+    const waiter = waiters.shift();
+    clearTimeout(waiter.timer);
+    waiter.resolve([{ event, data, t: Date.now() }]);
+  }
 }
 
 /**
@@ -239,15 +258,15 @@ router.get('/stream', (req, res) => {
     msg: 'SSE connected',
   });
 
-  // ─── Keepalive ping كل 25 ثانية ───
-  // (Nginx/Caddy بيقطع الاتصال بعد 60 ثانية من الـ silence)
+  // ─── Keepalive ping كل 5 ثواني ───
+  // Cloudflare يُبافِر SSE responses — ping بـ named event يجبره على flush
   const pingTimer = setInterval(() => {
     try {
-      res.write(': ping\n\n'); // comment في SSE — لا يُطلق event في الـ client
+      res.write('event: ping\ndata: {}\n\n'); // named event لإجبار Cloudflare flush
     } catch (e) {
       clearInterval(pingTimer);
     }
-  }, 25000);
+  }, 5000);
 
   // ─── تنظيف عند إغلاق الاتصال ───
   req.on('close', () => {
@@ -291,6 +310,61 @@ function _cleanupViewingForUser(tenantId, userId) {
     });
   });
 }
+
+// ─── Long Polling Endpoint (fallback لـ Cloudflare الذي يُبافِر SSE) ─────────
+// GET /api/inbox/stream/poll?since=<timestamp>
+// ينتظر 30 ثانية أو حتى يصل event جديد ثم يرجع JSON array
+
+const _pollWaiters = new Map(); // userId → [{ resolve, timer }]
+
+function _notifyPollWaiters(tenantId, event, data) {
+  // أيضاً أرسل للـ long poll waiters في نفس الـ tenantId
+  _clients.forEach((clientSet, uid) => {
+    const waiters = _pollWaiters.get(uid);
+    if (!waiters || waiters.length === 0) return;
+    const waiter = waiters.shift();
+    clearTimeout(waiter.timer);
+    waiter.resolve([{ event, data, t: Date.now() }]);
+  });
+}
+
+router.get('/poll', (req, res) => {
+  const userId   = req.inboxUser.id;
+  const tenantId = req.inboxUser.id;
+  const since    = parseInt(req.query.since || '0', 10);
+
+  // timeout بعد 25 ثانية (Cloudflare يقطع بعد 100 ثانية)
+  const TIMEOUT_MS = 25000;
+
+  const p = new Promise((resolve) => {
+    if (!_pollWaiters.has(userId)) _pollWaiters.set(userId, []);
+    const timer = setTimeout(() => {
+      const idx = _pollWaiters.get(userId)?.indexOf(waiter);
+      if (idx >= 0) _pollWaiters.get(userId).splice(idx, 1);
+      resolve([]);
+    }, TIMEOUT_MS);
+    const waiter = { resolve, timer };
+    _pollWaiters.get(userId).push(waiter);
+  });
+
+  p.then(events => {
+    res.setHeader('Cache-Control', 'no-cache, no-store');
+    res.json({ ok: true, events, t: Date.now() });
+  }).catch(() => res.json({ ok: true, events: [], t: Date.now() }));
+
+  req.on('close', () => {
+    const waiters = _pollWaiters.get(userId);
+    if (!waiters) return;
+    const idx = waiters.findIndex(w => w.resolve);
+    if (idx >= 0) waiters.splice(idx, 1);
+  });
+});
+
+// أيضاً أرسل للـ poll waiters عند برودكاست — hook في _send
+const _origSend = _send;
+const _sendAndNotifyPoll = (res, event, data) => {
+  _origSend(res, event, data);
+};
 
 // ─── Exports ─────────────────────────────────────────────────────────────
 
