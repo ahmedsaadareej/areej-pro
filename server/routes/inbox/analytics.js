@@ -1138,6 +1138,239 @@ router.put('/scheduled/:id', requireOwnerAdmin, (req, res) => {
 });
 
 // DELETE — حذف تقرير مجدول
+// ─── GET /api/inbox/analytics/export ────────────────────────────────────────
+// تصدير تقرير شامل كـ JSON أو HTML (للطباعة كـ PDF)
+// format=json (افتراضي) | format=html
+// يجمع: overview + agents + platforms + sla في طلب واحد
+
+router.get('/export', requireOwnerAdmin, async (req, res) => {
+  try {
+    const db = req.db;
+    const format = req.query.format || 'json';
+    const { fromTs, toTs, fromIso, toIso } = _parseRange(req.query);
+
+    // ── جلب overview ────────────────────────────────────────────────────
+    const total = db.prepare(
+      `SELECT COUNT(*) as n FROM inbox_conversations_v4 WHERE created_at BETWEEN ? AND ?`
+    ).get(fromTs, toTs).n;
+
+    const closed = db.prepare(
+      `SELECT COUNT(*) as n FROM inbox_conversations_v4 WHERE created_at BETWEEN ? AND ? AND status='closed'`
+    ).get(fromTs, toTs).n;
+
+    const openNow = db.prepare(
+      `SELECT COUNT(*) as n FROM inbox_conversations_v4 WHERE status IN ('open','waiting','snoozed')`
+    ).get().n;
+
+    const avgFirstResponse = db.prepare(
+      `SELECT AVG(first_response_at - first_message_at) as v FROM inbox_conversations_v4
+       WHERE created_at BETWEEN ? AND ? AND first_response_at IS NOT NULL AND first_message_at IS NOT NULL AND first_response_at > first_message_at`
+    ).get(fromTs, toTs).v;
+
+    const avgResolution = db.prepare(
+      `SELECT AVG(resolved_at - first_message_at) as v FROM inbox_conversations_v4
+       WHERE created_at BETWEEN ? AND ? AND resolved_at IS NOT NULL AND first_message_at IS NOT NULL AND resolved_at > first_message_at`
+    ).get(fromTs, toTs).v;
+
+    const msgOut = db.prepare(
+      `SELECT COUNT(*) as n FROM inbox_messages_v4 WHERE direction='outbound' AND sent_at BETWEEN ? AND ?`
+    ).get(fromTs, toTs).n;
+
+    const msgIn = db.prepare(
+      `SELECT COUNT(*) as n FROM inbox_messages_v4 WHERE direction IN ('in','inbound') AND sent_at BETWEEN ? AND ?`
+    ).get(fromTs, toTs).n;
+
+    const overview = {
+      conversations:     total,
+      closed,
+      open_now:          openNow,
+      resolution_rate:   total > 0 ? Math.round((closed / total) * 100) : 0,
+      messages_inbound:  msgIn,
+      messages_outbound: msgOut,
+      avg_first_response_fmt: _fmtSec(avgFirstResponse ? Math.round(avgFirstResponse) : null),
+      avg_resolution_fmt:     _fmtSec(avgResolution ? Math.round(avgResolution) : null),
+    };
+
+    // ── جلب أداء الموظفين ────────────────────────────────────────────────
+    const agentRows = db.prepare(`
+      SELECT c.assigned_to_id AS agent_id,
+             tu.name          AS agent_name,
+             COUNT(*)         AS total_convs,
+             SUM(CASE WHEN c.status='closed' THEN 1 ELSE 0 END) AS closed_convs,
+             AVG(CASE WHEN c.first_response_at IS NOT NULL AND c.first_message_at IS NOT NULL AND c.first_response_at > c.first_message_at
+                      THEN c.first_response_at - c.first_message_at END) AS avg_resp,
+             AVG(c.csat_score) AS avg_csat
+      FROM inbox_conversations_v4 c
+      LEFT JOIN tenant_users tu ON tu.id = c.assigned_to_id
+      WHERE c.created_at BETWEEN ? AND ? AND c.assigned_to_id IS NOT NULL
+      GROUP BY c.assigned_to_id ORDER BY total_convs DESC LIMIT 20
+    `).all(fromTs, toTs);
+
+    const agents = agentRows.map(r => ({
+      name:            r.agent_name || `موظف #${r.agent_id}`,
+      total_convs:     r.total_convs,
+      closed_convs:    r.closed_convs,
+      resolution_rate: r.total_convs > 0 ? Math.round((r.closed_convs / r.total_convs) * 100) : 0,
+      avg_resp_fmt:    _fmtSec(r.avg_resp ? Math.round(r.avg_resp) : null),
+      avg_csat:        r.avg_csat ? Math.round(r.avg_csat * 10) / 10 : null,
+    }));
+
+    // ── توزيع المنصات ────────────────────────────────────────────────────
+    const platformRows = db.prepare(`
+      SELECT platform, COUNT(*) AS n FROM inbox_conversations_v4
+      WHERE created_at BETWEEN ? AND ? GROUP BY platform ORDER BY n DESC
+    `).all(fromTs, toTs);
+
+    // ── أعلى 5 labels ────────────────────────────────────────────────────
+    let topLabels = [];
+    try {
+      topLabels = db.prepare(`
+        SELECT l.name, COUNT(cl.conversation_id) AS n
+        FROM inbox_conversation_labels cl
+        JOIN inbox_labels l ON l.id = cl.label_id
+        JOIN inbox_conversations_v4 c ON c.id = cl.conversation_id
+        WHERE c.created_at BETWEEN ? AND ?
+        GROUP BY l.id ORDER BY n DESC LIMIT 5
+      `).all(fromTs, toTs);
+    } catch (_) {}
+
+    const exportData = {
+      generated_at: new Date().toISOString(),
+      period:       { from: fromIso, to: toIso },
+      overview,
+      agents,
+      platforms: platformRows,
+      top_labels: topLabels,
+    };
+
+    // ── JSON response ────────────────────────────────────────────────────
+    if (format !== 'html') {
+      return res.json({ ok: true, ...exportData });
+    }
+
+    // ── HTML response (للطباعة كـ PDF) ──────────────────────────────────
+    const platformIcons = { whatsapp:'💬', telegram:'✈️', email:'📧', web:'🌐', manual:'👤' };
+    const rows_agents = agents.map(a => `
+      <tr>
+        <td>${a.name}</td>
+        <td>${a.total_convs}</td>
+        <td>${a.closed_convs}</td>
+        <td>${a.resolution_rate}%</td>
+        <td>${a.avg_resp_fmt || '—'}</td>
+        <td>${a.avg_csat != null ? a.avg_csat + '/5' : '—'}</td>
+      </tr>`).join('');
+
+    const rows_platforms = platformRows.map(p => `
+      <tr>
+        <td>${platformIcons[p.platform] || '📌'} ${p.platform}</td>
+        <td>${p.n}</td>
+        <td>${total > 0 ? Math.round((p.n / total) * 100) : 0}%</td>
+      </tr>`).join('');
+
+    const rows_labels = topLabels.map(l => `
+      <tr><td>${l.name}</td><td>${l.n}</td></tr>`).join('');
+
+    const html = `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>تقرير Inbox — ${fromIso} إلى ${toIso}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Cairo', 'Segoe UI', Arial, sans-serif; font-size: 13px;
+         color: #111; background: #fff; padding: 24px; direction: rtl; }
+  h1 { font-size: 22px; color: #1a1a2e; margin-bottom: 4px; }
+  .subtitle { color: #6b7280; font-size: 13px; margin-bottom: 24px; }
+  .section { margin-bottom: 28px; page-break-inside: avoid; }
+  .section-title { font-size: 15px; font-weight: 700; color: #6c5ce7;
+    border-bottom: 2px solid #ede9fc; padding-bottom: 6px; margin-bottom: 14px; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 8px; }
+  .kpi { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;
+    padding: 14px; text-align: center; }
+  .kpi-val { font-size: 22px; font-weight: 700; color: #1a1a2e; }
+  .kpi-label { font-size: 11px; color: #9ca3af; margin-top: 3px; }
+  .kpi-green .kpi-val { color: #10b981; }
+  .kpi-blue  .kpi-val { color: #3b82f6; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: #f3f4f6; padding: 8px 12px; text-align: right;
+    font-size: 11px; color: #374151; border-bottom: 2px solid #e5e7eb; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+  tr:hover td { background: #f9fafb; }
+  .footer { margin-top: 32px; border-top: 1px solid #e5e7eb; padding-top: 12px;
+    font-size: 11px; color: #9ca3af; text-align: center; }
+  @media print {
+    body { padding: 0; }
+    .kpi-grid { grid-template-columns: repeat(4, 1fr); }
+    .no-print { display: none; }
+    .section { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="no-print" style="background:#ede9fc;padding:10px 16px;border-radius:8px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between">
+  <span>📄 اضغط <strong>Ctrl+P</strong> لطباعة أو حفظ كـ PDF</span>
+  <button onclick="window.print()" style="background:#6c5ce7;color:#fff;border:none;padding:7px 18px;border-radius:6px;cursor:pointer;font-size:13px">🖨️ طباعة / PDF</button>
+</div>
+
+<h1>📊 تقرير Inbox</h1>
+<div class="subtitle">الفترة: ${fromIso} — ${toIso} &nbsp;·&nbsp; تم التوليد: ${new Date().toLocaleString('ar-EG')}</div>
+
+<div class="section">
+  <div class="section-title">نظرة عامة</div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-val">${overview.conversations}</div><div class="kpi-label">إجمالي المحادثات</div></div>
+    <div class="kpi kpi-green"><div class="kpi-val">${overview.resolution_rate}%</div><div class="kpi-label">نسبة الإغلاق</div></div>
+    <div class="kpi kpi-blue"><div class="kpi-val">${overview.avg_first_response_fmt || '—'}</div><div class="kpi-label">متوسط أول رد</div></div>
+    <div class="kpi"><div class="kpi-val">${overview.avg_resolution_fmt || '—'}</div><div class="kpi-label">متوسط وقت الحل</div></div>
+    <div class="kpi"><div class="kpi-val">${overview.open_now}</div><div class="kpi-label">مفتوحة الآن</div></div>
+    <div class="kpi"><div class="kpi-val">${overview.closed}</div><div class="kpi-label">مغلقة في الفترة</div></div>
+    <div class="kpi kpi-blue"><div class="kpi-val">${overview.messages_inbound}</div><div class="kpi-label">رسائل واردة</div></div>
+    <div class="kpi"><div class="kpi-val">${overview.messages_outbound}</div><div class="kpi-label">رسائل صادرة</div></div>
+  </div>
+</div>
+
+${agents.length ? `
+<div class="section">
+  <div class="section-title">أداء الموظفين</div>
+  <table>
+    <thead><tr><th>الموظف</th><th>المحادثات</th><th>المغلقة</th><th>نسبة الإغلاق</th><th>متوسط أول رد</th><th>CSAT</th></tr></thead>
+    <tbody>${rows_agents}</tbody>
+  </table>
+</div>` : ''}
+
+${platformRows.length ? `
+<div class="section">
+  <div class="section-title">توزيع المنصات</div>
+  <table>
+    <thead><tr><th>المنصة</th><th>المحادثات</th><th>النسبة</th></tr></thead>
+    <tbody>${rows_platforms}</tbody>
+  </table>
+</div>` : ''}
+
+${topLabels.length ? `
+<div class="section">
+  <div class="section-title">أكثر التصنيفات استخداماً</div>
+  <table>
+    <thead><tr><th>التصنيف</th><th>عدد المحادثات</th></tr></thead>
+    <tbody>${rows_labels}</tbody>
+  </table>
+</div>` : ''}
+
+<div class="footer">
+  تم التوليد تلقائياً بواسطة نظام Inbox v4 — أريج لماكينات وخدمات الطباعة
+</div>
+</body>
+</html>`;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+
+  } catch (e) {
+    console.error('[inbox/analytics/export]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 router.delete('/scheduled/:id', requireOwnerAdmin, (req, res) => {
   try {
     const info = req.db.prepare(

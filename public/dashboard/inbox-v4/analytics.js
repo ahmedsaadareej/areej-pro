@@ -194,7 +194,8 @@ const InboxAnalytics = (() => {
               <h3 class="iv4-an-section-title">👥 أداء الموظفين</h3>
               <div class="iv4-an-export-group">
                 <button id="iv4-an-export-agents" class="iv4-an-export-btn" title="تصدير بيانات الموظفين">⬇ موظفين</button>
-                <button id="iv4-an-export-full" class="iv4-an-export-btn iv4-an-export-btn--primary" title="تصدير التقرير كاملاً">📅 Excel كامل</button>
+                <button id="iv4-an-export-full" class="iv4-an-export-btn" title="تصدير التقرير كاملاً بصيغة CSV">📅 CSV كامل</button>
+                <button id="iv4-an-export-pdf" class="iv4-an-export-btn iv4-an-export-btn--primary" title="تصدير التقرير كـ PDF">🖨️ تصدير PDF</button>
               </div>
             </div>
             <div class="iv4-an-table-wrap">
@@ -1053,6 +1054,122 @@ const InboxAnalytics = (() => {
     URL.revokeObjectURL(url);
   }
 
+  // ─── P11-E3: Export PDF ────────────────────────────────────────────────────────────
+  // يفتح tab جديد بـ HTML جاهز للطباعة
+  async function _exportPDF() {
+    const btn = document.getElementById('iv4-an-export-pdf');
+    if (btn) { btn.disabled = true; btn.textContent = 'جاري…'; }
+
+    try {
+      const url = InboxAPI.analytics.exportPdfUrl({ from: _from, to: _to });
+      const win = window.open(url, '_blank');
+      if (!win) {
+        // لو popup محجوب → حمل مباشر
+        const { data, error } = await InboxAPI.analytics.exportReport({ from: _from, to: _to, format: 'json' });
+        if (error || !data) throw new Error(error || 'failed');
+        _showPDFPreview(data);
+      }
+    } catch (e) {
+      console.error('[PDF export]', e);
+      _showToast('خطأ في تصدير PDF', 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '🖨️ تصدير PDF'; }
+    }
+  }
+
+  /** fallback: تفتح نافذة معاينة عند منع popups */
+  function _showPDFPreview(data) {
+    const existing = document.getElementById('iv4-pdf-overlay');
+    if (existing) existing.remove();
+
+    const fmtSec = (s) => {
+      if (!s) return '—';
+      if (s < 60) return s + 'ث';
+      if (s < 3600) return Math.round(s / 60) + 'د';
+      const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60);
+      return m > 0 ? `${h}س ${m}د` : `${h}س`;
+    };
+
+    const ov = data.overview || {};
+    const overlay = document.createElement('div');
+    overlay.id = 'iv4-pdf-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:12px;max-width:720px;width:95%;max-height:90vh;overflow-y:auto;padding:24px;direction:rtl;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h2 style="font-size:18px;color:#1a1a2e">📄 تقرير Inbox — ${data.period?.from} إلى ${data.period?.to}</h2>
+          <div style="display:flex;gap:8px;">
+            <button onclick="window.print()" style="background:#6c5ce7;color:#fff;border:none;padding:7px 16px;border-radius:6px;cursor:pointer;font-size:13px">🖨️ طباعة</button>
+            <button onclick="document.getElementById('iv4-pdf-overlay').remove()" style="background:#f3f4f6;border:1px solid #e5e7eb;padding:7px 12px;border-radius:6px;cursor:pointer;">✕</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;">
+          ${[
+            [ov.conversations, 'محادثات', ''],
+            [(ov.resolution_rate || 0) + '%', 'نسبة الإغلاق', '#10b981'],
+            [ov.avg_first_response_fmt || '—', 'متوسط أول رد', '#3b82f6'],
+            [ov.avg_resolution_fmt || '—', 'متوسط الحل', ''],
+            [ov.open_now, 'مفتوحة', '#f97316'],
+            [ov.closed, 'مغلقة', ''],
+            [ov.messages_inbound, 'رسائل واردة', '#3b82f6'],
+            [ov.messages_outbound, 'رسائل صادرة', ''],
+          ].map(([v, l, c]) =>
+            `<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:20px;font-weight:700;color:${c || '#111'}">${v ?? 0}</div>
+              <div style="font-size:11px;color:#9ca3af;margin-top:2px;">${l}</div>
+            </div>`
+          ).join('')}
+        </div>
+        ${(data.agents || []).length ? `
+          <div style="margin-bottom:20px;">
+            <div style="font-weight:700;color:#6c5ce7;border-bottom:2px solid #ede9fc;padding-bottom:6px;margin-bottom:10px;">أداء الموظفين</div>
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead><tr style="background:#f3f4f6;">${['الموظف','محادثات','مغلقة','نسبة الإغلاق','متوسط رد','CSAT'].map(h => `<th style="padding:7px 10px;text-align:right;color:#374151;font-size:11px;">${h}</th>`).join('')}</tr></thead>
+              <tbody>${(data.agents || []).map(a =>
+                `<tr style="border-bottom:1px solid #f3f4f6;">
+                  <td style="padding:7px 10px;">${a.name}</td>
+                  <td style="padding:7px 10px;">${a.total_convs}</td>
+                  <td style="padding:7px 10px;">${a.closed_convs}</td>
+                  <td style="padding:7px 10px;">${a.resolution_rate}%</td>
+                  <td style="padding:7px 10px;">${a.avg_resp_fmt || '—'}</td>
+                  <td style="padding:7px 10px;">${a.avg_csat != null ? a.avg_csat + '/5' : '—'}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>` : ''}
+        ${(data.platforms || []).length ? `
+          <div>
+            <div style="font-weight:700;color:#6c5ce7;border-bottom:2px solid #ede9fc;padding-bottom:6px;margin-bottom:10px;">توزيع المنصات</div>
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead><tr style="background:#f3f4f6;">${['المنصة','محادثات','النسبة'].map(h => `<th style="padding:7px 10px;text-align:right;">${h}</th>`).join('')}</tr></thead>
+              <tbody>${(data.platforms || []).map(p =>
+                `<tr style="border-bottom:1px solid #f3f4f6;">
+                  <td style="padding:7px 10px;">${p.platform}</td>
+                  <td style="padding:7px 10px;">${p.n}</td>
+                  <td style="padding:7px 10px;">${ov.conversations > 0 ? Math.round((p.n / ov.conversations) * 100) : 0}%</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>` : ''}
+        <div style="margin-top:20px;border-top:1px solid #e5e7eb;padding-top:10px;font-size:11px;color:#9ca3af;text-align:center;">
+          تم التوليد بواسطة Inbox v4 — أريج
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  }
+
+  function _showToast(msg, type = 'info') {
+    // متشابك مع toast الموجود — نستخدم iv4-an-toast لو كان موجوداً
+    const existing = document.querySelector('.iv4-an-toast');
+    const el = existing || document.createElement('div');
+    el.className = `iv4-an-toast iv4-an-toast-${type}`;
+    el.textContent = msg;
+    if (!existing) document.body.appendChild(el);
+    setTimeout(() => el.remove?.(), 3000);
+  }
+
 
   let _lastAgentsData = [];
 
@@ -1344,10 +1461,16 @@ const InboxAnalytics = (() => {
       slaDetailBtn.addEventListener('click', _openSLADetail);
     }
 
-    // زر Export Full Excel
+    // زر Export Full CSV
     const exportFullBtn = document.getElementById('iv4-an-export-full');
     if (exportFullBtn) {
       exportFullBtn.addEventListener('click', _exportFullExcel);
+    }
+
+    // زر Export PDF (P11-E3)
+    const exportPdfBtn = document.getElementById('iv4-an-export-pdf');
+    if (exportPdfBtn) {
+      exportPdfBtn.addEventListener('click', _exportPDF);
     }
 
     // إغلاق بالنقر على الـ overlay خارج الـ modal
@@ -1455,7 +1578,10 @@ const InboxAnalytics = (() => {
           <span>→</span>
           <input type="date" id="iv4-an-to"   class="iv4-an-date-input" />
           <button id="iv4-an-apply-range" class="iv4-an-apply-btn">تطبيق</button>
-          ${canExport ? `<button id="iv4-an-export-full" class="iv4-an-export-btn">⬇ تصدير CSV</button>` : ''}
+          ${canExport ? `
+            <button id="iv4-an-export-full" class="iv4-an-export-btn">⬇ CSV</button>
+            <button id="iv4-an-export-pdf" class="iv4-an-export-btn iv4-an-export-btn--primary">🖨️ PDF</button>
+          ` : ''}
         </div>
 
         <!-- Loading bar -->
@@ -2027,6 +2153,8 @@ const InboxAnalytics = (() => {
 
     container.querySelector('#iv4-an-export-full')
       ?.addEventListener('click', _exportFullExcel);
+    container.querySelector('#iv4-an-export-pdf')
+      ?.addEventListener('click', _exportPDF);
   }
 
   return { open, close, mount, unmount };

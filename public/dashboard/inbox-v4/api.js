@@ -408,6 +408,17 @@ const InboxAPI = (() => {
     csatStats() {
       return _get('/inbox/csat-stats');
     },
+    /** P11-E3: تصدير تقرير شامل — format='json'|'html' */
+    exportReport({ from, to, format = 'json' } = {}) {
+      return _get('/inbox/analytics/export', { from, to, format });
+    },
+    /** P11-E3: بناء رابط HTML مباشر للطباعة */
+    exportPdfUrl({ from, to } = {}) {
+      const base = window.location.origin;
+      const token = _getToken ? _getToken() : '';
+      const params = new URLSearchParams({ from, to, format: 'html', _t: token });
+      return `${base}/api/inbox/analytics/export?${params}`;
+    },
   };
 
   // ─── Settings ─────────────────────────────────────────────────────────

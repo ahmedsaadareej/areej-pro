@@ -3851,11 +3851,16 @@
 .iv4-an-export-group { display: flex; gap: 6px; }
 
 .iv4-an-export-btn--primary {
-  background: #3b82f6 !important; color: #fff !important;
-  border-color: #3b82f6 !important;
+  background: #6c5ce7 !important; color: #fff !important;
+  border-color: #6c5ce7 !important;
 }
 .iv4-an-export-btn--primary:hover {
-  background: #2563eb !important; border-color: #2563eb !important;
+  background: #5b4cd6 !important; border-color: #5b4cd6 !important;
+}
+/* PDF overlay print */
+@media print {
+  #iv4-pdf-overlay > div { max-height: none !important; overflow: visible !important; box-shadow: none !important; }
+  #iv4-pdf-overlay > div > div:first-child button { display: none; }
 }
 
 /* ── Dark Mode ───────────────────────────────────────────────────── */
