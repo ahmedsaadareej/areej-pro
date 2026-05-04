@@ -1,6 +1,6 @@
 /**
  * inbox/context.js — Context Panel Routes لـ Inbox v4
- * آخر تحديث: 2026-05-03 (P5-4 Internal Notes)
+ * آخر تحديث: 2026-05-04 (M5 T14 — ERP Plugin Guard)
  *
  * Endpoints:
  *   GET  /api/inbox/conversations/:id/context              — بيانات العميل الكاملة
@@ -22,25 +22,40 @@
 const express = require('express');
 const router  = express.Router();
 
-// ─── Helper: جلب المحادثة مع التحقق من الصلاحية ──────────────────────────────
-function _getConv(db, convId, user) {
+// ── ERP Plugin Guard (D-043 / D-045) ─────────────────────────────────────────
+// يُستخدم على كل endpoint يعتمد على ERP (invoices, orders, CRM, paylinks)
+// GET  → أعد [] أو {} بدون error (graceful degradation)
+// POST/PUT/DELETE → 403 NO_ERP
+function erpGuard(req, res, next) {
+  if (req.inboxUser && req.inboxUser.has_erp === false) {
+    if (req.method === 'GET') {
+      return res.json({ ok: true, erp_disabled: true });
+    }
+    return res.status(403).json({ error: 'erp_not_available', code: 'NO_ERP' });
+  }
+  next();
+}
+
+// ─── Helper: جلب المحادثة مع التحقق من الصلاحية (يستخدم req.inboxUser) ─────────
+function _getConv(db, convId, inboxUser) {
   const conv = db.prepare(`SELECT * FROM inbox_conversations_v4 WHERE id = ?`).get(convId);
   if (!conv) return null;
   // موظف عادي: يقدر يشوف فقط لو معيّنة له أو غير معيّنة
-  if (user.role !== 'owner' && user.role !== 'admin') {
-    if (conv.assigned_to_id && conv.assigned_to_id !== user.id) return null;
+  const canSeeAll = inboxUser && (inboxUser.permissions.conversations_all || inboxUser.permissions.conversations_team);
+  if (!canSeeAll) {
+    if (conv.assigned_to_id && conv.assigned_to_id !== (inboxUser && inboxUser.id)) return null;
   }
   return conv;
 }
 
 // ─── GET /conversations/:id/context ──────────────────────────────────────────
-router.get('/conversations/:id/context', (req, res) => {
+router.get('/conversations/:id/context', erpGuard, (req, res) => {
   const convId = parseInt(req.params.id, 10);
   if (isNaN(convId)) return res.status(400).json({ error: 'id غير صالح' });
 
   try {
     const db   = req.db;
-    const conv = _getConv(db, convId, req.user);
+    const conv = _getConv(db, convId, req.inboxUser);
     if (!conv) return res.status(404).json({ error: 'المحادثة غير موجودة' });
 
     // ── بيانات العميل الأساسية ─────────────────────────────────────────
@@ -163,7 +178,7 @@ router.get('/conversations/:id/context', (req, res) => {
 
 // ─── POST /conversations/:id/context/link ─────────────────────────────────────
 // body: { contact_id } أو { contact_id: null } لإلغاء الربط
-router.post('/conversations/:id/context/link', (req, res) => {
+router.post('/conversations/:id/context/link', erpGuard, (req, res) => {
   const convId = parseInt(req.params.id, 10);
   if (isNaN(convId)) return res.status(400).json({ error: 'id غير صالح' });
 
@@ -171,7 +186,7 @@ router.post('/conversations/:id/context/link', (req, res) => {
 
   try {
     const db   = req.db;
-    const conv = _getConv(db, convId, req.user);
+    const conv = _getConv(db, convId, req.inboxUser);
     if (!conv) return res.status(404).json({ error: 'المحادثة غير موجودة' });
 
     if (contact_id !== null && contact_id !== undefined) {
@@ -189,8 +204,8 @@ router.post('/conversations/:id/context/link', (req, res) => {
           VALUES (?, 'contact_linked', ?, ?, ?, ?)
         `).run(
           convId,
-          req.user.id,
-          req.user.name || req.user.username,
+          req.inboxUser.id,
+          req.inboxUser.name,
           JSON.stringify({ contact_id, contact_name: contact.name }),
           new Date().toISOString()
         );
@@ -199,7 +214,7 @@ router.post('/conversations/:id/context/link', (req, res) => {
       // SSE
       try {
         const { broadcast } = require('./stream');
-        broadcast(req.user.id, 'conv_update', { id: convId, master_contact_id: contact_id });
+        broadcast(req.inboxUser.id, 'conv_update', { id: convId, master_contact_id: contact_id });
       } catch (_) {}
 
       return res.json({ ok: true, linked: true, contact_id, contact_name: contact.name });
@@ -213,8 +228,8 @@ router.post('/conversations/:id/context/link', (req, res) => {
           VALUES (?, 'contact_unlinked', ?, ?, ?, ?)
         `).run(
           convId,
-          req.user.id,
-          req.user.name || req.user.username,
+          req.inboxUser.id,
+          req.inboxUser.name,
           JSON.stringify({ prev_contact_id: conv.master_contact_id }),
           new Date().toISOString()
         );
@@ -230,7 +245,7 @@ router.post('/conversations/:id/context/link', (req, res) => {
 
 // ─── GET /conversations/:id/context/search ────────────────────────────────────
 // بحث في CRM contacts للربط اليدوي
-router.get('/conversations/:id/context/search', (req, res) => {
+router.get('/conversations/:id/context/search', erpGuard, (req, res) => {
   const convId = parseInt(req.params.id, 10);
   if (isNaN(convId)) return res.status(400).json({ error: 'id غير صالح' });
 
@@ -258,7 +273,7 @@ router.get('/conversations/:id/context/search', (req, res) => {
 
 // ─── GET /conversations/:id/context/invoices ─────────────────────────────────
 // جلب كل فواتير العميل مع pagination
-router.get('/conversations/:id/context/invoices', (req, res) => {
+router.get('/conversations/:id/context/invoices', erpGuard, (req, res) => {
   const convId = parseInt(req.params.id, 10);
   if (isNaN(convId)) return res.status(400).json({ error: 'id غير صالح' });
 
@@ -269,7 +284,7 @@ router.get('/conversations/:id/context/invoices', (req, res) => {
 
   try {
     const db   = req.db;
-    const conv = _getConv(db, convId, req.user);
+    const conv = _getConv(db, convId, req.inboxUser);
     if (!conv) return res.status(404).json({ error: 'المحادثة غير موجودة' });
     if (!conv.master_contact_id) return res.json({ ok: true, invoices: [], total: 0, pages: 0 });
 
@@ -308,7 +323,7 @@ router.get('/conversations/:id/context/invoices', (req, res) => {
 
 // ─── GET /conversations/:id/context/orders ────────────────────────────────────
 // جلب كل طلبات العميل مع pagination
-router.get('/conversations/:id/context/orders', (req, res) => {
+router.get('/conversations/:id/context/orders', erpGuard, (req, res) => {
   const convId = parseInt(req.params.id, 10);
   if (isNaN(convId)) return res.status(400).json({ error: 'id غير صالح' });
 
@@ -319,7 +334,7 @@ router.get('/conversations/:id/context/orders', (req, res) => {
 
   try {
     const db   = req.db;
-    const conv = _getConv(db, convId, req.user);
+    const conv = _getConv(db, convId, req.inboxUser);
     if (!conv) return res.status(404).json({ error: 'المحادثة غير موجودة' });
     if (!conv.master_contact_id) return res.json({ ok: true, orders: [], total: 0, pages: 0 });
 
@@ -346,7 +361,7 @@ router.get('/conversations/:id/context/orders', (req, res) => {
 
 // ─── GET /conversations/:id/context/paylinks ─────────────────────────────────
 // روابط الدفع المرتبطة بهاتف العميل أو فواتيره
-router.get('/conversations/:id/context/paylinks', (req, res) => {
+router.get('/conversations/:id/context/paylinks', erpGuard, (req, res) => {
   const convId = parseInt(req.params.id, 10);
   if (isNaN(convId)) return res.status(400).json({ error: 'id غير صالح' });
 
@@ -356,7 +371,7 @@ router.get('/conversations/:id/context/paylinks', (req, res) => {
 
   try {
     const db   = req.db;
-    const conv = _getConv(db, convId, req.user);
+    const conv = _getConv(db, convId, req.inboxUser);
     if (!conv) return res.status(404).json({ error: 'المحادثة غير موجودة' });
 
     // محاولة الجلب بالهاتف (سواء مرتبط CRM أو لا)
@@ -399,13 +414,13 @@ router.get('/conversations/:id/context/paylinks', (req, res) => {
 
 // ─── GET /conversations/:id/context/clv ──────────────────────────────────────
 // تقرير CLV تفصيلي للعميل
-router.get('/conversations/:id/context/clv', (req, res) => {
+router.get('/conversations/:id/context/clv', erpGuard, (req, res) => {
   const convId = parseInt(req.params.id, 10);
   if (isNaN(convId)) return res.status(400).json({ error: 'id غير صالح' });
 
   try {
     const db   = req.db;
-    const conv = _getConv(db, convId, req.user);
+    const conv = _getConv(db, convId, req.inboxUser);
     if (!conv) return res.status(404).json({ error: 'المحادثة غير موجودة' });
     if (!conv.master_contact_id) return res.json({ ok: true, clv: null });
 
@@ -467,7 +482,7 @@ router.get('/conversations/:id/context/clv', (req, res) => {
 
 // ─── POST /conversations/:id/context/invoice ─────────────────────────────────
 // إنشاء فاتورة سريعة من الـ Inbox مباشرة (P5-3 Quick Action)
-router.post('/conversations/:id/context/invoice', (req, res) => {
+router.post('/conversations/:id/context/invoice', erpGuard, (req, res) => {
   const convId = parseInt(req.params.id, 10);
   if (isNaN(convId)) return res.status(400).json({ error: 'id غير صالح' });
 
@@ -478,7 +493,7 @@ router.post('/conversations/:id/context/invoice', (req, res) => {
 
   try {
     const db   = req.db;
-    const conv = _getConv(db, convId, req.user);
+    const conv = _getConv(db, convId, req.inboxUser);
     if (!conv) return res.status(404).json({ error: 'المحادثة غير موجودة' });
 
     // جلب بيانات العميل (CRM أو sender)
@@ -513,7 +528,7 @@ router.post('/conversations/:id/context/invoice', (req, res) => {
       invoiceNo, contactId, clientName, clientPhone,
       totalAmt, totalAmt,
       description || notes || null,
-      req.user.id, req.user.name || req.user.username,
+      req.inboxUser.id, req.inboxUser.name,
       now, now
     );
 
@@ -526,7 +541,7 @@ router.post('/conversations/:id/context/invoice', (req, res) => {
           (conversation_id, event_type, actor_id, actor_name, meta, created_at)
         VALUES (?, 'invoice_created', ?, ?, ?, ?)
       `).run(
-        convId, req.user.id, req.user.name || req.user.username,
+        convId, req.inboxUser.id, req.inboxUser.name,
         JSON.stringify({ invoice_id: newInvoiceId, invoice_no: invoiceNo, amount: totalAmt }),
         now
       );
@@ -535,7 +550,7 @@ router.post('/conversations/:id/context/invoice', (req, res) => {
     // SSE broadcast
     try {
       const { broadcast } = require('./stream');
-      broadcast(req.user.id, 'conv_update', {
+      broadcast(req.inboxUser.id, 'conv_update', {
         id: convId,
         _quick_action: { type: 'invoice_created', invoice_no: invoiceNo, amount: totalAmt },
       });
@@ -554,7 +569,7 @@ router.post('/conversations/:id/context/invoice', (req, res) => {
 
 // ─── POST /conversations/:id/context/paylink ─────────────────────────────────
 // إنشاء رابط دفع سريع من الـ Inbox (P5-3 Quick Action)
-router.post('/conversations/:id/context/paylink', (req, res) => {
+router.post('/conversations/:id/context/paylink', erpGuard, (req, res) => {
   const convId = parseInt(req.params.id, 10);
   if (isNaN(convId)) return res.status(400).json({ error: 'id غير صالح' });
 
@@ -565,7 +580,7 @@ router.post('/conversations/:id/context/paylink', (req, res) => {
 
   try {
     const db   = req.db;
-    const conv = _getConv(db, convId, req.user);
+    const conv = _getConv(db, convId, req.inboxUser);
     if (!conv) return res.status(404).json({ error: 'المحادثة غير موجودة' });
 
     let clientName  = conv.sender_name  || 'عميل';
@@ -597,7 +612,7 @@ router.post('/conversations/:id/context/paylink', (req, res) => {
           (conversation_id, event_type, actor_id, actor_name, meta, created_at)
         VALUES (?, 'paylink_created', ?, ?, ?, ?)
       `).run(
-        convId, req.user.id, req.user.name || req.user.username,
+        convId, req.inboxUser.id, req.inboxUser.name,
         JSON.stringify({ link_id: newLinkId, amount: totalAmt, token }),
         now
       );
@@ -606,7 +621,7 @@ router.post('/conversations/:id/context/paylink', (req, res) => {
     // SSE broadcast
     try {
       const { broadcast } = require('./stream');
-      broadcast(req.user.id, 'conv_update', {
+      broadcast(req.inboxUser.id, 'conv_update', {
         id: convId,
         _quick_action: { type: 'paylink_created', amount: totalAmt },
       });
@@ -634,7 +649,7 @@ router.get('/conversations/:id/timeline', (req, res) => {
 
   try {
     const db   = req.db;
-    const conv = _getConv(db, convId, req.user);
+    const conv = _getConv(db, convId, req.inboxUser);
     if (!conv) return res.status(404).json({ error: 'المحادثة غير موجودة' });
 
     const limit  = Math.min(parseInt(req.query.limit  || 50, 10), 100);
@@ -691,7 +706,7 @@ router.get('/conversations/:id/context/notes', (req, res) => {
 
   try {
     const db = req.db;
-    const conv = _getConv(db, convId, req.user);
+    const conv = _getConv(db, convId, req.inboxUser);
     if (!conv) return res.status(404).json({ error: 'المحادثة غير موجودة' });
 
     const notes = db.prepare(`
@@ -719,14 +734,14 @@ router.post('/conversations/:id/context/notes', (req, res) => {
 
   try {
     const db = req.db;
-    const conv = _getConv(db, convId, req.user);
+    const conv = _getConv(db, convId, req.inboxUser);
     if (!conv) return res.status(404).json({ error: 'المحادثة غير موجودة' });
 
-    const authorName = req.user.name || req.user.username || 'موظف';
+    const authorName = req.inboxUser.name || 'موظف';
     const result = db.prepare(`
       INSERT INTO inbox_conv_notes_v4 (conversation_id, author_id, author_name, body)
       VALUES (?, ?, ?, ?)
-    `).run(convId, req.user.id, authorName, body);
+    `).run(convId, req.inboxUser.id, authorName, body);
 
     const note = db.prepare(`
       SELECT id, author_id, author_name, body, created_at
@@ -736,7 +751,7 @@ router.post('/conversations/:id/context/notes', (req, res) => {
     // SSE broadcast — إشعار باقي الموظفين بنوتة جديدة
     try {
       const { broadcast } = require('./stream');
-      broadcast(req.user.id, 'conv:note_added', { convId, note });
+      broadcast(req.inboxUser.id, 'conv:note_added', { convId, note });
     } catch (_) {}
 
     res.json({ ok: true, note });
@@ -755,7 +770,7 @@ router.delete('/conversations/:id/context/notes/:nid', (req, res) => {
 
   try {
     const db = req.db;
-    const conv = _getConv(db, convId, req.user);
+    const conv = _getConv(db, convId, req.inboxUser);
     if (!conv) return res.status(404).json({ error: 'المحادثة غير موجودة' });
 
     const note = db.prepare('SELECT * FROM inbox_conv_notes_v4 WHERE id = ? AND conversation_id = ?')
@@ -763,8 +778,8 @@ router.delete('/conversations/:id/context/notes/:nid', (req, res) => {
     if (!note) return res.status(404).json({ error: 'النوتة غير موجودة' });
 
     // موظف عادي: يحذف نوتاته فقط
-    const isOwner = req.user.role === 'owner' || req.user.role === 'admin';
-    if (!isOwner && note.author_id !== req.user.id) {
+    const isOwner = req.inboxUser.role_name === 'owner' || req.inboxUser.role_name === 'admin';
+    if (!isOwner && note.author_id !== req.inboxUser.id) {
       return res.status(403).json({ error: 'ليس لديك صلاحية حذف هذه النوتة' });
     }
 
@@ -773,7 +788,7 @@ router.delete('/conversations/:id/context/notes/:nid', (req, res) => {
     // SSE broadcast
     try {
       const { broadcast } = require('./stream');
-      broadcast(req.user.id, 'conv:note_deleted', { convId, noteId });
+      broadcast(req.inboxUser.id, 'conv:note_deleted', { convId, noteId });
     } catch (_) {}
 
     res.json({ ok: true });
