@@ -1,3 +1,22 @@
+## جلسة 2026-05-04 — M1 كامل: نظام الصلاحيات (T01→T11)
+- الحالة: مكتملة ✅
+- ما تم:
+  - T01: migration v33 — `inbox_roles` + seed 5 أدوار ثابتة (Owner→Read-only)
+  - T02: migration v34 — `inbox_users` + 3 indexes (email UNIQUE + tenant_user + role)
+  - T03: migration v35 — `ALTER inbox_team_members ADD COLUMN role_override`
+  - T04: `server/routes/inbox/permissions.js` — loadInboxPermissions + requirePermission(key) + fallback map
+  - T05: `server/routes/inbox/settings.js` — Roles API (GET/POST/PUT/DELETE) مع حماية is_system
+  - T06: تكملة settings.js — Users API مع قاعدة last_owner
+  - T07: `server/routes/inbox/index.js` — loadInboxPermissions على كل request + requirePermission على /analytics و /settings
+  - T08: `public/dashboard/inbox-v4/store.js` — currentUser.permissions + canDo() helper
+  - T09: `public/dashboard/inbox-v4/app.js` — guardRoute() + loadCurrentUser() + guard على Analytics
+  - T10: `public/dashboard/inbox-v4/settings/roles.js` — صفحة الأدوار (list + drawer create/edit/delete)
+  - T11: `public/dashboard/inbox-v4/settings/users.js` — صفحة الموظفين (table + drawer + last_owner guard)
+- قرارات جديدة: لا يوجد (موثق مسبقاً D-008→D-012)
+- آخر commit: 15f49a0
+- المهمة القادمة: M5 T01 — `inbox-v4/execution/EX-M5-adapter.md`
+
+---
 ## جلسة 2026-05-04 — مراجعة M1→M5 وكتابة PHASE10_TASKS.md
 - الحالة: مكتملة ✅
 - ما تم:
