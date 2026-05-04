@@ -473,6 +473,58 @@ const TENANT_MIGRATIONS = [
     )`,
   ]},
 
+  // ─────────────────────────────────────────────────────────────
+  // M1 Phase 10 — نظام الصلاحيات (Permissions)
+  // ─────────────────────────────────────────────────────────────
+
+  // v33 — T01: inbox_roles (الأدوار الخمسة الثابتة لـ Inbox)
+  { version: 33, sqls: [
+    // جدول الأدوار
+    `CREATE TABLE IF NOT EXISTS inbox_roles (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      name        TEXT    NOT NULL UNIQUE,
+      description TEXT,
+      is_system   INTEGER NOT NULL DEFAULT 0,
+      permissions TEXT    NOT NULL DEFAULT '{}',
+      created_at  INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+    // seed: الأدوار الخمسة الثابتة — is_system=1 = غير قابل للحذف أو التعديل
+    `INSERT OR IGNORE INTO inbox_roles (id, name, description, is_system, permissions) VALUES
+      (1, 'Owner',      'صاحب الحساب — كل الصلاحيات',                    1, '{"team_manage":true,"org_settings":true,"channels":true,"inbox_settings":true,"reports_full":true,"reports_team":true,"reports_self":true,"export":true,"conversations_all":true,"conversations_team":true,"broadcast":true,"role_manage":true}'),
+      (2, 'Admin',      'مدير — كل الصلاحيات بدون إدارة الأدوار',         1, '{"team_manage":true,"org_settings":true,"channels":true,"inbox_settings":true,"reports_full":true,"reports_team":true,"reports_self":true,"export":true,"conversations_all":true,"conversations_team":true,"broadcast":true,"role_manage":false}'),
+      (3, 'Supervisor', 'مشرف — إدارة الفريق والتقارير',                   1, '{"team_manage":false,"org_settings":false,"channels":false,"inbox_settings":false,"reports_full":false,"reports_team":true,"reports_self":true,"export":false,"conversations_all":false,"conversations_team":true,"broadcast":false,"role_manage":false}'),
+      (4, 'Agent',      'موظف خدمة عملاء — المحادثات فقط',                 1, '{"team_manage":false,"org_settings":false,"channels":false,"inbox_settings":false,"reports_full":false,"reports_team":false,"reports_self":true,"export":false,"conversations_all":false,"conversations_team":true,"broadcast":false,"role_manage":false}'),
+      (5, 'Read-only',  'مشاهدة فقط — لا يمكن إرسال أو تعديل',            1, '{"team_manage":false,"org_settings":false,"channels":false,"inbox_settings":false,"reports_full":true,"reports_team":true,"reports_self":true,"export":false,"conversations_all":false,"conversations_team":false,"broadcast":false,"role_manage":false}')
+    `,
+  ]},
+
+  // v34 — T02: inbox_users (موظفو الـ Inbox مع ربط اختياري بـ tenant_users)
+  { version: 34, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_users (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      email           TEXT    NOT NULL,
+      name            TEXT    NOT NULL,
+      inbox_role_id   INTEGER NOT NULL DEFAULT 4 REFERENCES inbox_roles(id),
+      tenant_user_id  INTEGER DEFAULT NULL,
+      status          TEXT    NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive')),
+      created_at      INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at      INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+    // UNIQUE على email لمنع التكرار
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_inbox_users_email ON inbox_users(email)`,
+    // بحث سريع بـ tenant_user_id (للربط مع ERP users)
+    `CREATE INDEX IF NOT EXISTS idx_inbox_users_tenant_user ON inbox_users(tenant_user_id) WHERE tenant_user_id IS NOT NULL`,
+    // بحث سريع بـ role لإحصاءات الفريق
+    `CREATE INDEX IF NOT EXISTS idx_inbox_users_role ON inbox_users(inbox_role_id)`,
+  ]},
+
+  // v35 — T03: role_override على inbox_team_members (Team-level permission override)
+  { version: 35, sqls: [
+    // ALTER TABLE آمن: null = لا override — يُطبق الدور الأصلي
+    `ALTER TABLE inbox_team_members ADD COLUMN role_override TEXT DEFAULT NULL`,
+  ]},
+
+  // ─────────────────────────────────────────────────────────────
   // أضف migrations جديدة هنا دايماً — لا تعدّل القديمة أبداً
 
   // v32: inbox_email_accounts_v4 + inbox_email_messages_v4 (P8-1 Email Channel)
