@@ -450,8 +450,8 @@ router.post('/conversations/:id/messages', async (req, res) => {
       mediaUrl:      media_url    || null,
       mediaFilename: media_filename || null,
       quotedMsgId:   quoted_msg_id  || null,
-      agentId:       req.user.id,
-      agentName:     req.user.name || req.user.username || 'موظف',
+      agentId:       req.inboxUser.id,
+      agentName:     req.inboxUser.name || 'موظف',
       platform,
       status:        isNote ? 'sent' : 'pending',
     });
@@ -459,7 +459,7 @@ router.post('/conversations/:id/messages', async (req, res) => {
     // ── SSE: أبلغ الـ clients فوراً ─────────────────────────────────────
     try {
       const { broadcast: sseBroadcast } = require('./stream');
-      sseBroadcast(req.user.id, {
+      sseBroadcast(req.inboxUser.id, {
         type: 'message_new',
         data: { ...savedMsg, conversation_id: convId },
       });
@@ -486,7 +486,7 @@ router.post('/conversations/:id/messages', async (req, res) => {
         // SSE: أبلغ بالفشل
         try {
           const { broadcast: sseBroadcast } = require('./stream');
-          sseBroadcast(req.user.id, {
+          sseBroadcast(req.inboxUser.id, {
             type: 'message_status',
             data: { id: savedMsg.id, conversation_id: convId, status: 'failed', fail_reason: dispatchErr },
           });
@@ -504,7 +504,7 @@ router.post('/conversations/:id/messages', async (req, res) => {
         // SSE: حدّث الحالة
         try {
           const { broadcast: sseBroadcast } = require('./stream');
-          sseBroadcast(req.user.id, {
+          sseBroadcast(req.inboxUser.id, {
             type: 'message_status',
             data: { id: savedMsg.id, conversation_id: convId, status: newStatus },
           });
@@ -528,17 +528,17 @@ router.post('/conversations/:id/messages', async (req, res) => {
         .filter(id => !isNaN(id));
       await _notifyMentions(
         db,
-        req.user.tenant_id,
+        req.inboxUser.tenantUserId,
         mentionIdsInt,
         { ...savedMsg, conversation_id: convId },
-        req.user
+        req.inboxUser
       );
     }
 
     // ── SSE: تحديث المحادثة في القائمة ─────────────────────────────────
     try {
       const { broadcast: sseBroadcast } = require('./stream');
-      sseBroadcast(req.user.id, {
+      sseBroadcast(req.inboxUser.id, {
         type: 'conv_update',
         data: { id: convId, last_message: content.trim() || '[ميديا]', last_message_type: content_type },
       });
@@ -548,14 +548,14 @@ router.post('/conversations/:id/messages', async (req, res) => {
     if (!isNote) {
       try {
         const { triggerWebhooks } = require('./automation');
-        triggerWebhooks(db, req.user.id, 'message.sent', {
+        triggerWebhooks(db, req.inboxUser.id, 'message.sent', {
           conversation_id: convId,
           message_id     : savedMsg.id,
           direction      : 'outbound',
           content_type,
           content        : (content || '').slice(0, 300),
           platform,
-          agent_id       : req.user.id,
+          agent_id       : req.inboxUser.id,
         });
       } catch (_) {}
     }
@@ -616,8 +616,8 @@ router.post(
         mediaFilename: req.file.originalname,
         mediaSize:     req.file.size,
         quotedMsgId:   quoted_msg_id || null,
-        agentId:       req.user.id,
-        agentName:     req.user.name || req.user.username || 'موظف',
+        agentId:       req.inboxUser.id,
+        agentName:     req.inboxUser.name || 'موظف',
         platform,
         status:        'pending',
       });
@@ -625,7 +625,7 @@ router.post(
       // SSE: أبلغ فوراً
       try {
         const { broadcast: sseBroadcast } = require('./stream');
-        sseBroadcast(req.user.id, { type: 'message_new', data: { ...savedMsg, conversation_id: convId } });
+        sseBroadcast(req.inboxUser.id, { type: 'message_new', data: { ...savedMsg, conversation_id: convId } });
       } catch (_) {}
 
       await _touchConv(db, convId, `[${contentType}]`, contentType, conv.status);
@@ -961,8 +961,8 @@ router.post('/conversations/:id/messages/interactive', async (req, res) => {
       direction:   'outbound',
       contentType: 'interactive',
       content:     body.trim(),
-      agentId:     req.user.id,
-      agentName:   req.user.name || req.user.username || 'موظف',
+      agentId:     req.inboxUser.id,
+      agentName:   req.inboxUser.name || 'موظف',
       platform:    'whatsapp_api',
       status:      externalId ? 'sent' : 'pending',
     });
@@ -981,7 +981,7 @@ router.post('/conversations/:id/messages/interactive', async (req, res) => {
     // SSE broadcast
     try {
       const { broadcast: sseBroadcast } = require('./stream');
-      sseBroadcast(req.user.id, { type: 'message_new', data: { ...savedMsg, conversation_id: convId } });
+      sseBroadcast(req.inboxUser.id, { type: 'message_new', data: { ...savedMsg, conversation_id: convId } });
     } catch (_) {}
 
     await _touchConv(db, convId, `[رسالة تفاعلية]`, 'interactive', conv.status);
@@ -1135,8 +1135,8 @@ router.post('/conversations/:id/messages/catalog', async (req, res) => {
       direction:   'outbound',
       contentType: 'catalog',
       content:     contentSummary,
-      agentId:     req.user.id,
-      agentName:   req.user.name || req.user.username || 'موظف',
+      agentId:     req.inboxUser.id,
+      agentName:   req.inboxUser.name || 'موظف',
       platform:    'whatsapp_api',
       status:      externalId ? 'sent' : 'pending',
     });
@@ -1168,7 +1168,7 @@ router.post('/conversations/:id/messages/catalog', async (req, res) => {
     // SSE broadcast
     try {
       const { broadcast: sseBroadcast } = require('./stream');
-      sseBroadcast(req.user.id, { type: 'message_new', data: { ...savedMsg, conversation_id: convId } });
+      sseBroadcast(req.inboxUser.id, { type: 'message_new', data: { ...savedMsg, conversation_id: convId } });
     } catch (_) {}
 
     await _touchConv(db, convId, contentSummary, 'catalog', conv.status);
