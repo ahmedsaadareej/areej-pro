@@ -141,3 +141,39 @@
 - `public/inbox-v4/pages/page-settings.js`
 - `public/inbox-v4/pages/page-inbox.js`
 - `public/inbox-v4/shell.js`
+
+---
+
+## 🚀 Phase 12 — Production Rollout
+> آخر تحديث: 2026-05-05
+> الهدف: inbox v4 يخدم كل العملاء الحقيقيين رسمياً
+
+### المسار 1 — تحويل `/inbox` لـ v4 رسمياً
+
+| # | المهمة | الملفات | الحالة |
+|---|--------|---------|--------|
+| P12-A1 | تغيير route `/inbox` في app.js → يخدم `inbox-v4/index.html` | `server/app.js` | ⏳ |
+| P12-A2 | إبقاء `/inbox-legacy` → يخدم `inbox-v4/index.html` القديم (v3 fallback) | `server/app.js` | ⏳ |
+| P12-A3 | اختبار نهائي: فتح `/inbox` + تحقق SSE + لا console errors | — | ⏳ |
+| P12-A4 | commit + push + pm2 reload | — | ⏳ |
+
+---
+
+### المسار 2 — هجرة باقي الـ Tenants
+
+| # | المهمة | الملفات | الحالة |
+|---|--------|---------|--------|
+| P12-B1 | تشغيل migrations على باقي الـ tenants (v17→v44) عبر pm2 restart | `server/migrations.js` | ⏳ |
+| P12-B2 | هجرة Tenant 1 (هشام سعد) — dry-run ثم execute | `server/scripts/migrate-inbox-v3-to-v4.js` | ⏳ |
+| P12-B3 | هجرة كل الـ tenants الأخرى — `--all --execute` | `server/scripts/migrate-inbox-v3-to-v4.js` | ⏳ |
+| P12-B4 | تحقق: COUNT في inbox_conversations_v4 لكل tenant | — | ⏳ |
+
+---
+
+### المسار 3 — WhatsApp Live Mode
+
+| # | المهمة | الملفات | الحالة |
+|---|--------|---------|--------|
+| P12-C1 | إعداد توثيق Meta Business Verification (ما يحتاجه أحمد) | `inbox-v4/docs/meta-verification.md` | ⏳ |
+| P12-C2 | بعد موافقة Meta: تغيير App Mode من Development → Live | Meta Dashboard | ⏳ |
+| P12-C3 | اختبار إرسال/استقبال مع أرقام خارج قائمة Test Numbers | — | ⏳ |
