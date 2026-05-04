@@ -1,3 +1,98 @@
+## جلسة 2026-05-04 — مراجعة M1→M5 وكتابة PHASE10_TASKS.md
+- الحالة: مكتملة ✅
+- ما تم:
+  - قراءة M1→M5 كاملة وتحقق عدم التعارض
+  - ترتيب التنفيذ: M1 → M5(Adapter) → M3(Shell) → M2(Settings) → M4(Analytics)
+  - كتابة `inbox-v4/PHASE10_TASKS.md` — 63 مهمة موزعة + جدول dependencies + تحذيرات
+- قرارات جديدة: لا يوجد
+- الخطوة التالية: Phase 10 — جلسة تقسيم المهام (PHASE10_EXECUTION.md)
+
+---
+
+## جلسة 2026-05-04 — المحور M5: Standalone Architecture (المرحلة 2)
+- الحالة: مكتملة ✅
+- ما تم: خطة تنفيذ تقنية كاملة (8 خطوات) لفصل Inbox عن areej-pro
+  - STEP 1: inbox-auth-adapter.js (ملف جديد — كود كامل)
+  - STEP 2: تحديث inbox/index.js لاستدعاء الـ Adapter
+  - STEP 3: context.js → optional ERP plugin (has_erp check + graceful degradation)
+  - STEP 4: team.js — استبدال req.user.role بـ req.inboxUser.permissions
+  - STEP 5: conversations.js — هجرة req.tenantUser → req.inboxUser
+  - STEP 6: 10 ملفات متبقية (stream, messages, analytics, ...) — نمط موحّد
+  - STEP 7: InboxConfig في api.js (Frontend Standalone-ready)
+  - STEP 8: تحديث ملفات التوثيق
+- قرارات جديدة: لا (D-042→D-046 موثقة من المرحلة 1)
+- المحور القادم: Phase 9 مكتملة ✅ → جلسة مراجعة شاملة (Phase 10 تمهيد)
+
+---
+
+## جلسة 2026-05-04 — المحور M5: Standalone Architecture — المرحلة 1
+- الحالة: مكتملة ✅
+- ما تم:
+  - خريطة كاملة لكل نقاط التبعية بين Inbox وـ areej-pro (Auth + DB + context.js + iframe + tenant-middleware)
+  - تصميم Adapter Layer: inbox-auth-adapter.js + req.inboxUser
+  - تحديد حدود الفصل (Boundaries): ما داخل Inbox Core وما خارجه
+  - Optional Plugin Pattern لـ context.js (has_erp flag)
+  - ثلاثة Deployment Models: Integrated / Side-by-side / Fully Standalone
+  - تكامل M5 مع M1/M2/M3/M4
+- قرارات جديدة: D-042, D-043, D-044, D-045, D-046
+- المحور القادم: M5 — المرحلة 2 (خطة التنفيذ التقنية التفصيلية)
+
+---
+
+## جلسة 2026-05-04 — المحور M4: التقارير (Analytics) — المرحلة 2
+- الحالة: مكتملة ✅
+- ما تم:
+  - DB Migration: جدول `inbox_scheduled_reports_v4` + 6 DB Indexes للأداء
+  - Backend: `getInboxRole()` + `getTeamFilter()` + `requireAnalyticsAccess()` helpers
+  - Backend: endpoint جديد `/analytics/labels` (Labels Analytics)
+  - Backend: endpoint جديد `/analytics/automation` (AI & Chatbot Analytics)
+  - Backend: Permission Filtering في `/overview`, `/agents`, `/agents/:id`
+  - Backend: Scheduled Reports CRUD (GET/POST/PUT/DELETE `/analytics/scheduled`)
+  - Frontend: تحويل InboxAnalytics لـ Page Module (mount/unmount/D-027)
+  - Frontend: Tab Loaders لـ 8 أقسام (Overview/Agents/Channels/Labels/SLA/CSAT/Automation/Scheduled)
+  - Frontend: CSS Classes `iv4-an-*` كاملة
+  - Shell: Route `/analytics` + Sidebar Link + Route Guard
+  - تسلسل تنفيذ من 10 خطوات مرتبة لـ Phase 10
+- قرارات جديدة: D-039, D-040, D-041
+- المحور القادم: M5 — Standalone Architecture
+
+## جلسة 2026-05-04 — المحور M4: التقارير (Analytics) — المرحلة 1
+- الحالة: مكتملة ✅
+- ما تم: تحليل كامل لـ Backend + Frontend الحالي — تصميم معماري للصفحة المستقلة بـ 7 أقسام + Permission Filtering + Live Status + Labels/AI endpoints جديدة + Scheduled Reports مؤجلة
+- قرارات جديدة: D-031, D-032, D-033, D-034, D-035, D-036, D-037, D-038
+- المحور القادم: M4 المرحلة 2
+
+---
+
+## جلسة 2026-05-04 — المحور M3: هيكل التنقل + حجم الشاشات (المرحلة 2)
+- الحالة: مكتملة ✅
+- ما تم: خطة التنفيذ التقنية الكاملة لـ App Shell — router.js + shell.js + shell.css + index.html + 4 page modules + تعديلات backend + Deep Link + Responsive
+- قرارات جديدة: D-026, D-027, D-028, D-029, D-030
+- المحور القادم: M4 — التقارير (Analytics) المرحلة 1
+
+---
+
+## جلسة 2026-05-04 — المحور M2: Settings (إعادة الهيكلة الكاملة)
+- الحالة: مكتملة
+- ما تم:
+  - المرحلة 1: تحليل + تصميم معماري (5 أقسام + قرارات الجداول)
+  - المرحلة 2: خطة تنفيذ كاملة (6 migrations + APIs + Frontend + CSS)
+- قرارات جديدة: D-013, D-014, D-015, D-016, D-017
+- المحور القادم: M3 — هيكل التنقل + حجم الشاشات
+
+---
+
+## جلسة 2026-05-04 — المحور M1: نظام الصلاحيات
+- الحالة: مكتملة
+- ما تم:
+  - المرحلة 1: تحليل + تصميم معماري كامل لنظام الصلاحيات
+  - المرحلة 2: خطة تنفيذ تقنية تفصيلية كاملة
+  - ملف الخطة: `inbox-v4/plans/M1-permissions.md`
+- قرارات جديدة: D-008, D-009, D-010, D-011, D-012
+- المحور القادم: M2 — Settings (إعادة الهيكلة الكاملة)
+
+---
+
 ## جلسة 2026-05-03 23:42 UTC
 - الحالة: مكتملة
 - ما تم:
