@@ -38,7 +38,7 @@ const { getTenantDb } = require('../../db-tenant');
 router.use((req, res, next) => {
   if (req.path.startsWith('/email/webhook/')) return next(); // public
   requireAuth(req, res, () => {
-    req.db = req.db || getTenantDb(req.user.id);
+    req.db = req.db || getTenantDb(req.inboxUser.id);
     next();
   });
 });
@@ -187,7 +187,7 @@ function sseBroadcast(tenantId, event, data) {
 
 /** GET /email/accounts — قائمة الحسابات */
 router.get('/email/accounts', (req, res) => {
-  const tenantId = req.user.id;
+  const tenantId = req.inboxUser.id;
   const accounts = req.db.prepare(`
     SELECT id, name, email, smtp_host, smtp_port, smtp_secure, smtp_user,
            imap_enabled, imap_host, imap_port, imap_secure, imap_user, imap_mailbox,
@@ -202,7 +202,7 @@ router.get('/email/accounts', (req, res) => {
 
 /** POST /email/accounts — إنشاء حساب جديد */
 router.post('/email/accounts', (req, res) => {
-  const tenantId = req.user.id;
+  const tenantId = req.inboxUser.id;
   const {
     name, email,
     smtp_host, smtp_port = 587, smtp_secure = false, smtp_user, smtp_pass,
@@ -241,14 +241,14 @@ router.post('/email/accounts', (req, res) => {
 router.get('/email/accounts/:id', (req, res) => {
   const account = req.db.prepare(
     `SELECT * FROM inbox_email_accounts_v4 WHERE id=? AND tenant_id=?`
-  ).get(req.params.id, req.user.id);
+  ).get(req.params.id, req.inboxUser.id);
   if (!account) return res.status(404).json({ error: 'الحساب غير موجود' });
   res.json({ account });
 });
 
 /** PUT /email/accounts/:id — تعديل */
 router.put('/email/accounts/:id', (req, res) => {
-  const tenantId = req.user.id;
+  const tenantId = req.inboxUser.id;
   const account = req.db.prepare(
     `SELECT * FROM inbox_email_accounts_v4 WHERE id=? AND tenant_id=?`
   ).get(req.params.id, tenantId);
@@ -292,14 +292,14 @@ router.put('/email/accounts/:id', (req, res) => {
 router.delete('/email/accounts/:id', (req, res) => {
   const info = req.db.prepare(
     `DELETE FROM inbox_email_accounts_v4 WHERE id=? AND tenant_id=?`
-  ).run(req.params.id, req.user.id);
+  ).run(req.params.id, req.inboxUser.id);
   if (info.changes === 0) return res.status(404).json({ error: 'الحساب غير موجود' });
   res.json({ ok: true });
 });
 
 /** PUT /email/accounts/:id/toggle — تفعيل/تعطيل */
 router.put('/email/accounts/:id/toggle', (req, res) => {
-  const tenantId = req.user.id;
+  const tenantId = req.inboxUser.id;
   const account = req.db.prepare(
     `SELECT * FROM inbox_email_accounts_v4 WHERE id=? AND tenant_id=?`
   ).get(req.params.id, tenantId);
@@ -319,7 +319,7 @@ router.put('/email/accounts/:id/toggle', (req, res) => {
 router.post('/email/accounts/:id/test-smtp', async (req, res) => {
   const account = req.db.prepare(
     `SELECT * FROM inbox_email_accounts_v4 WHERE id=? AND tenant_id=?`
-  ).get(req.params.id, req.user.id);
+  ).get(req.params.id, req.inboxUser.id);
   if (!account) return res.status(404).json({ error: 'الحساب غير موجود' });
   if (!account.smtp_host) return res.status(400).json({ error: 'لم يتم ضبط SMTP' });
 
@@ -338,7 +338,7 @@ router.post('/email/accounts/:id/test-imap', async (req, res) => {
 
   const account = req.db.prepare(
     `SELECT * FROM inbox_email_accounts_v4 WHERE id=? AND tenant_id=?`
-  ).get(req.params.id, req.user.id);
+  ).get(req.params.id, req.inboxUser.id);
   if (!account) return res.status(404).json({ error: 'الحساب غير موجود' });
   if (!account.imap_host) return res.status(400).json({ error: 'لم يتم ضبط IMAP' });
 
@@ -355,7 +355,7 @@ router.post('/email/accounts/:id/test-imap', async (req, res) => {
 
 /** POST /email/accounts/:id/poll — poll يدوي */
 router.post('/email/accounts/:id/poll', async (req, res) => {
-  const tenantId = req.user.id;
+  const tenantId = req.inboxUser.id;
   const account = req.db.prepare(
     `SELECT * FROM inbox_email_accounts_v4 WHERE id=? AND tenant_id=?`
   ).get(req.params.id, tenantId);
@@ -446,7 +446,7 @@ router.post('/email/webhook/:token', express.json({ limit: '5mb' }), express.url
 
 /** GET /email/messages/:convId — رسائل الإيميل في المحادثة */
 router.get('/email/messages/:convId', (req, res) => {
-  const tenantId = req.user.id;
+  const tenantId = req.inboxUser.id;
   const conv = req.db.prepare(
     `SELECT * FROM inbox_conversations_v4 WHERE id=? AND tenant_id=? AND platform='email'`
   ).get(req.params.convId, tenantId);
@@ -465,7 +465,7 @@ router.get('/email/messages/:convId', (req, res) => {
 
 /** POST /email/messages/:convId/send — إرسال إيميل في المحادثة */
 router.post('/email/messages/:convId/send', async (req, res) => {
-  const tenantId = req.user.id;
+  const tenantId = req.inboxUser.id;
   const conv = req.db.prepare(
     `SELECT c.*, ct.phone as contact_email, ct.name as contact_name
      FROM inbox_conversations_v4 c
