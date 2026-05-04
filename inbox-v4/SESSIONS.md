@@ -1,3 +1,27 @@
+## جلسة 2026-05-04 18:35 UTC — P11-D: Pilot Migration
+- الحالة: مكتملة ✅
+- ما تم:
+  - **D1**: كتابة `server/scripts/migrate-inbox-v3-to-v4.js` (412 سطر)
+    - dry-run mode + execute mode + --all mode
+    - Transaction-safe (rollback كامل عند أي خطأ)
+    - `inbox_migration_log` جدول جديد لتسجيل كل عملية
+    - INSERT OR IGNORE = آمن لو شُغّل مرتين
+    - تحويل direction: in/out → inbound/outbound
+    - تحويل timestamps: TEXT → unix
+    - تحديث first_message_at تلقائياً
+  - **D2**: Dry-Run ناجح على Tenant 2 (pro-test)
+    - 11 محادثة + 466 رسالة ✅
+  - **D2**: تنفيذ الهجرة على Tenant 2
+    - backup: `2.db.backup-20260504-183800`
+    - نتيجة: 11/11 محادثة ✅ + 466/466 رسالة ✅
+    - migration_log: status=ok ✅
+  - Health check: `pm2 reload areej-pro` + `curl /health` → ok ✅
+- قرارات: لا جديد (D-046 مُنفّذة)
+- آخر commit: 7f8e333
+- المهمة القادمة: **P11-E** — Deferred Features (Email مجدول + Contacts + PDF)
+
+---
+
 ## جلسة 2026-05-04 18:00 UTC — P11-C: QA + Bugfix (Browser Automation)
 - الحالة: مكتملة ✅
 - ما تم:
