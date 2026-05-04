@@ -1,6 +1,6 @@
 /**
  * InboxAPI — كل الـ fetch calls لـ Inbox v4
- * آخر تحديث: 2026-05-04
+ * آخر تحديث: 2026-05-04 (M5 T18 — InboxConfig object)
  *
  * كل method ترجع Promise<{ data, error }>
  * لا تُطلق exceptions — الأخطاء في { error }
@@ -8,6 +8,19 @@
  * الاستخدام:
  *   const { data, error } = await InboxAPI.conversations.list({ status: 'open' });
  */
+
+/**
+ * InboxConfig — إعدادات الـ Inbox (D-044)
+ * يمنع hardcoded URLs ويُمهّد لـ Standalone deployment مستقبلاً
+ * \u062aعديل baseUrl فقط عند نشر مستقل عن ERP
+ */
+const InboxConfig = {
+  baseUrl:  window.location.origin,
+  apiBase:  '/api/inbox',
+  authBase: '/api/auth',
+  wsBase:   window.location.origin.replace(/^http/, 'ws'),
+  version:  'v4',
+};
 
 const InboxAPI = (() => {
 
