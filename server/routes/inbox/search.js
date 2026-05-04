@@ -55,7 +55,7 @@ router.get('/search', (req, res) => {
     }
 
     const db   = req.db;
-    const user = req.user;
+    const user = req.inboxUser;
     const like = `%${q}%`;
     const { clause: scopeClause, params: scopeParams } = _scopeClause(user);
 
@@ -207,7 +207,7 @@ router.get('/search/suggest', (req, res) => {
     if (!q) return res.json({ suggestions: [] });
 
     const db   = req.db;
-    const user = req.user;
+    const user = req.inboxUser;
     const like = `%${q}%`;
     const { clause: scopeClause, params: scopeParams } = _scopeClause(user);
 
