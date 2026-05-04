@@ -34,11 +34,13 @@ const crypto         = require('crypto');
 const { requireAuth } = require('../../auth-middleware');
 const { getTenantDb } = require('../../db-tenant');
 
-// حقن requireAuth + req.db على كل routes عدا /email/webhook/:token
+// حقن requireAuth + req.db + req.inboxUser على كل routes عدا /email/webhook/:token
 router.use((req, res, next) => {
   if (req.path.startsWith('/email/webhook/')) return next(); // public
   requireAuth(req, res, () => {
     req.db = req.db || getTenantDb(req.user.id); // req.user يأتي من requireAuth (owner id)
+    // توافق مع inbox adapter: req.inboxUser.id = tenant id
+    if (!req.inboxUser) req.inboxUser = { id: req.user.id };
     next();
   });
 });
