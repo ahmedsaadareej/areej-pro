@@ -841,6 +841,25 @@ const TENANT_MIGRATIONS = [
       ON inbox_conversation_labels(label_id)`,
   ]},
 
+  // v44: P11-D — جدول سجل Migration v3→v4
+  // آخر تحديث: 2026-05-04 — P11-D Pilot Migration
+  { version: 44, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_migration_log (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id    INTEGER NOT NULL,
+      migrated_at  TEXT    DEFAULT (datetime('now')),
+      status       TEXT    NOT NULL DEFAULT 'running',
+      v3_convs     INTEGER DEFAULT 0,
+      v4_convs     INTEGER DEFAULT 0,
+      v3_msgs      INTEGER DEFAULT 0,
+      v4_msgs      INTEGER DEFAULT 0,
+      error_msg    TEXT,
+      notes        TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_migration_log_tenant
+      ON inbox_migration_log(tenant_id, migrated_at)`,
+  ]},
+
 ];
 
 // ══════════════════════════════════════════════════════════════
