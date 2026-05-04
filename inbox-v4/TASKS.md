@@ -115,8 +115,28 @@
 
 ---
 
-## ✅ الحالة
-**Phase 10 ✅ مكتملة بالكامل** — M1 + M5 + M3 + M2 + M4 منجزة
-آخر commit: 50f792a — 2026-05-04
+## ✅ Phase 10 — مكتملة
+**M1 + M5 + M3 + M2 + M4 ✅** — آخر commit: eb588b3 — 2026-05-04
 
-التالي: تكامل فعلي و QA (page-reports يستدعي InboxAnalytics.mount) أو Phase 11 حسب أحمد
+---
+
+## 🔴 Phase 11 — التكامل الحقيقي + QA + الانتقال لـ v4
+> المرجع التفصيلي: `inbox-v4/execution/EX-P11-integration.md`
+
+### خريطة الجلسات
+
+| الجلسة | المحور | المهام | الحالة |
+|---|---|---|---|
+| 1 | **P11-A** Shell Wiring | A1→A5 (page modules تشتغل فعلياً) | ⏳ |
+| 2 | **P11-B** Permissions DB | B1→B4 (صلاحيات من DB حقيقية) | ⏳ |
+| 3 | **P11-C** QA + Bugfix | C1→C4 (console errors + SSE + mobile) | ⏳ |
+| 4 | **P11-D** Pilot Migration | D1→D3 (v3 → v4 لعميل واحد) | ⏳ |
+| 5+ | **P11-E** Deferred Features | E1 إيميل مجدول + E2 Contacts + E3 PDF | ⏳ |
+
+### المهمة القادمة فوراً
+**P11-A: Shell Wiring** — ربط page-reports + page-settings + page-inbox + shell.js + اختبار Deep Links
+الملفات:
+- `public/inbox-v4/pages/page-reports.js`
+- `public/inbox-v4/pages/page-settings.js`
+- `public/inbox-v4/pages/page-inbox.js`
+- `public/inbox-v4/shell.js`
