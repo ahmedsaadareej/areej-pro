@@ -501,7 +501,7 @@ function _fmtWA(r) {
 // GET /api/inbox/automation/welcome-away
 router.get('/automation/welcome-away', (req, res) => {
   try {
-    const row = _ensureWelcomeAway(req.db, req.user.id);
+    const row = _ensureWelcomeAway(req.db, req.inboxUser.id);
     res.json({ ok: true, settings: _fmtWA(row) });
   } catch (err) {
     console.error('[automation] get welcome-away:', err.message);
@@ -512,7 +512,7 @@ router.get('/automation/welcome-away', (req, res) => {
 // PUT /api/inbox/automation/welcome-away
 router.put('/automation/welcome-away', (req, res) => {
   try {
-    _ensureWelcomeAway(req.db, req.user.id);
+    _ensureWelcomeAway(req.db, req.inboxUser.id);
 
     const {
       welcome_active, welcome_message,
@@ -537,7 +537,7 @@ router.put('/automation/welcome-away', (req, res) => {
     if (!sets.length) return res.json({ ok: true, changed: false });
 
     sets.push('updated_at = unixepoch()');
-    params.push(req.user.id);
+    params.push(req.inboxUser.id);
 
     req.db.prepare(`
       UPDATE inbox_welcome_away_v4
@@ -545,7 +545,7 @@ router.put('/automation/welcome-away', (req, res) => {
       WHERE tenant_id = ?
     `).run(...params);
 
-    const updated = _fmtWA(req.db.prepare('SELECT * FROM inbox_welcome_away_v4 WHERE tenant_id = ?').get(req.user.id));
+    const updated = _fmtWA(req.db.prepare('SELECT * FROM inbox_welcome_away_v4 WHERE tenant_id = ?').get(req.inboxUser.id));
     res.json({ ok: true, settings: updated });
   } catch (err) {
     console.error('[automation] put welcome-away:', err.message);
@@ -674,7 +674,7 @@ function _fmtAC(r) {
 // GET /api/inbox/automation/auto-close
 router.get('/automation/auto-close', (req, res) => {
   try {
-    res.json({ ok: true, settings: _fmtAC(_ensureAutoClose(req.db, req.user.id)) });
+    res.json({ ok: true, settings: _fmtAC(_ensureAutoClose(req.db, req.inboxUser.id)) });
   } catch (err) {
     console.error('[automation] get auto-close:', err.message);
     res.status(500).json({ error: err.message });
@@ -684,7 +684,7 @@ router.get('/automation/auto-close', (req, res) => {
 // PUT /api/inbox/automation/auto-close
 router.put('/automation/auto-close', (req, res) => {
   try {
-    _ensureAutoClose(req.db, req.user.id);
+    _ensureAutoClose(req.db, req.inboxUser.id);
 
     const {
       enabled, idle_minutes, status_filter,
@@ -706,11 +706,11 @@ router.put('/automation/auto-close', (req, res) => {
     if (!sets.length) return res.json({ ok: true, changed: false });
 
     sets.push('updated_at = unixepoch()');
-    params.push(req.user.id);
+    params.push(req.inboxUser.id);
 
     req.db.prepare(`UPDATE inbox_auto_close_v4 SET ${sets.join(', ')} WHERE tenant_id = ?`).run(...params);
 
-    res.json({ ok: true, settings: _fmtAC(req.db.prepare('SELECT * FROM inbox_auto_close_v4 WHERE tenant_id = ?').get(req.user.id)) });
+    res.json({ ok: true, settings: _fmtAC(req.db.prepare('SELECT * FROM inbox_auto_close_v4 WHERE tenant_id = ?').get(req.inboxUser.id)) });
   } catch (err) {
     console.error('[automation] put auto-close:', err.message);
     res.status(500).json({ error: err.message });
@@ -720,7 +720,7 @@ router.put('/automation/auto-close', (req, res) => {
 // POST /api/inbox/automation/auto-close/run  — تشغيل يدوي فوري
 router.post('/automation/auto-close/run', async (req, res) => {
   try {
-    const result = await runAutoClose(req.db, req.user.id);
+    const result = await runAutoClose(req.db, req.inboxUser.id);
     res.json({ ok: true, ...result });
   } catch (err) {
     console.error('[automation] run auto-close:', err.message);
@@ -848,7 +848,7 @@ router.get('/conversations/:id/scheduled', (req, res) => {
       SELECT * FROM inbox_scheduled_messages_v4
       WHERE conversation_id = ? AND tenant_id = ?
       ORDER BY scheduled_at ASC
-    `).all(req.params.id, req.user.id);
+    `).all(req.params.id, req.inboxUser.id);
     res.json({ ok: true, scheduled: rows.map(_fmtSched) });
   } catch (err) {
     console.error('[scheduled] list:', err.message);
@@ -867,7 +867,7 @@ router.get('/scheduled', (req, res) => {
       WHERE s.tenant_id = ? AND s.status = ?
       ORDER BY s.scheduled_at ASC
       LIMIT ?
-    `).all(req.user.id, status, Math.min(parseInt(limit)||50, 200));
+    `).all(req.inboxUser.id, status, Math.min(parseInt(limit)||50, 200));
     res.json({ ok: true, scheduled: rows.map(_fmtSched) });
   } catch (err) {
     console.error('[scheduled] list all:', err.message);
@@ -897,7 +897,7 @@ router.post('/conversations/:id/scheduled', (req, res) => {
       INSERT INTO inbox_scheduled_messages_v4
         (tenant_id, conversation_id, content, message_type, media_url, scheduled_at, created_by)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(req.user.id, conv.id, content.trim(), message_type, media_url||null, schedSec, req.user.id);
+    `).run(req.inboxUser.id, conv.id, content.trim(), message_type, media_url||null, schedSec, req.inboxUser.id);
 
     const row = req.db.prepare('SELECT * FROM inbox_scheduled_messages_v4 WHERE id = ?').get(result.lastInsertRowid);
     res.json({ ok: true, scheduled: _fmtSched(row) });
@@ -912,7 +912,7 @@ router.delete('/scheduled/:id', (req, res) => {
   try {
     const row = req.db.prepare(
       'SELECT id FROM inbox_scheduled_messages_v4 WHERE id = ? AND tenant_id = ?'
-    ).get(req.params.id, req.user.id);
+    ).get(req.params.id, req.inboxUser.id);
     if (!row) return res.status(404).json({ error: 'الرسالة غير موجودة' });
 
     req.db.prepare('DELETE FROM inbox_scheduled_messages_v4 WHERE id = ?').run(row.id);
@@ -928,7 +928,7 @@ router.put('/scheduled/:id', (req, res) => {
   try {
     const row = req.db.prepare(
       "SELECT * FROM inbox_scheduled_messages_v4 WHERE id = ? AND tenant_id = ? AND status = 'pending'"
-    ).get(req.params.id, req.user.id);
+    ).get(req.params.id, req.inboxUser.id);
     if (!row) return res.status(404).json({ error: 'الرسالة غير موجودة أو تم إرسالها' });
 
     const { content, scheduled_at } = req.body;
@@ -1018,7 +1018,7 @@ async function runScheduledMessages(db, tenantId) {
 // POST /api/inbox/automation/scheduled/run — تشغيل يدوي
 router.post('/automation/scheduled/run', async (req, res) => {
   try {
-    const result = await runScheduledMessages(req.db, req.user.id);
+    const result = await runScheduledMessages(req.db, req.inboxUser.id);
     res.json({ ok: true, ...result });
   } catch (err) {
     console.error('[scheduled] run:', err.message);
@@ -1063,7 +1063,7 @@ router.get('/automation/webhooks', (req, res) => {
   try {
     const rows = req.db.prepare(
       'SELECT * FROM inbox_webhooks_v4 WHERE tenant_id = ? ORDER BY created_at DESC'
-    ).all(req.user.id);
+    ).all(req.inboxUser.id);
     res.json({ ok: true, webhooks: rows.map(_fmtWH) });
   } catch (err) {
     console.error('[webhooks] list:', err.message);
@@ -1092,7 +1092,7 @@ router.post('/automation/webhooks', (req, res) => {
         (tenant_id, name, url, secret, events, is_active, retry_count, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)
     `).run(
-      req.user.id,
+      req.inboxUser.id,
       name.trim(),
       url.trim(),
       secret?.trim() || null,
@@ -1112,7 +1112,7 @@ router.post('/automation/webhooks', (req, res) => {
 router.put('/automation/webhooks/:id', (req, res) => {
   const wh = req.db.prepare(
     'SELECT id FROM inbox_webhooks_v4 WHERE id = ? AND tenant_id = ?'
-  ).get(req.params.id, req.user.id);
+  ).get(req.params.id, req.inboxUser.id);
   if (!wh) return res.status(404).json({ error: 'webhook غير موجود' });
 
   const { name, url, secret, events, is_active, retry_count } = req.body;
@@ -1148,7 +1148,7 @@ router.put('/automation/webhooks/:id', (req, res) => {
 router.delete('/automation/webhooks/:id', (req, res) => {
   const wh = req.db.prepare(
     'SELECT id FROM inbox_webhooks_v4 WHERE id = ? AND tenant_id = ?'
-  ).get(req.params.id, req.user.id);
+  ).get(req.params.id, req.inboxUser.id);
   if (!wh) return res.status(404).json({ error: 'webhook غير موجود' });
 
   try {
@@ -1164,7 +1164,7 @@ router.delete('/automation/webhooks/:id', (req, res) => {
 router.put('/automation/webhooks/:id/toggle', (req, res) => {
   const wh = req.db.prepare(
     'SELECT id, is_active FROM inbox_webhooks_v4 WHERE id = ? AND tenant_id = ?'
-  ).get(req.params.id, req.user.id);
+  ).get(req.params.id, req.inboxUser.id);
   if (!wh) return res.status(404).json({ error: 'webhook غير موجود' });
 
   try {
@@ -1184,7 +1184,7 @@ router.put('/automation/webhooks/:id/toggle', (req, res) => {
 router.post('/automation/webhooks/:id/test', async (req, res) => {
   const wh = req.db.prepare(
     'SELECT * FROM inbox_webhooks_v4 WHERE id = ? AND tenant_id = ?'
-  ).get(req.params.id, req.user.id);
+  ).get(req.params.id, req.inboxUser.id);
   if (!wh) return res.status(404).json({ error: 'webhook غير موجود' });
 
   const testPayload = {
@@ -1207,7 +1207,7 @@ router.post('/automation/webhooks/:id/test', async (req, res) => {
 router.get('/automation/webhooks/:id/logs', (req, res) => {
   const wh = req.db.prepare(
     'SELECT id FROM inbox_webhooks_v4 WHERE id = ? AND tenant_id = ?'
-  ).get(req.params.id, req.user.id);
+  ).get(req.params.id, req.inboxUser.id);
   if (!wh) return res.status(404).json({ error: 'webhook غير موجود' });
 
   try {
