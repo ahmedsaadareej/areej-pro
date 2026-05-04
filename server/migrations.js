@@ -799,6 +799,48 @@ const TENANT_MIGRATIONS = [
     `INSERT OR IGNORE INTO inbox_csat_settings_v4 (id) VALUES (1)`,
   ]},
 
+  // v42: M4 — جدول التقارير المجدولة (inbox_scheduled_reports_v4)
+  // آخر تحديث: 2026-05-04 — M4 Analytics
+  { version: 42, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_scheduled_reports_v4 (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      name        TEXT NOT NULL,
+      report_type TEXT NOT NULL CHECK(report_type IN
+                  ('overview','agents','sla','csat','labels','automation','full')),
+      frequency   TEXT NOT NULL CHECK(frequency IN ('daily','weekly','monthly')),
+      send_hour   INTEGER NOT NULL DEFAULT 8
+                  CHECK(send_hour BETWEEN 0 AND 23),
+      send_day    INTEGER CHECK(send_day BETWEEN 0 AND 6),
+      recipients  TEXT NOT NULL,
+      format      TEXT NOT NULL DEFAULT 'csv'
+                  CHECK(format IN ('csv','pdf')),
+      active      INTEGER NOT NULL DEFAULT 1,
+      last_sent   INTEGER,
+      created_at  INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+      created_by  INTEGER
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_scheduled_reports_active
+      ON inbox_scheduled_reports_v4(active, send_hour)`,
+  ]},
+
+  // v43: M4 — DB Indexes للأداء على Analytics queries
+  // آمن على production — CREATE INDEX IF NOT EXISTS لا يمس البيانات
+  // آخر تحديث: 2026-05-04 — M4 Analytics
+  { version: 43, sqls: [
+    `CREATE INDEX IF NOT EXISTS idx_conv_created_at
+      ON inbox_conversations_v4(created_at)`,
+    `CREATE INDEX IF NOT EXISTS idx_conv_assigned
+      ON inbox_conversations_v4(assigned_to_id, created_at)`,
+    `CREATE INDEX IF NOT EXISTS idx_conv_status_date
+      ON inbox_conversations_v4(status, created_at)`,
+    `CREATE INDEX IF NOT EXISTS idx_msg_conv_id
+      ON inbox_messages_v4(conversation_id, created_at)`,
+    `CREATE INDEX IF NOT EXISTS idx_conv_labels_conv
+      ON inbox_conversation_labels(conversation_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_conv_labels_label
+      ON inbox_conversation_labels(label_id)`,
+  ]},
+
 ];
 
 // ══════════════════════════════════════════════════════════════
