@@ -1,6 +1,6 @@
 /**
  * Inbox v4 Routes — /api/inbox/*
- * آخر تحديث: 2026-05-04 (M5 T13 — inboxAuthAdapter مُفعَّل قبل loadInboxPermissions)
+ * آخر تحديث: 2026-05-04 (P11-E2 — Contacts route)
  *
  * مسجّل في app.js كـ:
  *   app.use('/api/inbox', require('./routes/inbox/index'))
@@ -118,5 +118,8 @@ router.use('/', require('./email'));
 
 // Phase 10 M1 — Settings (Roles + Users)
 router.use('/settings', require('./settings'));
+
+// Phase 11 E2 — Contacts Page
+router.use('/', require('./contacts'));
 
 module.exports = router;

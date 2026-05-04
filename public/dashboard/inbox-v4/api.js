@@ -462,6 +462,18 @@ const settings = {
     testChannel:   (ch)        => _post(`/inbox/settings/channels/${ch}/test`),
   };
 
+  // ─── Contacts Page (P11-E2) ──────────────────────────────────────────────
+
+  const contacts = {
+    list  : (p = {}) => _get('/inbox/contacts', p),
+    stats : ()       => _get('/inbox/contacts/stats'),
+    get   : (id)     => _get(`/inbox/contacts/${id}`),
+    convs : (id, p)  => _get(`/inbox/contacts/${id}/conversations`, p),
+    create: (data)   => _post('/inbox/contacts', data),
+    update: (id, d)  => _put(`/inbox/contacts/${id}`, d),
+    remove: (id)     => _delete(`/inbox/contacts/${id}`),
+  };
+
   // ─── CRM & ERP (للـ Context Panel) ───────────────────────────────────
 
   const crm = {
@@ -713,6 +725,7 @@ const settings = {
     autoAssignAll:  () => team.autoAssignAll(),
     analytics,
     settings,
+    contacts,
     crm,
     broadcast,
     search,
