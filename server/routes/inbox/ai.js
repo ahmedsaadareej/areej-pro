@@ -336,7 +336,7 @@ router.post('/conversations/:id/ai/labels', async (req, res) => {
     // 2) جلب الـ labels المتاحة للـ tenant
     const availableLabels = req.db.prepare(
       'SELECT id, name FROM inbox_labels_v4 WHERE tenant_id = ? ORDER BY name ASC'
-    ).all(req.user.id);
+    ).all(req.inboxUser.id);
 
     // لو مفيش labels أصلاً، ارجع فاضي
     if (!availableLabels || availableLabels.length === 0) {
