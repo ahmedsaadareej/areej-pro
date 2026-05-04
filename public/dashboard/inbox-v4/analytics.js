@@ -1398,7 +1398,638 @@ const InboxAnalytics = (() => {
     document.removeEventListener('keydown', _onKeyDown);
   }
 
-  return { open, close };
+  // ─── M4 T58: Page Module API (mount/unmount) ────────────────────────────
+  // يُستخدم من shell.js عبر route /reports
+  // يُغلّف الـ overlay الحالي داخل container خارجي
+  // آخر تحديث: 2026-05-04
+
+  let _pageContainer = null;
+  let _liveInterval  = null;
+
+  /**
+   * mount — يفتح Analytics كـ full-page داخل container المُمرَّر
+   * @param {HTMLElement} container
+   * @param {Object}      params     - { section: 'overview'|'labels'|'automation'|'scheduled' }
+   */
+  function mount(container, params) {
+    _pageContainer = container;
+    const section  = (params && params.section) || 'overview';
+
+    // T62: Permission-Aware — نقرأ الدور من InboxStore
+    const roleId  = window.InboxStore?.state?.currentUser?.inbox_role_id;
+    const roleMap = { 1: 'owner', 2: 'admin', 3: 'supervisor', 4: 'agent', 5: 'readonly' };
+    const roleStr = roleMap[roleId] || 'agent';
+    const canExport    = window.InboxStore?.can ? InboxStore.can('export')    : true;
+    const canScheduled = ['owner', 'admin'].includes(roleStr);
+
+    // بناء الـ page shell
+    container.innerHTML = `
+      <div class="iv4-an-page">
+
+        <!-- Live Status Bar (T61) -->
+        <div class="iv4-an-live-bar" id="iv4-an-live-bar">
+          <span class="iv4-an-live-dot"></span>
+          <span id="iv4-an-live-open">—</span> مفتوحة &nbsp;|
+          &nbsp;<span id="iv4-an-live-agents">—</span> موظف أونلاين
+        </div>
+
+        <!-- Nav tabs -->
+        <nav class="iv4-an-page-nav" id="iv4-an-page-nav">
+          <button class="iv4-an-tab ${section==='overview'   ?'active':''}" data-section="overview"   >📈 نظرة عامة</button>
+          <button class="iv4-an-tab ${section==='agents'     ?'active':''}" data-section="agents"     >👥 الموظفون</button>
+          <button class="iv4-an-tab ${section==='labels'     ?'active':''}" data-section="labels"     >🏷 التصنيفات</button>
+          <button class="iv4-an-tab ${section==='automation' ?'active':''}" data-section="automation" >🤖 الأتمتة والـ AI</button>
+          <button class="iv4-an-tab ${section==='sla'        ?'active':''}" data-section="sla"        >⏱ SLA</button>
+          <button class="iv4-an-tab ${section==='csat'       ?'active':''}" data-section="csat"       >⭐ CSAT</button>
+          ${canScheduled
+            ? `<button class="iv4-an-tab ${section==='scheduled'?'active':''}" data-section="scheduled">📅 مجدول</button>`
+            : ''}
+        </nav>
+
+        <!-- Date Range -->
+        <div class="iv4-an-range iv4-an-page-range">
+          <button class="iv4-an-preset active" data-preset="7">7 أيام</button>
+          <button class="iv4-an-preset" data-preset="30">30 يوم</button>
+          <button class="iv4-an-preset" data-preset="90">90 يوم</button>
+          <input type="date" id="iv4-an-from" class="iv4-an-date-input" />
+          <span>→</span>
+          <input type="date" id="iv4-an-to"   class="iv4-an-date-input" />
+          <button id="iv4-an-apply-range" class="iv4-an-apply-btn">تطبيق</button>
+          ${canExport ? `<button id="iv4-an-export-full" class="iv4-an-export-btn">⬇ تصدير CSV</button>` : ''}
+        </div>
+
+        <!-- Loading bar -->
+        <div class="iv4-an-loading-bar hidden" id="iv4-an-loading"></div>
+
+        <!-- Content area -->
+        <div class="iv4-an-page-content" id="iv4-an-body"></div>
+
+      </div>
+    `;
+
+    // ضبط النطاق الافتراضي
+    if (!_from || !_to) _applyPreset('30');
+    const fromInput = container.querySelector('#iv4-an-from');
+    const toInput   = container.querySelector('#iv4-an-to');
+    if (fromInput) fromInput.value = _from;
+    if (toInput)   toInput.value   = _to;
+
+    // T62: Agent → وجّه مباشرة لصفحته
+    let activeSection = section;
+    if (roleStr === 'agent') {
+      const selfId = window.InboxStore?.state?.currentUser?.id;
+      if (selfId) activeSection = 'agents';
+    }
+
+    // ربط tabs
+    container.querySelectorAll('.iv4-an-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        container.querySelectorAll('.iv4-an-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _loadPageSection(btn.dataset.section, roleStr);
+      });
+    });
+
+    // ربط date range
+    _bindPageRange(container, roleStr);
+
+    // T61: Live Status Bar
+    _startLiveBar();
+
+    // تحميل القسم الأول
+    _loadPageSection(activeSection, roleStr);
+  }
+
+  /**
+   * unmount — تنظيف عند مغادرة صفحة Analytics
+   */
+  function unmount() {
+    if (_liveInterval) { clearInterval(_liveInterval); _liveInterval = null; }
+    _pageContainer = null;
+  }
+
+  // ─── Page Section Loader ─────────────────────────────────────────────────
+
+  function _loadPageSection(section, roleStr) {
+    const body = document.getElementById('iv4-an-body');
+    if (!body) return;
+    body.innerHTML = '<div class="iv4-an-page-loading">جارٍ التحميل...</div>';
+
+    const selfId = window.InboxStore?.state?.currentUser?.id;
+
+    switch (section) {
+      case 'overview':
+        _loadAll_page();       break;
+      case 'agents':
+        // T62: agent يرى نفسه فقط
+        if (roleStr === 'agent' && selfId) {
+          _loadAgentDetail_page(selfId);
+        } else {
+          _loadAgents_page();
+        }
+        break;
+      case 'labels':
+        _loadLabels_page();    break;
+      case 'automation':
+        _loadAutomation_page(); break;
+      case 'sla':
+        _loadSLA_page();       break;
+      case 'csat':
+        _loadCSAT_page();      break;
+      case 'scheduled':
+        _loadScheduled_page(); break;
+      default:
+        _loadAll_page();
+    }
+  }
+
+  // تحميل overview (نفس الـ _loadAll الحالي ولكن داخل iv4-an-body)
+  function _loadAll_page() {
+    if (!_from || !_to) _applyPreset('30');
+    _setLoading(true);
+    Promise.all([
+      fetch(`/api/inbox/analytics/overview?from=${_from}&to=${_to}`).then(r => r.json()),
+      fetch(`/api/inbox/analytics/volume?from=${_from}&to=${_to}`).then(r => r.json()),
+      fetch(`/api/inbox/analytics/hourly?from=${_from}&to=${_to}`).then(r => r.json()),
+      fetch(`/api/inbox/analytics/platforms?from=${_from}&to=${_to}`).then(r => r.json()),
+    ]).then(([ov, vol, hr, plat]) => {
+      _setLoading(false);
+      const body = document.getElementById('iv4-an-body');
+      if (!body) return;
+      body.innerHTML = `
+        <section class="iv4-an-section">
+          <h3 class="iv4-an-section-title">📈 نظرة عامة</h3>
+          <div class="iv4-an-kpi-grid" id="iv4-an-kpi-grid"></div>
+        </section>
+        <section class="iv4-an-section">
+          <h3 class="iv4-an-section-title">📅 حجم المحادثات يومياً</h3>
+          <div class="iv4-an-chart-wrap"><canvas id="iv4-an-volume-chart" class="iv4-an-canvas"></canvas></div>
+        </section>
+        <section class="iv4-an-section iv4-an-section--half">
+          <h3 class="iv4-an-section-title">🕐 أوقات الذروة</h3>
+          <div id="iv4-an-hourly" class="iv4-an-hourly"></div>
+        </section>
+        <section class="iv4-an-section iv4-an-section--half">
+          <h3 class="iv4-an-section-title">📡 توزيع المنصات</h3>
+          <div id="iv4-an-platforms" class="iv4-an-platforms"></div>
+        </section>
+      `;
+      if (ov.ok)   _renderKPI(ov);
+      if (vol.ok)  _renderVolumeChart(vol.volume || []);
+      if (hr.ok)   _renderHourly(hr.hourly || []);
+      if (plat.ok) _renderPlatforms(plat.platforms || []);
+    }).catch(() => _setLoading(false));
+  }
+
+  // تحميل قسم الموظفين
+  function _loadAgents_page() {
+    fetch(`/api/inbox/analytics/agents?from=${_from}&to=${_to}`)
+      .then(r => r.json())
+      .then(data => {
+        const body = document.getElementById('iv4-an-body');
+        if (!body) return;
+        if (!data.ok) {
+          body.innerHTML = '<div class="iv4-an-empty">ليس لديك صلاحية لعرض هذا التقرير</div>';
+          return;
+        }
+        _lastAgentsData = data.agents || [];
+        body.innerHTML = `
+          <section class="iv4-an-section">
+            <div class="iv4-an-section-header-row">
+              <h3 class="iv4-an-section-title">👥 أداء الموظفين</h3>
+              <button id="iv4-an-export-agents" class="iv4-an-export-btn">⬇ تصدير CSV</button>
+            </div>
+            <div class="iv4-an-table-wrap">
+              <table class="iv4-an-table">
+                <thead><tr>
+                  <th>الموظف</th><th>محادثات</th><th>مغلقة</th>
+                  <th>معدل الإغلاق</th><th>رسائل أُرسلت</th>
+                  <th>وقت أول رد</th><th>وقت الإغلاق</th>
+                </tr></thead>
+                <tbody id="iv4-an-agents-body"></tbody>
+              </table>
+            </div>
+          </section>
+        `;
+        _renderAgents(data);
+        document.getElementById('iv4-an-export-agents')
+          ?.addEventListener('click', _exportAgentsCSV);
+      })
+      .catch(() => {
+        const body = document.getElementById('iv4-an-body');
+        if (body) body.innerHTML = '<div class="iv4-an-empty">خطأ في تحميل البيانات</div>';
+      });
+  }
+
+  function _loadAgentDetail_page(agentId) {
+    // تحميل تفاصيل موظف واحد (للـ agent role)
+    fetch(`/api/inbox/analytics/agents/${agentId}?from=${_from}&to=${_to}`)
+      .then(r => r.json())
+      .then(data => {
+        const body = document.getElementById('iv4-an-body');
+        if (!body) return;
+        if (!data.ok) {
+          body.innerHTML = '<div class="iv4-an-empty">لا توجد بيانات كافية</div>';
+          return;
+        }
+        body.innerHTML = `<section class="iv4-an-section" id="iv4-an-agent-detail"></section>`;
+        _renderAgentDetail(data);
+      })
+      .catch(() => {});
+  }
+
+  // ─── T59: قسم Labels ──────────────────────────────────────────────────────
+  // آخر تحديث: 2026-05-04
+
+  function _loadLabels_page() {
+    fetch(`/api/inbox/analytics/labels?from=${_from}&to=${_to}`)
+      .then(r => r.json())
+      .then(data => {
+        const body = document.getElementById('iv4-an-body');
+        if (!body) return;
+        if (!data.ok || !data.labels) {
+          body.innerHTML = '<div class="iv4-an-empty">لا توجد بيانات تصنيفات</div>';
+          return;
+        }
+        const labels = data.labels;
+        const maxCount = Math.max(...labels.map(l => l.conv_count || 0), 1);
+
+        const rows = labels.map(l => `
+          <tr>
+            <td>
+              <span class="iv4-an-label-dot" style="background:${_esc(l.color || '#888')}"></span>
+              ${_esc(l.name)}
+            </td>
+            <td>${_fmt(l.conv_count)}</td>
+            <td>
+              <div class="iv4-an-bar-wrap">
+                <div class="iv4-an-bar-fill" style="width:${Math.round((l.conv_count/maxCount)*100)}%;background:${_esc(l.color||'#6366f1')}"></div>
+              </div>
+            </td>
+            <td>${l.avg_resolution_min != null ? Math.round(l.avg_resolution_min) + ' د' : '—'}</td>
+          </tr>
+        `).join('');
+
+        body.innerHTML = `
+          <section class="iv4-an-section">
+            <h3 class="iv4-an-section-title">🏷 تحليل التصنيفات</h3>
+            ${labels.length === 0
+              ? '<div class="iv4-an-empty">لم يُستخدم أي تصنيف في هذه الفترة</div>'
+              : `<div class="iv4-an-table-wrap">
+                   <table class="iv4-an-table">
+                     <thead><tr>
+                       <th>التصنيف</th>
+                       <th>عدد المحادثات</th>
+                       <th>النسبة</th>
+                       <th>متوسط وقت الحل</th>
+                     </tr></thead>
+                     <tbody>${rows}</tbody>
+                   </table>
+                 </div>`
+            }
+          </section>
+        `;
+      })
+      .catch(() => {
+        const body = document.getElementById('iv4-an-body');
+        if (body) body.innerHTML = '<div class="iv4-an-empty">خطأ في تحميل التصنيفات</div>';
+      });
+  }
+
+  // ─── T60: قسم AI & Automation ────────────────────────────────────────────
+  // آخر تحديث: 2026-05-04
+
+  function _loadAutomation_page() {
+    Promise.all([
+      fetch(`/api/inbox/analytics/automation?from=${_from}&to=${_to}`).then(r => r.json()),
+      fetch(`/api/inbox/analytics/sentiment?from=${_from}&to=${_to}`).then(r => r.json()).catch(() => null),
+    ]).then(([auto, sentiment]) => {
+      const body = document.getElementById('iv4-an-body');
+      if (!body) return;
+
+      const kws = (auto.keyword_stats || []).map(k => `
+        <tr><td>${_esc(k.keyword)}</td><td>${_fmt(k.trigger_count)}</td></tr>
+      `).join('');
+
+      body.innerHTML = `
+        <section class="iv4-an-section">
+          <h3 class="iv4-an-section-title">🤖 الأتمتة والـ AI</h3>
+          <div class="iv4-an-kpi-grid">
+            <div class="iv4-an-kpi-card">
+              <div class="iv4-an-kpi-val">${_fmt(auto.chatbot_only)}</div>
+              <div class="iv4-an-kpi-label">أُغلقت بالـ Chatbot</div>
+            </div>
+            <div class="iv4-an-kpi-card">
+              <div class="iv4-an-kpi-val">${_fmt(auto.auto_closed)}</div>
+              <div class="iv4-an-kpi-label">أُغلقت تلقائياً</div>
+            </div>
+            <div class="iv4-an-kpi-card">
+              <div class="iv4-an-kpi-val">${_fmt(auto.ai_suggested)}</div>
+              <div class="iv4-an-kpi-label">اقتراحات AI استُخدمت</div>
+            </div>
+            <div class="iv4-an-kpi-card">
+              <div class="iv4-an-kpi-val">${auto.chatbot_completion_rate || 0}%</div>
+              <div class="iv4-an-kpi-label">معدل إنجاز الـ Chatbot</div>
+            </div>
+          </div>
+        </section>
+
+        ${kws ? `
+          <section class="iv4-an-section">
+            <h3 class="iv4-an-section-title">🔑 الكلمات المفتاحية الأكثر تشغيلاً</h3>
+            <div class="iv4-an-table-wrap">
+              <table class="iv4-an-table">
+                <thead><tr><th>الكلمة</th><th>مرات التشغيل</th></tr></thead>
+                <tbody>${kws}</tbody>
+              </table>
+            </div>
+          </section>` : ''}
+
+        <!-- T60: Sentiment هنا (D-037) -->
+        <section class="iv4-an-section" id="iv4-an-sentiment-section">
+          <div class="iv4-an-section-header-row">
+            <h3 class="iv4-an-section-title">🧠 تحليل المشاعر</h3>
+            <span class="iv4-an-sentiment-hint" id="iv4-an-sentiment-hint"></span>
+          </div>
+          <div id="iv4-an-sentiment" class="iv4-an-sentiment-wrap"></div>
+        </section>
+      `;
+
+      // رسم Sentiment (ينتقل لهنا حسب D-037)
+      if (sentiment) _renderSentiment(sentiment);
+    })
+    .catch(() => {
+      const body = document.getElementById('iv4-an-body');
+      if (body) body.innerHTML = '<div class="iv4-an-empty">خطأ في تحميل بيانات الأتمتة</div>';
+    });
+  }
+
+  // SLA page
+  function _loadSLA_page() {
+    fetch(`/api/inbox/analytics/sla?from=${_from}&to=${_to}`)
+      .then(r => r.json())
+      .then(data => {
+        const body = document.getElementById('iv4-an-body');
+        if (!body) return;
+        body.innerHTML = `
+          <section class="iv4-an-section">
+            <h3 class="iv4-an-section-title">⏱ الالتزام بـ SLA</h3>
+            <div id="iv4-an-sla" class="iv4-an-sla-grid"></div>
+          </section>`;
+        if (data.ok) _renderSLA(data);
+      }).catch(() => {});
+  }
+
+  // CSAT page
+  function _loadCSAT_page() {
+    fetch(`/api/inbox/analytics/csat?from=${_from}&to=${_to}`)
+      .then(r => r.json())
+      .then(data => {
+        const body = document.getElementById('iv4-an-body');
+        if (!body) return;
+        body.innerHTML = `
+          <section class="iv4-an-section" id="iv4-an-csat-section">
+            <h3 class="iv4-an-section-title">⭐ رضا العملاء (CSAT)</h3>
+            <div id="iv4-an-csat" class="iv4-an-csat-wrap"></div>
+          </section>`;
+        if (data.ok) _renderCSAT(data);
+      }).catch(() => {});
+  }
+
+  // ─── T63: قسم Scheduled Reports ─────────────────────────────────────────
+  // مرئي لـ Owner / Admin فقط — Email delivery مؤجل Phase 10+ (D-034)
+  // آخر تحديث: 2026-05-04
+
+  function _loadScheduled_page() {
+    fetch('/api/inbox/analytics/scheduled')
+      .then(r => r.json())
+      .then(data => {
+        const body = document.getElementById('iv4-an-body');
+        if (!body) return;
+
+        if (!data.ok) {
+          body.innerHTML = '<div class="iv4-an-empty">هذا القسم للمدراء فقط</div>';
+          return;
+        }
+
+        const reports = data.reports || [];
+        const TYPE_LABEL = {
+          overview:'نظرة عامة', agents:'الموظفون', sla:'SLA',
+          csat:'CSAT', labels:'التصنيفات', automation:'الأتمتة', full:'شامل',
+        };
+        const FREQ_LABEL = { daily:'يومي', weekly:'أسبوعي', monthly:'شهري' };
+
+        const rows = reports.map(r => `
+          <tr>
+            <td>${_esc(r.name)}</td>
+            <td>${TYPE_LABEL[r.report_type] || r.report_type}</td>
+            <td>${FREQ_LABEL[r.frequency]  || r.frequency}</td>
+            <td>${r.send_hour}:00</td>
+            <td>${(r.recipients || []).join(', ')}</td>
+            <td>
+              <span class="iv4-an-status-badge ${r.active ? 'active' : 'inactive'}">
+                ${r.active ? '✅ مفعّل' : '⏸ موقوف'}
+              </span>
+            </td>
+            <td>
+              <button class="iv4-an-del-btn" data-id="${r.id}" title="حذف">🗑</button>
+              <button class="iv4-an-toggle-btn" data-id="${r.id}" data-active="${r.active}"
+                title="${r.active ? 'إيقاف' : 'تفعيل'}">
+                ${r.active ? '⏸' : '▶'}
+              </button>
+            </td>
+          </tr>
+        `).join('');
+
+        body.innerHTML = `
+          <section class="iv4-an-section">
+            <div class="iv4-an-section-header-row">
+              <h3 class="iv4-an-section-title">📅 التقارير المجدولة</h3>
+              <button id="iv4-an-new-report-btn" class="iv4-an-export-btn iv4-an-export-btn--primary">
+                + تقرير جديد
+              </button>
+            </div>
+            <p class="iv4-an-note">⚠️ إرسال البريد الإلكتروني قيد التطوير — سيُفعَّل قريباً</p>
+            ${ reports.length === 0
+              ? '<div class="iv4-an-empty">لا توجد تقارير مجدولة بعد</div>'
+              : `<div class="iv4-an-table-wrap">
+                   <table class="iv4-an-table">
+                     <thead><tr>
+                       <th>الاسم</th><th>النوع</th><th>التكرار</th>
+                       <th>الوقت</th><th>المستلمون</th><th>الحالة</th><th>إجراءات</th>
+                     </tr></thead>
+                     <tbody>${rows}</tbody>
+                   </table>
+                 </div>`
+            }
+          </section>
+
+          <!-- Modal إنشاء تقرير -->
+          <div class="iv4-an-modal-backdrop hidden" id="iv4-an-sched-modal">
+            <div class="iv4-an-modal-box">
+              <h3>📅 تقرير جديد</h3>
+              <label>الاسم
+                <input id="iv4-sched-name" class="iv4-an-input" placeholder="مثال: تقرير أسبوعي" />
+              </label>
+              <label>نوع البيانات
+                <select id="iv4-sched-type" class="iv4-an-input">
+                  <option value="overview">نظرة عامة</option>
+                  <option value="agents">الموظفون</option>
+                  <option value="sla">SLA</option>
+                  <option value="csat">CSAT</option>
+                  <option value="labels">التصنيفات</option>
+                  <option value="automation">الأتمتة</option>
+                  <option value="full">شامل</option>
+                </select>
+              </label>
+              <label>التكرار
+                <select id="iv4-sched-freq" class="iv4-an-input">
+                  <option value="daily">يومي</option>
+                  <option value="weekly">أسبوعي</option>
+                  <option value="monthly">شهري</option>
+                </select>
+              </label>
+              <label>وقت الإرسال (ساعة)
+                <input id="iv4-sched-hour" type="number" min="0" max="23" value="8" class="iv4-an-input" />
+              </label>
+              <label>المستلمون (بريد إلكتروني، مفصول بفاصلة)
+                <input id="iv4-sched-recip" class="iv4-an-input" placeholder="ahmed@example.com, ali@example.com" />
+              </label>
+              <div class="iv4-an-modal-actions">
+                <button id="iv4-sched-save" class="iv4-an-export-btn iv4-an-export-btn--primary">حفظ</button>
+                <button id="iv4-sched-cancel" class="iv4-an-export-btn">إلغاء</button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // ربط أحداث الجدول
+        body.querySelectorAll('.iv4-an-del-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (!confirm('حذف هذا التقرير؟')) return;
+            fetch(`/api/inbox/analytics/scheduled/${btn.dataset.id}`, { method: 'DELETE' })
+              .then(r => r.json())
+              .then(d => { if (d.ok) _loadScheduled_page(); });
+          });
+        });
+
+        body.querySelectorAll('.iv4-an-toggle-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const newActive = btn.dataset.active === '1' ? 0 : 1;
+            fetch(`/api/inbox/analytics/scheduled/${btn.dataset.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ active: newActive }),
+            }).then(r => r.json()).then(d => { if (d.ok) _loadScheduled_page(); });
+          });
+        });
+
+        // modal إنشاء
+        document.getElementById('iv4-an-new-report-btn')
+          ?.addEventListener('click', () => {
+            document.getElementById('iv4-an-sched-modal')?.classList.remove('hidden');
+          });
+        document.getElementById('iv4-sched-cancel')
+          ?.addEventListener('click', () => {
+            document.getElementById('iv4-an-sched-modal')?.classList.add('hidden');
+          });
+        document.getElementById('iv4-sched-save')
+          ?.addEventListener('click', () => {
+            const name    = document.getElementById('iv4-sched-name')?.value.trim();
+            const type    = document.getElementById('iv4-sched-type')?.value;
+            const freq    = document.getElementById('iv4-sched-freq')?.value;
+            const hour    = parseInt(document.getElementById('iv4-sched-hour')?.value || '8', 10);
+            const recipRaw = document.getElementById('iv4-sched-recip')?.value || '';
+            const recips  = recipRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+            if (!name || recips.length === 0) {
+              alert('الاسم والمستلمون مطلوبان');
+              return;
+            }
+
+            fetch('/api/inbox/analytics/scheduled', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name, report_type: type, frequency: freq,
+                send_hour: hour, recipients: recips, format: 'csv',
+              }),
+            })
+              .then(r => r.json())
+              .then(d => {
+                if (d.ok) {
+                  document.getElementById('iv4-an-sched-modal')?.classList.add('hidden');
+                  _loadScheduled_page();
+                } else {
+                  alert(d.error || 'خطأ في الحفظ');
+                }
+              });
+          });
+      })
+      .catch(() => {
+        const body = document.getElementById('iv4-an-body');
+        if (body) body.innerHTML = '<div class="iv4-an-empty">خطأ في تحميل التقارير المجدولة</div>';
+      });
+  }
+
+  // ─── T61: Live Status Bar ────────────────────────────────────────────────
+  // Polling كل 30 ثانية (D-033) — لا SSE جديد
+  // آخر تدديث: 2026-05-04
+
+  function _startLiveBar() {
+    if (_liveInterval) { clearInterval(_liveInterval); _liveInterval = null; }
+
+    const refresh = () => {
+      fetch('/api/inbox/analytics/overview?live=1')
+        .then(r => r.json())
+        .then(data => {
+          const openEl   = document.getElementById('iv4-an-live-open');
+          const agentsEl = document.getElementById('iv4-an-live-agents');
+          if (openEl   && data.open_now   != null) openEl.textContent   = data.open_now;
+          if (agentsEl && data.agents_online != null) agentsEl.textContent = data.agents_online;
+        })
+        .catch(() => {});
+    };
+
+    refresh(); // استدعاء فوري
+    _liveInterval = setInterval(refresh, 30000); // كل 30 ثانية (D-033)
+  }
+
+  // ─── Page Range Binding ──────────────────────────────────────────────────
+
+  function _bindPageRange(container, roleStr) {
+    container.querySelectorAll('.iv4-an-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        container.querySelectorAll('.iv4-an-preset').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _applyPreset(btn.dataset.preset);
+        const fi = container.querySelector('#iv4-an-from');
+        const ti = container.querySelector('#iv4-an-to');
+        if (fi) fi.value = _from;
+        if (ti) ti.value = _to;
+        // أعد تحميل القسم النشط
+        const active = container.querySelector('.iv4-an-tab.active');
+        if (active) _loadPageSection(active.dataset.section, roleStr);
+      });
+    });
+
+    container.querySelector('#iv4-an-apply-range')
+      ?.addEventListener('click', () => {
+        const from = container.querySelector('#iv4-an-from')?.value;
+        const to   = container.querySelector('#iv4-an-to')?.value;
+        if (from && to && from <= to) {
+          _from = from; _to = to; _preset = 'custom';
+          container.querySelectorAll('.iv4-an-preset').forEach(b => b.classList.remove('active'));
+          const active = container.querySelector('.iv4-an-tab.active');
+          if (active) _loadPageSection(active.dataset.section, roleStr);
+        }
+      });
+
+    container.querySelector('#iv4-an-export-full')
+      ?.addEventListener('click', _exportFullExcel);
+  }
+
+  return { open, close, mount, unmount };
 
 })();
 

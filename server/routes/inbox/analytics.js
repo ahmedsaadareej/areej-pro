@@ -124,7 +124,19 @@ function _fmtSec(sec) {
 
 router.get('/overview', (req, res) => {
   try {
-    const db             = req.db;
+    const db = req.db;
+
+    // T61: live mode — يُعيد أرقام فورية فقط (للـ Live Status Bar)
+    if (req.query.live) {
+      const openNow = db.prepare(
+        `SELECT COUNT(*) AS n FROM inbox_conversations_v4 WHERE status IN ('open','waiting','snoozed')`
+      ).get().n;
+      const agentsOnline = db.prepare(
+        `SELECT COUNT(*) AS n FROM inbox_agent_status_v4 WHERE status = 'online'`
+      ).get().n;
+      return res.json({ ok: true, open_now: openNow, agents_online: agentsOnline });
+    }
+
     const { fromTs, toTs, fromIso, toIso } = _parseRange(req.query);
 
     // إجماليات المحادثات في الفترة
