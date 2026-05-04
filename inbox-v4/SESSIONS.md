@@ -22,6 +22,29 @@
 
 ---
 
+## جلسة 2026-05-04 18:37 UTC — P11-D: Pilot Migration
+- الحالة: مكتملة ✅
+- ما تم:
+  - **D1**: `server/migrations.js` — migration v44: جدول `inbox_migration_log` + index
+  - **D1**: `server/scripts/migrate-inbox-v3-to-v4.js` — migration utility كامل
+    - Dry-run mode (`--dry-run`) + Execute mode (`--execute`) + `--all` flag
+    - Rollback تلقائي عند أي خطأ (better-sqlite3 transaction)
+    - INSERT OR IGNORE — آمن لو اتشغل مرتين
+    - تحويل timestamps نص→unix + direction in/out→inbound/outbound
+    - تحديث `first_message_at` بعد نقل الرسائل
+    - FK safety: تخطي رسائل بـ conversation_id غير موجود في v4
+  - **D2**: Pilot ناجح على Tenant 2 ✅
+    - 11 محادثة + 466 رسالة مهاجرة
+    - Backup: `data/tenants/2.db.backup-20260504-*`
+    - Schema version: 44
+    - Dry-run أولاً → Execute ناجح → تحقق → commit
+  - pm2 restart areej-pro → server شغال ✅
+- قرارات: D3 (قرار v4 كـ Default) — ينتظر مراجعة أحمد بعد أسبوع Pilot
+- آخر commit: 6ff7186
+- المهمة القادمة: **P11-D3** — مراجعة Pilot بعد أسبوع + قرار `/inbox` → v4 كـ Default
+
+---
+
 ## جلسة 2026-05-04 18:00 UTC — P11-C: QA + Bugfix (Browser Automation)
 - الحالة: مكتملة ✅
 - ما تم:
@@ -1177,3 +1200,84 @@
 - قرارات: لا قرارات جديدة — الرؤية متفق عليها في INBOX_VISION.md
 - آخر commit: bd7b101
 - المهمة القادمة: P0-2 — بناء InboxStore في `public/dashboard/inbox-v4/store.js`
+
+---
+
+## جلسة 2026-05-04 18:43 UTC — P11-E1: Scheduled Reports Engine
+- الحالة: مكتملة ✅
+- ما تم:
+  - `server/inbox-scheduled-reports.js` (جديد — 280 سطر)
+    - `runScheduledReports(getTenantDb, masterDb)` — الدالة الرئيسية
+    - `_isDue()` — تحقق daily/weekly/monthly + send_hour + last_sent guard (لا إرسال مرتين في نفس اليوم)
+    - `_buildRange()` — نطاق الفترة حسب التكرار (أمس/أسبوع/شهر)
+    - `_fetchSection()` — 6 أنواع: overview/agents/sla/csat/labels/automation + full (كلها مجموعة)
+    - `_generateCSV()` — BOM + escape للعربية + Excel-compatible
+    - SMTP من `inbox_email_accounts_v4` (fallback آمن لو لا يوجد SMTP)
+  - `server/cron-jobs.js` — `startCronJobs` يقبل `getTenantDb` + CronJob كل ساعة عند الدقيقة 5
+  - `server/app.js` — تمرير `getTenantDb` لـ `startCronJobs`
+  - اختبار: tenant 2 → overview CSV صحيح + last_sent محدّث ✅
+  - pm2 reload + `[Cron] Inbox scheduled reports: مُفعَّل` ✅
+- آخر commit: 2f8f93a
+- المهمة القادمة: **P11-E2** — صفحة Contacts كاملة
+
+---
+
+## جلسة 2026-05-04 23:36 UTC — P11-E2: Contacts Page
+- الحالة: مكتملة ✅
+- ما تم:
+  - **Backend** `server/routes/inbox/contacts.js` (جديد — 7 endpoints):
+    - GET /contacts — قائمة + بحث + فلتر status + pagination
+    - GET /contacts/stats — إحصائيات سريعة
+    - GET /contacts/:id — بروفايل كامل + invoices_count
+    - GET /contacts/:id/conversations — محادثات مرتبطة
+    - POST /contacts — إنشاء + تحقق تكرار الهاتف
+    - PUT /contacts/:id — تحديث
+    - DELETE /contacts/:id — حذف + فك ربط المحادثات
+    - Dual mode: CRM (crm_contacts) أو Standalone (inbox_conversations_v4)
+  - **API** `api.js` — namespace `contacts` كامل (8 methods)
+  - **Frontend** `public/inbox-v4/pages/page-contacts.js`:
+    - جدول + بحث real-time + فلاتر الحالة
+    - Panel بروفايل جانبي: بيانات + KPIs مالية + محادثات
+    - Form إنشاء/تعديل + Pagination + Toast
+    - Responsive + Dark Mode
+  - **CSS** `inbox.css` — 150+ سطر بـ prefix `ct-*`
+  - اختبار كامل: list ✅ + create ✅ + get ✅ + stats ✅ + delete ✅
+- قرارات: لا جديد
+- آخر commit: 9e91047
+- المهمة القادمة: **P11-E1** — Email Delivery للتقارير المجدولة (Scheduled Reports)
+
+---
+
+## جلسة 2026-05-04 23:47 UTC — P11-E3: PDF Export
+- الحالة: مكتملة ✅
+- ما تم:
+  - **Backend** `server/routes/inbox/analytics.js`:
+    - `GET /api/inbox/analytics/export?format=json|html`
+    - format=json → بيانات overview + agents + platforms + top_labels في طلب واحد
+    - format=html → HTML كامل جاهز للطباعة (Ctrl+P → PDF) مع @media print
+    - requireOwnerAdmin: owner/admin فقط
+    - بدون npm packages جديدة ✅
+  - **Frontend** `analytics.js`:
+    - `_exportPDF()` → tab جديد بـ HTML جاهز للطباعة
+    - `_showPDFPreview()` → fallback modal لو popup محجوب
+    - زر "🖨 تصدير PDF" في toolbar Overview + قسم الموظفين
+  - **API** `api.js`: `exportReport()` + `exportPdfUrl()`
+  - **CSS**: لون primary button متسق + @media print
+  - اختبار: format=json ✅ + format=html ✅
+- قرارات: لا جديد (D-038 مُنفَّذة بدون npm)
+- آخر commit: dae7065
+- المهمة القادمة: **P11-E1** — Email Delivery للتقارير المجدولة
+
+---
+
+## جلسة 2026-05-05 00:00 UTC — P11-E1: Scheduled Reports Email Engine
+- الحالة: مكتملة ✅
+- ما تم:
+  - تحقق: `server/inbox-scheduled-reports.js` موجود ومكتمل (commit 2f8f93a)
+  - تحقق: `server/cron-jobs.js` يُشغّل `runScheduledReports` كل ساعة عند الدقيقة 5
+  - تحقق: `server/app.js` يُمرّر `getTenantDb` لـ `startCronJobs`
+  - **bugfix**: `email.js` — إضافة fallback `req.inboxUser = { id: req.user.id }` في middleware المحلي (كان يُسبب TypeError)
+  - pm2 reload ناجح + `[Cron] Inbox scheduled reports: مُفعَّل` في اللوج ✅
+- قرارات: لا جديد
+- آخر commit: fe2ab4f
+- **Phase 11 مكتملة بالكامل ✅** — كل المحاور A→B→C→D→E1→E2→E3

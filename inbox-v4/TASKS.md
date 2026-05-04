@@ -131,7 +131,8 @@
 | 2 | **P11-B** Permissions DB | B1→B4 (صلاحيات من DB حقيقية) | ✅ |
 | 3 | **P11-C** QA + Bugfix | C1→C4 (console errors + SSE + mobile) | ⏳ |
 | 4 | **P11-D** Pilot Migration | D1→D3 (v3 → v4 لعميل واحد) | ✅ |
-| 5+ | **P11-E** Deferred Features | E1 إيميل مجدول + E2 Contacts + E3 PDF | ⏳ |
+| 5 | **P11-E2** Contacts Page | صفحة جهات الاتصال كاملة | ✅ |
+| 6+ | **P11-E1/E3** Deferred | E1 إيميل مجدول + E3 PDF Export | ✅ |
 
 ### المهمة القادمة فوراً
 **P11-A: Shell Wiring** — ربط page-reports + page-settings + page-inbox + shell.js + اختبار Deep Links
