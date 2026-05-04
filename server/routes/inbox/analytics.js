@@ -1,16 +1,23 @@
 /**
  * inbox/analytics.js — Analytics & SLA Reports لـ Inbox v4
- * آخر تحديث: 2026-05-03 (P6-1 Analytics Dashboard)
+ * آخر تحديث: 2026-05-04 — M4 Analytics (T53→T57)
  *
  * Endpoints:
+ *   GET /api/inbox/analytics/overview      — أرقام عامة (inbox health) + live mode
  *   GET /api/inbox/analytics/sla          — SLA overview (نسبة الالتزام + متوسطات)
- *   GET /api/inbox/analytics/agents        — أداء الموظفين (ردود + وقت استجابة + إغلاق)
+ *   GET /api/inbox/analytics/agents        — أداء الموظفين (owner/admin/supervisor فقط)
+ *   GET /api/inbox/analytics/agents/:id    — تفاصيل موظف (agent يرى نفسه فقط)
  *   GET /api/inbox/analytics/platforms     — توزيع المحادثات على المنصات
- *   GET /api/inbox/analytics/overview      — أرقام عامة (inbox health)
+ *   GET /api/inbox/analytics/volume        — حجم يومي
+ *   GET /api/inbox/analytics/hourly        — توزيع ساعي
+ *   GET /api/inbox/analytics/labels        — تحليل التصنيفات (M4 جديد)
+ *   GET /api/inbox/analytics/automation    — AI & Automation analytics (M4 جديد)
+ *   GET /api/inbox/analytics/scheduled     — التقارير المجدولة CRUD (M4 جديد)
  *
  * Query params مشتركة:
  *   ?from=YYYY-MM-DD  — بداية الفترة (افتراضي: آخر 30 يوم)
  *   ?to=YYYY-MM-DD    — نهاية الفترة
+ *   ?live=1           — بيانات مباشرة (overview فقط)
  */
 
 'use strict';
@@ -18,6 +25,49 @@
 const express = require('express');
 const router  = express.Router();
 const { computeSLA, SLA_THRESHOLDS_SEC } = require('./conversations');
+
+// ─── M4: Permission Helpers (T53) ────────────────────────────────────────────
+// آخر تحديث: 2026-05-04
+
+/**
+ * getInboxRole — يُعيد role string للـ analytics permissions
+ * Fallback آمن: لو req.inboxUser غير موجود (قبل M1) → 'agent'
+ */
+function getInboxRole(req) {
+  const roleMap = { 1: 'owner', 2: 'admin', 3: 'supervisor', 4: 'agent', 5: 'readonly' };
+  return roleMap[req.inboxUser?.inbox_role_id] || 'agent';
+}
+
+/**
+ * requireAnalyticsAccess — أدنى مستوى للوصول (كل الأدوار)
+ * يُضاف كـ middleware لو أردنا في المستقبل تقييد الـ endpoint كلياً
+ */
+function requireAnalyticsAccess(req, res, next) {
+  // حالياً كل أدوار الـ inbox مسموح لها — يمكن تشديده لاحقاً
+  next();
+}
+
+/**
+ * requireOwnerAdmin — يمنع إلا Owner أو Admin
+ */
+function requireOwnerAdmin(req, res, next) {
+  const role = getInboxRole(req);
+  if (!['owner', 'admin'].includes(role)) {
+    return res.status(403).json({ ok: false, error: 'owner_or_admin_required' });
+  }
+  next();
+}
+
+/**
+ * getTeamFilter — يُعيد team_id للـ Supervisor (أو null لباقي الأدوار)
+ * يُستخدم لتصفية نتائج /agents لفريق الـ Supervisor فقط
+ */
+function getTeamFilter(req) {
+  if (getInboxRole(req) === 'supervisor') {
+    return req.inboxUser?.team_id || null;
+  }
+  return null;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -235,13 +285,24 @@ router.get('/sla', (req, res) => {
 });
 
 // ─── GET /api/inbox/analytics/agents ─────────────────────────────────────────
+// T56: Permission Filtering — owner/admin/supervisor فقط
+// Supervisor يرى فريقه فقط (getTeamFilter)
 
 router.get('/agents', (req, res) => {
+  // Permission check (T56)
+  const role = getInboxRole(req);
+  if (!['owner', 'admin', 'supervisor'].includes(role)) {
+    return res.status(403).json({ ok: false, error: 'forbidden' });
+  }
+
   try {
     const db             = req.db;
     const { fromTs, toTs, fromIso, toIso } = _parseRange(req.query);
+    const teamId = getTeamFilter(req);  // T56: Supervisor filter
 
     // مجموع المحادثات + المغلقة + المتوسطات لكل موظف
+    // Supervisor: يُقيّد بـ team_members للتأكد من الفريق
+    const teamJoin   = teamId ? `JOIN inbox_team_members itm ON itm.user_id = c.assigned_to_id AND itm.team_id = ${Number(teamId)}` : '';
     const agentStats = db.prepare(`
       SELECT
         c.assigned_to_id            AS agent_id,
@@ -266,6 +327,7 @@ router.get('/agents', (req, res) => {
         AVG(c.csat_score) AS avg_csat
       FROM inbox_conversations_v4 c
       LEFT JOIN tenant_users tu ON tu.id = c.assigned_to_id
+      ${teamJoin}
       WHERE c.created_at BETWEEN ? AND ?
         AND c.assigned_to_id IS NOT NULL
       GROUP BY c.assigned_to_id
@@ -424,7 +486,15 @@ router.get('/hourly', (req, res) => {
 // ─── GET /api/inbox/analytics/agents/:id ─────────────────────────────────
 // تفاصيل أداء موظف واحد: تطور يومي + توزيع منصات + آخر محادثات
 
+// T56: agents/:id — Agent يرى نفسه فقط
 router.get('/agents/:id', (req, res) => {
+  const role     = getInboxRole(req);
+  const selfId   = req.inboxUser?.id || req.user?.id;
+  // Agent أو Readonly → يرى نفسه فقط
+  if (['agent', 'readonly'].includes(role) && String(req.params.id) !== String(selfId)) {
+    return res.status(403).json({ ok: false, error: 'forbidden' });
+  }
+
   try {
     const db       = req.db;
     const agentId  = parseInt(req.params.id, 10);
@@ -813,6 +883,266 @@ router.get('/csat', (req, res) => {
     res.status(500).json({ ok: false, error: e.message });
   }
 });
+
+// ─── M4 T54: GET /api/inbox/analytics/labels ──────────────────────────────
+// تحليل التصنيفات: عدد المحادثات + متوسط وقت الحل
+// آخر تحديث: 2026-05-04
+
+router.get('/labels', requireAnalyticsAccess, (req, res) => {
+  try {
+    const db     = req.db;
+    const { fromTs, toTs, fromIso, toIso } = _parseRange(req.query);
+    const teamId = getTeamFilter(req);
+
+    // بناء SQL ديناميكي حسب Supervisor filter
+    const teamClause = teamId
+      ? `AND c.team_id = ${Number(teamId)}`
+      : '';
+
+    const labels = db.prepare(`
+      SELECT
+        l.id,
+        l.name,
+        l.color,
+        COUNT(DISTINCT cl.conversation_id) AS conv_count,
+        ROUND(
+          AVG(
+            CASE WHEN c.resolved_at IS NOT NULL AND c.first_message_at IS NOT NULL
+              AND c.resolved_at > c.first_message_at
+            THEN (c.resolved_at - c.first_message_at) / 60.0
+            ELSE NULL END
+          ), 1
+        ) AS avg_resolution_min
+      FROM inbox_labels l
+      LEFT JOIN inbox_conversation_labels cl ON cl.label_id = l.id
+      LEFT JOIN inbox_conversations_v4 c
+        ON c.id = cl.conversation_id
+        AND c.created_at BETWEEN ? AND ?
+        ${teamClause}
+      GROUP BY l.id
+      ORDER BY conv_count DESC
+    `).all(fromTs, toTs);
+
+    // أكثر 5 تصنيفات لـ trend يومي
+    const top5ids = labels.slice(0, 5).map(l => l.id);
+    let trend = [];
+    if (top5ids.length > 0) {
+      const placeholders = top5ids.map(() => '?').join(',');
+      try {
+        trend = db.prepare(`
+          SELECT
+            date(c.created_at, 'unixepoch') AS day,
+            cl.label_id,
+            COUNT(*) AS count
+          FROM inbox_conversation_labels cl
+          JOIN inbox_conversations_v4 c ON c.id = cl.conversation_id
+          WHERE cl.label_id IN (${placeholders})
+            AND c.created_at BETWEEN ? AND ?
+            ${teamClause}
+          GROUP BY day, cl.label_id
+          ORDER BY day ASC
+        `).all([...top5ids, fromTs, toTs]);
+      } catch (_) { trend = []; }
+    }
+
+    res.json({
+      ok:     true,
+      period: { from: fromIso, to: toIso },
+      labels,
+      trend,
+    });
+  } catch (e) {
+    console.error('[inbox/analytics/labels]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ─── M4 T55: GET /api/inbox/analytics/automation ───────────────────────────
+// AI & Chatbot & Automation Analytics
+// Graceful degradation: كل query في try/catch — لا 500 على جداول فارغة (D-045)
+// آخر تحديث: 2026-05-04
+
+router.get('/automation', requireAnalyticsAccess, async (req, res) => {
+  const db     = req.db;
+  const { fromTs, toTs, fromIso, toIso } = _parseRange(req.query);
+
+  // كل query في try/catch مستقل — graceful degradation
+  let chatbot_only = 0, auto_closed = 0, ai_suggested = 0;
+  let keyword_stats = [], chatbot_sessions = 0, chatbot_completed = 0;
+
+  // محادثات أنهىتها البوت (ended_by)
+  try {
+    const r = db.prepare(
+      `SELECT COUNT(*) AS c FROM inbox_conversations_v4
+       WHERE ended_by = 'bot' AND created_at BETWEEN ? AND ?`
+    ).get(fromTs, toTs);
+    chatbot_only = r?.c || 0;
+  } catch (_) {}
+
+  // محادثات أغلقتها auto_close
+  try {
+    const r = db.prepare(
+      `SELECT COUNT(*) AS c FROM inbox_conversations_v4
+       WHERE close_reason = 'auto_close' AND created_at BETWEEN ? AND ?`
+    ).get(fromTs, toTs);
+    auto_closed = r?.c || 0;
+  } catch (_) {}
+
+  // عدد AI suggestions (مخزنة في inbox_messages_v4.metadata كـ JSON)
+  try {
+    const r = db.prepare(
+      `SELECT COUNT(*) AS c FROM inbox_messages_v4
+       WHERE metadata LIKE '%"ai_suggested":true%'
+         AND sent_at BETWEEN ? AND ?`
+    ).get(fromTs, toTs);
+    ai_suggested = r?.c || 0;
+  } catch (_) {}
+
+  // Chatbot sessions
+  try {
+    const r = db.prepare(
+      `SELECT
+         COUNT(*) AS total,
+         SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed
+       FROM inbox_chatbot_sessions_v4
+       WHERE created_at BETWEEN ? AND ?`
+    ).get(fromTs, toTs);
+    chatbot_sessions   = r?.total     || 0;
+    chatbot_completed  = r?.completed || 0;
+  } catch (_) {}
+
+  // Keyword trigger stats (top 10 keywords)
+  try {
+    keyword_stats = db.prepare(
+      `SELECT keyword, trigger_count
+       FROM inbox_keywords
+       WHERE trigger_count > 0
+       ORDER BY trigger_count DESC
+       LIMIT 10`
+    ).all();
+  } catch (_) {}
+
+  res.json({
+    ok:     true,
+    period: { from: fromIso, to: toIso },
+    chatbot_only,
+    auto_closed,
+    ai_suggested,
+    chatbot_sessions,
+    chatbot_completed,
+    chatbot_completion_rate: chatbot_sessions > 0
+      ? Math.round((chatbot_completed / chatbot_sessions) * 100) : 0,
+    keyword_stats,
+  });
+});
+
+// ─── M4 T57: Scheduled Reports CRUD ──────────────────────────────────────
+// owner/admin فقط (requireOwnerAdmin)
+// Email delivery مؤجل Phase 10+ (D-034) — الجدول جاهز للحفظ
+// آخر تحديث: 2026-05-04
+
+// GET — قائمة التقارير المجدولة
+router.get('/scheduled', requireOwnerAdmin, (req, res) => {
+  try {
+    const reports = req.db.prepare(
+      `SELECT * FROM inbox_scheduled_reports_v4 ORDER BY created_at DESC`
+    ).all();
+    // فك recipients JSON
+    const parsed = reports.map(r => ({
+      ...r,
+      recipients: _safeParseJSON(r.recipients, []),
+    }));
+    res.json({ ok: true, reports: parsed });
+  } catch (e) {
+    console.error('[inbox/analytics/scheduled GET]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// POST — إنشاء تقرير مجدول
+router.post('/scheduled', requireOwnerAdmin, (req, res) => {
+  try {
+    const { name, report_type, frequency, send_hour, send_day, recipients, format } = req.body;
+    if (!name || !report_type || !frequency || !Array.isArray(recipients)) {
+      return res.status(400).json({ ok: false, error: 'missing_required_fields' });
+    }
+    const stmt = req.db.prepare(`
+      INSERT INTO inbox_scheduled_reports_v4
+        (name, report_type, frequency, send_hour, send_day, recipients, format, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const info = stmt.run(
+      name, report_type, frequency,
+      send_hour ?? 8,
+      send_day  ?? null,
+      JSON.stringify(recipients),
+      format    || 'csv',
+      req.inboxUser?.id || req.user?.id || null,
+    );
+    res.json({ ok: true, id: info.lastInsertRowid });
+  } catch (e) {
+    console.error('[inbox/analytics/scheduled POST]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// PUT — تحديث تقرير مجدول
+router.put('/scheduled/:id', requireOwnerAdmin, (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const existing = req.db.prepare(
+      `SELECT id FROM inbox_scheduled_reports_v4 WHERE id = ?`
+    ).get(id);
+    if (!existing) return res.status(404).json({ ok: false, error: 'not_found' });
+
+    const { name, report_type, frequency, send_hour, send_day, recipients, format, active } = req.body;
+    req.db.prepare(`
+      UPDATE inbox_scheduled_reports_v4
+      SET name        = COALESCE(?, name),
+          report_type = COALESCE(?, report_type),
+          frequency   = COALESCE(?, frequency),
+          send_hour   = COALESCE(?, send_hour),
+          send_day    = COALESCE(?, send_day),
+          recipients  = COALESCE(?, recipients),
+          format      = COALESCE(?, format),
+          active      = COALESCE(?, active)
+      WHERE id = ?
+    `).run(
+      name        ?? null,
+      report_type ?? null,
+      frequency   ?? null,
+      send_hour   ?? null,
+      send_day    ?? null,
+      recipients  != null ? JSON.stringify(recipients) : null,
+      format      ?? null,
+      active      ?? null,
+      id,
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[inbox/analytics/scheduled PUT]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// DELETE — حذف تقرير مجدول
+router.delete('/scheduled/:id', requireOwnerAdmin, (req, res) => {
+  try {
+    const info = req.db.prepare(
+      `DELETE FROM inbox_scheduled_reports_v4 WHERE id = ?`
+    ).run(Number(req.params.id));
+    if (!info.changes) return res.status(404).json({ ok: false, error: 'not_found' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[inbox/analytics/scheduled DELETE]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// helper: فك JSON بأمان (لا throw)
+function _safeParseJSON(str, fallback) {
+  try { return JSON.parse(str); } catch (_) { return fallback; }
+}
 
 module.exports = router;
 
