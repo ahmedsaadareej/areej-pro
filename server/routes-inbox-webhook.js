@@ -121,6 +121,72 @@ async function detectTelegramMedia(msg, token) {
   return { mediaType, fileId, mediaUrl };
 }
 
+// ── A4 Dual-Write Helper ─────────────────────────────────────────────────────
+// يكتب المحادثة والرسالة في inbox_conversations_v4 + inbox_messages_v4
+// بجانب v3 (لا يحذف أي شيء من v3)
+// آمن مع INSERT OR IGNORE — لا يُنشئ duplicates
+function upsertConvV4(db, { platform, senderId, senderName, senderPhone, content, direction = 'in' }) {
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    // تحديد sender_phone: لـ whatsapp نستخدم senderId, للبقية null
+    const phone = senderPhone || (platform === 'whatsapp' || platform === 'whatsapp_api' ? senderId : null);
+    let convV4 = db.prepare(
+      'SELECT * FROM inbox_conversations_v4 WHERE platform=? AND sender_id=? LIMIT 1'
+    ).get(platform, senderId);
+
+    if (!convV4) {
+      const r = db.prepare(`
+        INSERT INTO inbox_conversations_v4
+          (platform, sender_id, sender_name, sender_phone, status, unread_count,
+           last_message_at, last_message_text, last_message_dir, first_message_at, created_at, updated_at)
+        VALUES (?,?,?,?,'open',1,?,?,?,?,?,?)
+      `).run(platform, senderId, senderName || senderId, phone,
+             now, (content || '').slice(0, 300), direction, now, now, now);
+      convV4 = db.prepare('SELECT * FROM inbox_conversations_v4 WHERE id=?').get(r.lastInsertRowid);
+    } else {
+      // تحديث unread + last_message
+      db.prepare(`
+        UPDATE inbox_conversations_v4
+        SET unread_count    = unread_count + 1,
+            last_message_at = ?,
+            last_message_text = ?,
+            last_message_dir  = ?,
+            sender_name       = COALESCE(?, sender_name),
+            updated_at        = ?
+        WHERE id = ?
+      `).run(now, (content || '').slice(0, 300), direction, senderName || null, now, convV4.id);
+    }
+    return convV4;
+  } catch (e) {
+    console.error('[upsertConvV4]', e.message);
+    return null;
+  }
+}
+
+function insertMsgV4(db, { convV4Id, platform, direction, content, platformMsgId, mediaType, mediaUrl }) {
+  try {
+    if (!convV4Id) return;
+    const now = Math.floor(Date.now() / 1000);
+    db.prepare(`
+      INSERT OR IGNORE INTO inbox_messages_v4
+        (conversation_id, platform, direction, content, content_type,
+         media_type, media_url, platform_msg_id, is_read, sent_at, created_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?)
+    `).run(
+      convV4Id, platform, direction,
+      content || null,
+      mediaType ? 'media' : 'text',
+      mediaType || null,
+      mediaUrl  || null,
+      platformMsgId || null,
+      direction === 'in' ? 0 : 1,
+      now, now
+    );
+  } catch (e) {
+    console.error('[insertMsgV4]', e.message);
+  }
+}
+
 // ── TELEGRAM WEBHOOK ── 
 // POST /api/webhook/telegram/:userId
 router.post('/telegram/:userId', express.json(), async (req, res) => {
@@ -193,12 +259,19 @@ router.post('/telegram/:userId', express.json(), async (req, res) => {
       try { require('./inbox-distributor').autoAssign(db, conv.id, 'telegram'); } catch(e) { console.error('[webhook/distribute]', e.message); }
     }
 
+    // [A4] Dual-write: Telegram → inbox_conversations_v4 + inbox_messages_v4
+    const convV4tg = upsertConvV4(db, { platform: 'telegram', senderId, senderName, content, direction: 'in' });
+
     // Save message (with media info)
     const platformMsgId = String(msg.message_id);
     db.prepare(`INSERT OR IGNORE INTO inbox_messages 
       (conversation_id, platform, direction, content, message_type, platform_msg_id, media_url, media_type, file_id) 
       VALUES (?,?,?,?,?,?,?,?,?)`)
       .run(conv.id, 'telegram', 'in', content, mediaType || 'text', platformMsgId, mediaUrl || null, mediaType || null, fileId || null);
+
+    // [A4] Dual-write: Telegram message → inbox_messages_v4
+    insertMsgV4(db, { convV4Id: convV4tg?.id, platform: 'telegram', direction: 'in',
+      content, platformMsgId, mediaType: mediaType || null, mediaUrl: mediaUrl || null });
 
     // Add notification
     const notifContent = content.substring(0, 80);
@@ -433,6 +506,13 @@ router.post('/whatsapp/:userId', express.raw({ type: 'application/json' }), asyn
             db.prepare("UPDATE inbox_conversations SET unread_count=unread_count+1, last_message=?, last_message_at=datetime('now'), sender_name=? WHERE id=?").run(content, senderName, conv.id);
           }
 
+          // [A4] Dual-write: WA Business → inbox_conversations_v4 + inbox_messages_v4
+          const convV4wa_dw = upsertConvV4(db, {
+            platform: 'whatsapp', senderId, senderName, senderPhone: senderId, content, direction: 'in'
+          });
+          insertMsgV4(db, { convV4Id: convV4wa_dw?.id, platform: 'whatsapp', direction: 'in',
+            content, platformMsgId: msgId, mediaType: mediaType || null, mediaUrl: mediaId || null });
+
           // Ensure media_id column exists
           try {
             const mc = db.prepare('PRAGMA table_info(inbox_messages)').all().map(c => c.name);
@@ -449,7 +529,8 @@ router.post('/whatsapp/:userId', express.raw({ type: 'application/json' }), asyn
           // P4-3 Welcome + Away Engine
           try {
             const { processWelcomeAway } = require('./routes/inbox/automation');
-            const convV4wa = db.prepare(
+            // نستخدم convV4 الموجود (dual-write ضمن أن المحادثة موجودة دائماً)
+            const convV4wa = convV4wa_dw || db.prepare(
               "SELECT * FROM inbox_conversations_v4 WHERE platform = 'whatsapp' AND sender_phone = ? LIMIT 1"
             ).get(senderId);
             if (convV4wa) {
@@ -461,8 +542,7 @@ router.post('/whatsapp/:userId', express.raw({ type: 'application/json' }), asyn
           // P4-2 Chatbot Engine — تشغيل محرك الـ chatbot على الرسالة الواردة (v4)
           try {
             const { processChatbot } = require('./routes/inbox/chatbot');
-            // حاول البحث عن محادثة v4 مقابلة (نفس sender_id + platform)
-            const convV4 = db.prepare(
+            const convV4 = convV4wa_dw || db.prepare(
               "SELECT * FROM inbox_conversations_v4 WHERE platform = 'whatsapp' AND sender_phone = ? LIMIT 1"
             ).get(senderId);
             if (convV4 && content) {

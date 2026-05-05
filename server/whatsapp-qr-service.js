@@ -326,6 +326,43 @@ async function handleIncomingMessage(userId, msg) {
   db.prepare(`INSERT OR IGNORE INTO inbox_messages (conversation_id, platform, direction, content, message_type, platform_msg_id, media_url, media_type) VALUES (?,?,?,?,?,?,?,?)`)
     .run(conv.id, 'whatsapp-qr', 'in', displayContent, msgType, msg.id._serialized, mediaUrl, mediaType);
 
+  // [A4] Dual-write: WA QR → inbox_conversations_v4 + inbox_messages_v4
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    let convV4qr = db.prepare(
+      "SELECT * FROM inbox_conversations_v4 WHERE platform='whatsapp-qr' AND sender_id=? LIMIT 1"
+    ).get(senderId);
+    if (!convV4qr) {
+      const rV4 = db.prepare(`
+        INSERT INTO inbox_conversations_v4
+          (platform, sender_id, sender_name, sender_phone, status, unread_count,
+           last_message_at, last_message_text, last_message_dir, first_message_at, created_at, updated_at)
+        VALUES ('whatsapp-qr',?,?,?,'open',1,?,?,?,?,?,?)
+      `).run(senderId, senderName, senderId,
+             now, (displayContent).slice(0, 300), 'in', now, now, now);
+      convV4qr = { id: rV4.lastInsertRowid };
+    } else {
+      db.prepare(`
+        UPDATE inbox_conversations_v4
+        SET unread_count=unread_count+1, last_message_at=?, last_message_text=?,
+            last_message_dir='in', sender_name=COALESCE(?,sender_name), updated_at=?
+        WHERE id=?
+      `).run(now, (displayContent).slice(0, 300), senderName || null, now, convV4qr.id);
+    }
+    const platformMsgIdQr = msg.id && msg.id._serialized ? msg.id._serialized : null;
+    if (convV4qr?.id) {
+      db.prepare(`
+        INSERT OR IGNORE INTO inbox_messages_v4
+          (conversation_id, platform, direction, content, content_type,
+           media_type, media_url, platform_msg_id, is_read, sent_at, created_at)
+        VALUES (?,?,?,?,?,?,?,?,0,?,?)
+      `).run(convV4qr.id, 'whatsapp-qr', 'in', displayContent,
+             mediaType ? 'media' : 'text',
+             mediaType || null, mediaUrl || null,
+             platformMsgIdQr, now, now);
+    }
+  } catch (_qrV4Err) { console.error('[A4 QR dual-write]', _qrV4Err.message); }
+
   db.prepare(`INSERT INTO notifications (title, body, type) VALUES (?,?,?)`)
     .run('💬 واتساب QR — رسالة جديدة', senderName + ': ' + displayContent.substring(0, 80), 'info');
 }
