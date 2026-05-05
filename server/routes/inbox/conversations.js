@@ -1,6 +1,6 @@
 /**
  * inbox/conversations.js — Conversations Routes لـ Inbox v4
- * آخر تحديث: 2026-05-03 (P3-6 SLA Tracking)
+ * آخر تحديث: 2026-05-05 (C1 — new-conversation endpoint)
  *
  * Endpoints:
  *   GET    /api/inbox/conversations           — قائمة محادثات مع فلاتر + pagination
@@ -22,6 +22,7 @@
  *   DELETE /api/inbox/conversations/:id/labels/:labelId — إزالة label
  *   GET    /api/inbox/conversations/:id/sla      — SLA بيانات محادثة واحدة (P3-6)
  *   POST   /api/inbox/conversations/:id/sla/backfill — إعادة حساب SLA من الرسائل (P3-6)
+ *   POST   /api/inbox/new-conversation               — إنشاء محادثة جديدة (outbound)
  */
 
 'use strict';
@@ -739,6 +740,83 @@ function _broadcastConvUpdate(req, convId, patch) {
     console.warn('[SSE broadcast] skipped:', e.message);
   }
 }
+
+// ─── POST /api/inbox/new-conversation ───────────────────────────────────────
+// إنشاء محادثة جديدة (outbound) من الـ Inbox UI
+// Body: { platform, phone, name, message, template_name, template_vars, channel_override }
+router.post('/new-conversation', async (req, res) => {
+  try {
+    const db   = req.db;
+    const user = req.inboxUser;
+    const {
+      platform,
+      phone,
+      name,
+      message,
+      template_name,
+      template_vars,
+      channel_override,
+    } = req.body || {};
+
+    if (!platform) return res.status(400).json({ ok: false, error: 'platform مطلوب' });
+    if (!phone)    return res.status(400).json({ ok: false, error: 'phone مطلوب' });
+
+    const ALLOWED_PLATFORMS = ['whatsapp_api', 'whatsapp_qr', 'telegram', 'instagram', 'messenger', 'email'];
+    if (!ALLOWED_PLATFORMS.includes(platform)) {
+      return res.status(400).json({ ok: false, error: `platform غير صالح: ${platform}` });
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const senderName = name || phone;
+
+    // تحقق إذا كانت محادثة موجودة مسبقاً مع نفس الـ sender
+    const existing = db.prepare(
+      `SELECT id FROM inbox_conversations_v4
+       WHERE platform = ? AND sender_id = ? AND status != 'archived'
+       ORDER BY last_message_at DESC LIMIT 1`
+    ).get(platform, phone);
+
+    let convId;
+    if (existing) {
+      convId = existing.id;
+      // أعد فتحها إذا كانت مغلقة
+      db.prepare(
+        `UPDATE inbox_conversations_v4 SET status='open', updated_at=? WHERE id=?`
+      ).run(now, convId);
+    } else {
+      // أنشئ محادثة جديدة
+      const result = db.prepare(
+        `INSERT INTO inbox_conversations_v4
+         (platform, sender_id, sender_name, sender_phone, status, assigned_to_id, first_message_at, last_message_at, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?, ?)`
+      ).run(platform, phone, senderName, phone, user.id, now, now, now, now);
+      convId = result.lastInsertRowid;
+    }
+
+    // إذا كان هناك رسالة، أضفها كـ outbound
+    if (message || template_name) {
+      const content = message || `[template: ${template_name}]`;
+      db.prepare(
+        `INSERT INTO inbox_messages_v4
+         (conversation_id, platform, direction, content, content_type, agent_id, status, created_at)
+         VALUES (?, ?, 'out', ?, 'text', ?, 'pending', ?)`
+      ).run(convId, platform, content, user.id, now);
+
+      db.prepare(
+        `UPDATE inbox_conversations_v4
+         SET last_message_text=?, last_message_dir='out', last_message_at=?, updated_at=?
+         WHERE id=?`
+      ).run(content, now, now, convId);
+    }
+
+    const conv = db.prepare('SELECT * FROM inbox_conversations_v4 WHERE id=?').get(convId);
+    return res.json({ ok: true, conversation: conv, created: !existing });
+
+  } catch (err) {
+    console.error('[new-conversation]', err.message);
+    return res.status(500).json({ ok: false, error: 'db_error' });
+  }
+});
 
 module.exports = router;
 module.exports.recordFirstResponse = recordFirstResponse;
