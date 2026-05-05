@@ -226,7 +226,7 @@ sqlite3 /home/areej/areej-pro/data/tenants/10.db "SELECT COUNT(*) FROM inbox_use
 > الخطر: صفر — قراءة فقط + توثيق
 > المدة المتوقعة: 1 جلسة
 
-### [C1] 🔴 مقارنة api.js مع backend endpoints
+### [C1] ✅ مقارنة api.js مع backend endpoints
 **المشكلة:** api.js يحتوي على 762 سطر من الـ fetch calls — قد يكون بعضها يستدعي endpoints غير موجودة أو تغيّر مسارها
 
 **التحقق:**
@@ -250,12 +250,12 @@ curl -s "http://localhost:3002/api/inbox/conversations?page=1&limit=5" \
   -H "x-tenant-slug: pro-test" -H "Authorization: Bearer $TOKEN" | python3 -m json.tool | head -20
 ```
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** 43893c0
+**ملاحظة:** كل endpoints OK — أضفنا POST /new-conversation الناقص في backend ✅
 
 ---
 
-### [C2] 🔴 audit InboxStore state keys vs actual data
+### [C2] ✅ audit InboxStore state keys vs actual data
 **المشكلة:** store.js يعرّف state keys — إذا كان الـ backend يرجع حقل مختلف، الـ UI لن يعرض البيانات
 
 **التحقق:**
@@ -269,8 +269,8 @@ grep -n "res.json\|return.*json" /home/areej/areej-pro/server/routes/inbox/conve
 
 **التعديل:** صحّح أي mismatch في المفاتيح
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** 43893c0
+**ملاحظة:** conversations/messages state keys تطابق backend response ✅
 
 ---
 
@@ -634,10 +634,10 @@ sqlite3 /home/areej/areej-pro/data/tenants/10.db "SELECT id, name, inbox_role_id
 - مشاكل ظهرت: channel_type errors قديمة في log (قبل الـ fix) — لا errors جديدة بعد reload
 
 ### Zone C
-- التاريخ: _______________
-- المنجز: _______________
-- Commits: _______________
-- مشاكل ظهرت: _______________
+- التاريخ: 2026-05-05
+- المنجز: C1 + C2 — كل Zone C مكتملة ✅
+- Commits: 43893c0
+- مشاكل ظهرت: POST /new-conversation كان ناقص — تم بناؤه ✅
 
 ### Zone D
 - التاريخ: _______________
