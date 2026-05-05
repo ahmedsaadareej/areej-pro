@@ -588,6 +588,10 @@
 .iv4-msg.out { align-self: flex-start; align-items: flex-start; }
 .iv4-msg.in  { align-self: flex-end;   align-items: flex-end; }
 .iv4-msg.note { align-self: center; max-width: 90%; }
+/* BEM aliases (actual HTML uses double-dash) */
+.iv4-msg--out { align-self: flex-start; align-items: flex-start; }
+.iv4-msg--in  { align-self: flex-end;   align-items: flex-end; }
+.iv4-msg--note { align-self: center; max-width: 90%; }
 
 .iv4-msg-bubble {
   padding: 8px 12px;
@@ -1076,12 +1080,14 @@
 /* ─── Reply Button (يظهر عند hover على الرسالة) ─────────────────────── */
 .iv4-msg {
   position: relative;
+  height: fit-content;
+  min-height: 0;
 }
 
 .iv4-msg-reply-btn {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 8px;
+  transform: none;
   background: var(--iv4-bg);
   border: 1px solid var(--iv4-border);
   border-radius: 50%;
