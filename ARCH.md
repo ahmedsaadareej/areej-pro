@@ -20,7 +20,7 @@
 |---|---|---|
 | 🔴 A1 | `inbox_timeline_v4` — column `meta` بدل `data` في 4 INSERTs | ✅ مكتمل |
 | 🔴 A2 | Settings Channels — يكتب في v4 table، الإرسال يقرأ من `inbox_settings` القديم | ✅ مكتمل |
-| 🟠 A3 | `routes/inbox.js` (v3) — 3552 سطر، 134 route، لا يزال شغّالاً بجانب v4 | 🟠 تحليل مطلوب |
+| ✅ A3 | `routes/inbox.js` (v3) — تحليل كامل + حذف 454 سطر dead code | ✅ مكتمل |
 | 🟡 A4 | `inbox_conversations` (v3) + `inbox_conversations_v4` — جدولان | 🟡 Pending |
 | 🟡 A5 | WA templates: v3 endpoint + v4 frontend — غير متزامنين | 🟡 Pending |
 
@@ -76,32 +76,56 @@ sqlite3 /home/areej/areej-pro/data/tenants/2.db \
 
 ---
 
-## 🟠 [A3] — routes/inbox.js (v3) — تحليل مطلوب قبل deprecation
+## ✅ [A3] — routes/inbox.js (v3) — تحليل مكتمل + خطة انتقال واضحة
 
 **المشكلة:**
 - الملف `server/routes/inbox.js` يحتوي 3552 سطر و134 route
-- أُنشئ للـ inbox v3 لكن يحتوي على وظائف متعددة مختلطة:
+- أُنشئ للـ inbox v3 لكن يحتوي على وظائف متعددة مختلطة
 
-| الوظيفة | في v4 بديل؟ |
+**نتائج التحليل (2026-05-05):**
+
+### الفئة A — Dead Code (Express لا يصلها — ملفات منفصلة تأتي أولاً في routes-system.js)
+| Route في inbox.js | يُخدَّم من |
 |---|---|
-| `/api/inbox/conversations` (v3) | ✅ `routes/inbox/conversations.js` |
-| `/api/inbox/settings` (v3 GET/PUT) | ✅ `routes/inbox/settings.js` (بعد A2) |
-| `/api/inbox/send` | ✅ `routes/inbox/messages.js` |
-| `/api/inbox/templates` (WA canned) | ⚠️ جزئياً في v4 |
-| `/api/marketplace/*` | ❌ لا يوجد v4 بديل |
-| `/api/payment-links` (v3) | ⚠️ هل v4 messaging يستخدمه؟ |
-| `/api/order-forms/*` | ❌ لا يوجد v4 بديل |
-| `/api/shipping/*` | ❌ لا يوجد v4 بديل |
-| WA webhook/send handlers | ⚠️ موجود في routes-inbox-webhook.js أيضاً |
+| `/shipping/*` (11 routes) | `routes/shipping.js` (مُسجَّل قبل inbox.js) |
+| `/payment-links`, `/order-forms` | `routes/sales-tools.js` (مُسجَّل قبل inbox.js) |
+| `/orders/:id/to-invoice,to-production,ready` | `routes/sales-tools.js` + `routes/orders.js` |
+| `/categories`, `/products/*` | `routes/shipping.js` |
+| `/suppliers/:id/link-person` | `routes/orders.js` |
+→ **هذه routes ميتة تماماً — لا تُنفَّذ أبداً — آمن حذفها من inbox.js**
 
-**الخطر:** حذف inbox.js قد يكسر marketplace, order-forms, shipping
+### الفئة B — V3 Inbox Routes (معطَّلة UI-wise)
+- مُسجَّلة على `/api/system/inbox/*`
+- تُستدعى من `dashboard/js/inbox.js` + `dashboard/js/ui.js`
+- لكن الـ UI التي تستدعيها (`inboxSettingsModal`) معطَّلة `display:none!important`
+- كل inbox-v3 scripts موجودة لكن مُعلَّقة في dashboard/index.html (commented out منذ 2026-05-04)
+- **الخطر: منخفض** — يمكن deprecate بعد التحقق من عدم وجود clients تستخدمها مباشرة
 
-**الخطوة التالية:**
-1. تدقيق كل `/api/inbox/*` endpoint — هل الـ frontend v4 لا يزال يستدعيه؟
-2. تدقيق كل `/api/marketplace/*` و `/api/payment-links` — هل لها v4 بديل؟
-3. إنشاء خطة انتقال تدريجية — deprecate v3 inbox routes فقط، مش كل الملف
+### الفئة C — Marketplace (ACTIVE — يجب الإبقاء عليها)
+| Route | الـ Frontend |
+|---|---|
+| `GET /marketplace/suppliers` | `page-marketplace` في dashboard (active sidebar) |
+| `POST /marketplace/quote` | `submitQuoteRequest()` في inbox.js |
+| `POST /marketplace/rate` | `selectRating()` |
+| `GET /marketplace/my-quotes` | `showMarketTab('my-quotes')` |
+→ **هذه routes نشطة — تُستدعى من page-marketplace في الـ sidebar**
+→ **لا تحذف — انقلها لملف `routes/marketplace.js` منفصل**
 
-**Status:** 🟠 تحليل مطلوب — لا تحذف أو تعطّل قبل التحقق
+**خطة الانتقال التدريجية:**
+1. ✅ **P1 (آمن الآن):** حذف الـ Dead Code (الفئة A) من inbox.js — لن يكسر شيئاً
+2. ⏳ **P2:** نقل `/marketplace/*` لـ `routes/marketplace.js` + تسجيلها في routes-system.js
+3. ⏳ **P3:** deprecate v3 inbox routes تدريجياً (بعد التحقق من صفر استخدام)
+4. ⏳ **P4:** حذف inbox.js بالكامل بعد اكتمال v4 migration
+
+**Commit:** `66dc131`
+
+**الاختبار:**
+```bash
+# التحقق من Marketplace تعمل بعد الـ refactor:
+curl -s http://localhost:3002/api/system/marketplace/suppliers -H "Authorization: Bearer TEST" | head -50
+```
+
+**Status:** ✅ تحليل مكتمل — خطة واضحة موثَّقة
 
 ---
 
@@ -135,3 +159,4 @@ sqlite3 /home/areej/areej-pro/data/tenants/2.db \
 |---|---|---|---|
 | 2026-05-05 | A1 | context.js: meta → data (4 INSERTs في timeline) | `9b1f59a` |
 | 2026-05-05 | A2 | settings.js: CHANNEL_BRIDGE + bridge GET/PUT | `83df6df` |
+| 2026-05-05 | A3 | تحليل كامل + حذف 454 سطر dead code من routes/inbox.js | `66dc131` |
