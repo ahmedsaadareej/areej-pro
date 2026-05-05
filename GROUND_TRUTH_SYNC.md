@@ -401,7 +401,7 @@ grep -n "tab\|fetch\|render" /home/areej/areej-pro/public/dashboard/inbox-v4/con
 > الهدف: SSE يشتغل بدون انقطاع + كل الـ events تصل
 > المدة المتوقعة: 1 جلسة
 
-### [F1] 🔴 audit SSE events — كل event له handler
+### [F1] ✅ audit SSE events — كل event له handler
 **الملفات:** `server/routes/inbox/stream.js` + `public/dashboard/inbox-v4/stream.js`
 
 **التحقق:**
@@ -423,8 +423,8 @@ curl -N "http://localhost:3002/api/inbox/stream?_t=$TOKEN" \
 # يجب أن يستمر الاتصال ويُرسل ping
 ```
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** 2bb605c
+**ملاحظة:** 10 events مطابقة (connected/conv:new/update/removed/message:new/counts/agent:status/viewing/note:mention/ping) ✅
 
 ---
 
@@ -432,7 +432,7 @@ curl -N "http://localhost:3002/api/inbox/stream?_t=$TOKEN" \
 > الهدف: لا N+1 queries + الـ JS/CSS عندهم cache-busting صح
 > المدة المتوقعة: 1 جلسة
 
-### [G1] 🔴 audit cache-busting في index.html
+### [G1] ✅ audit cache-busting في index.html
 **الملف:** `public/inbox-v4/index.html` + `public/dashboard/inbox-v4/index.html`
 
 **التحقق:**
@@ -443,12 +443,12 @@ grep -n "\.js\?v=\|\.css\?v=" /home/areej/areej-pro/public/dashboard/inbox-v4/in
 
 **يجب:** كل `.js` و `.css` عندهم `?v=TIMESTAMP` — إذا لا، أضف cache-bust
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** e43eb83
+**ملاحظة:** تحديث ?v=2 → ?v=20260505 لـ 30 asset ✅
 
 ---
 
-### [G2] 🔴 audit heavy queries في analytics.js
+### [G2] ✅ audit heavy queries في analytics.js
 **الملف:** `server/routes/inbox/analytics.js` (1,642 سطر)
 
 **التحقق:**
@@ -466,8 +466,8 @@ time curl -s "http://localhost:3002/api/inbox/analytics/overview" \
 # يجب أن يكون < 500ms
 ```
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** e43eb83
+**ملاحظة:** analytics/overview: 12ms (أقل من 500ms) ✅ — 32 queries بدون N+1 مشاكل ✅
 
 ---
 
@@ -652,16 +652,16 @@ sqlite3 /home/areej/areej-pro/data/tenants/10.db "SELECT id, name, inbox_role_id
 - مشاكل ظهرت: timeline 500 error (عمود meta غير موجود) — مصلح ✅
 
 ### Zone F
-- التاريخ: _______________
-- المنجز: _______________
-- Commits: _______________
-- مشاكل ظهرت: _______________
+- التاريخ: 2026-05-05
+- المنجز: F1 — كل Zone F مكتملة ✅
+- Commits: 2bb605c
+- مشاكل ظهرت: لا — backend ↔ frontend مطابقة بالكامل
 
 ### Zone G
-- التاريخ: _______________
-- المنجز: _______________
-- Commits: _______________
-- مشاكل ظهرت: _______________
+- التاريخ: 2026-05-05
+- المنجز: G1 + G2 — كل Zone G مكتملة ✅
+- Commits: e43eb83
+- مشاكل ظهرت: لا — cache-busting موجود + analytics سريع
 
 ### Zone H
 - التاريخ: _______________
