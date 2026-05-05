@@ -346,7 +346,7 @@ router.post('/conversations/auto-assign-all', (req, res) => {
     const db   = req.db;
     const user = req.inboxUser;
 
-    if (user.role !== 'owner' && user.role !== 'admin') {
+    if (!user?.permissions?.team_manage) {
       return res.status(403).json({ ok: false, error: 'للمشرفين فقط' });
     }
 
