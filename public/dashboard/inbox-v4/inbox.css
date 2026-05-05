@@ -50,7 +50,7 @@
 /* ─── Root Layout (3 columns) ───────────────────────────────────────────── */
 .iv4-root {
   display: grid;
-  grid-template-columns: var(--iv4-sidebar-w) var(--iv4-conv-w) 1fr;
+  grid-template-columns: var(--iv4-sidebar-w) var(--iv4-conv-w) 1fr 0; /* FIX-012: col4 = context panel (0 when hidden) */
   grid-template-rows: 100%;
   height: 100%;
   position: relative;
@@ -729,7 +729,11 @@
   overflow: hidden;
   transition: width var(--iv4-transition);
 }
-.iv4-context-panel.hidden { width: 0; border: none; }
+.iv4-context-panel.hidden { width: 0; border: none; overflow: hidden; }
+/* FIX-012: expand col4 when context panel is visible */
+.iv4-root:has(.iv4-context-panel:not(.hidden)) {
+  grid-template-columns: var(--iv4-sidebar-w) var(--iv4-conv-w) 1fr var(--iv4-ctx-w);
+}
 
 .iv4-ctx-tabs {
   display: flex;

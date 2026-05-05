@@ -709,6 +709,17 @@ ${transcriptHtml}`.trim();
       });
     }
 
+    // FIX-011: ربط الـ avatar بزر "بيانات العميل" (Context Panel)
+    const avatarEl = header.querySelector('.iv4-header-avatar');
+    if (avatarEl) {
+      avatarEl.style.cursor = 'pointer';
+      avatarEl.title = 'عرض بيانات العميل';
+      avatarEl.addEventListener('click', () => {
+        const toggleBtn = document.getElementById('iv4-ctx-toggle');
+        if (toggleBtn) toggleBtn.click();
+      });
+    }
+
     // ربط أزرار الـ header
     _bindHeaderActions(header, conv);
   }
