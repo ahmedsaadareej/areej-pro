@@ -36,7 +36,8 @@ router.use('/', require('./routes/treasury'));     // /wallets, /transactions, /
 router.use('/', require('./routes/shipping'));     // /shipping
 router.use('/', require('./routes/sales-tools'));         // /payment-links, /order-forms, /orders/:id/to-invoice
 router.use('/', require('./routes/payment-gateways'));    // /payment-gateways
-router.use('/', require('./routes/inbox'));        // /inbox/*, /marketplace/*
+router.use('/', require('./routes/marketplace'));   // /marketplace/*
+router.use('/', require('./routes/inbox'));        // /inbox/* (v3 — pending deprecation)
 
 // ── Settings / Profile (صغيرة — تبقى هنا) ─────────────────────────────
 router.get('/settings', requireAuth, (req, res) => {
