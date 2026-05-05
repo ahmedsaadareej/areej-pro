@@ -663,7 +663,7 @@ router.get('/conversations/:id/timeline', (req, res) => {
         event_type       AS type,
         actor_id,
         actor_name,
-        COALESCE(data, meta, '{}') AS payload,
+        COALESCE(data, '{}') AS payload,
         created_at
       FROM inbox_timeline_v4
       WHERE conversation_id = ?
