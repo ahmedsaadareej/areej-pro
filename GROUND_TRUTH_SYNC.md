@@ -349,7 +349,7 @@ grep -n "platform\|channel\|whatsapp\|telegram\|instagram\|messenger" \
 > الملفات: context.js (backend + frontend)
 > المدة المتوقعة: 2 جلسات
 
-### [E1] 🔴 audit context.js backend — كل endpoint يشتغل
+### [E1] ✅ audit context.js backend — كل endpoint يشتغل
 **الملف:** `server/routes/inbox/context.js`
 
 **التحقق:**
@@ -372,12 +372,12 @@ curl -s "http://localhost:3002/api/inbox/context/invoices/PHONE" \
   -H "x-tenant-slug: pro-test" -H "Authorization: Bearer $TOKEN"
 ```
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** b9fc367
+**ملاحظة:** إصلاح bug timeline — column 'meta' غير موجود → حذفناه ✅
 
 ---
 
-### [E2] 🔴 audit context.js frontend — tabs تعمل وبيانات تظهر
+### [E2] ✅ audit context.js frontend — tabs تعمل وبيانات تظهر
 **الملف:** `public/dashboard/inbox-v4/context.js`
 
 **التحقق:**
@@ -392,8 +392,8 @@ grep -n "tab\|fetch\|render" /home/areej/areej-pro/public/dashboard/inbox-v4/con
 - Tab "الأوردرات" → يجب أن تظهر أوردرات
 - Tab "Payment Links" → يجب أن تظهر links
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** b9fc367
+**ملاحظة:** 7 tabs مربوطة (contact/invoices/orders/pay/clv/notes/timeline) ✅
 
 ---
 
@@ -646,10 +646,10 @@ sqlite3 /home/areej/areej-pro/data/tenants/10.db "SELECT id, name, inbox_role_id
 - مشاكل ظهرت: iv4-close-btn في HTML هو stub — الفعلي iv4-btn-resolve في chat.js
 
 ### Zone E
-- التاريخ: _______________
-- المنجز: _______________
-- Commits: _______________
-- مشاكل ظهرت: _______________
+- التاريخ: 2026-05-05
+- المنجز: E1 + E2 — كل Zone E مكتملة ✅
+- Commits: b9fc367
+- مشاكل ظهرت: timeline 500 error (عمود meta غير موجود) — مصلح ✅
 
 ### Zone F
 - التاريخ: _______________
