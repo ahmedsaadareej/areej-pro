@@ -1198,13 +1198,14 @@ ${transcriptHtml}`.trim();
     const replyBox = document.getElementById('iv4-reply-box');
     const chatArea = document.getElementById('iv4-chat-area');
 
-    // iv4-chat-area يظهر دائماً
-    if (chatArea) chatArea.classList.remove('hidden');
+    // iv4-chat-area: يظهر فقط لما تُفتح محادثة
+    if (chatArea) chatArea.classList.toggle('hidden', show);
 
+    // iv4-empty-state: يظهر فقط لما لا توجد محادثة
     if (empty)    empty.classList.toggle('hidden', !show);
-    if (msgs)     msgs.classList.toggle('hidden', show);
-    if (header)   header.classList.toggle('hidden', show);
-    if (replyBox) replyBox.classList.toggle('hidden', show); // ‏✅ مخفي في الـ empty state
+
+    // العناصر داخل الـ chat-area تتحكم فيها تلقائياً لأنها جواه
+    // (msgs و header و replyBox) — لا تحتاج toggle منفصل
   }
 
   function _clearMessages() {
