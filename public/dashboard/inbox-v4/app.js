@@ -401,11 +401,7 @@
     });
   }
 
-  // شغّل بعد تحميل الـ DOM
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  // expose init للاستخدام من page-inbox.js
+  window.InboxApp = { init, loadCurrentUser };
 
 })();

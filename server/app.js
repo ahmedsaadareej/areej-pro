@@ -124,9 +124,14 @@ app.use(express.static(path.join(__dirname, '../public'), {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
     }
-    // JS + CSS: cache سنة كاملة — بنستخدم ETag للـ invalidation
+    // JS + CSS: cache مع revalidation — inbox files تتحقق دايماً
     else if (filePath.endsWith('.js') || filePath.endsWith('.css')) {
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      // inbox-v4 files: no-cache عشان التحديثات تظهر فوراً
+      if (filePath.includes('inbox-v4') || filePath.includes('inbox-v4')) {
+        res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+      } else {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
     }
     // صور وفونتس: cache سبع أيام
     else if (/\.(png|jpg|jpeg|gif|webp|svg|ico|woff2?|ttf|eot)$/.test(filePath)) {

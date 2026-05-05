@@ -308,18 +308,23 @@ const PageInbox = (() => {
         window._inboxAppInitialized = false;
       }
 
-      if (typeof InboxConvList !== 'undefined') InboxConvList.init();
-      if (typeof InboxChat     !== 'undefined') InboxChat.init();
-      if (typeof InboxTeam     !== 'undefined') InboxTeam.init();
-      if (typeof InboxReply    !== 'undefined') InboxReply.init();
-      if (typeof InboxLabels   !== 'undefined') InboxLabels.init();
-      if (typeof InboxSearch   !== 'undefined') InboxSearch.init();
-      if (typeof InboxContext  !== 'undefined') InboxContext.init();
-      if (typeof InboxAI       !== 'undefined') InboxAI.init();
-      if (typeof InboxBroadcast   !== 'undefined') InboxBroadcast.init();   // للجماعي من context
-      if (typeof InboxInteractive  !== 'undefined') InboxInteractive.init();  // أزرار WA في reply
-      if (typeof InboxCatalog      !== 'undefined') InboxCatalog.init();       // منتجات في reply
-      // InboxEmail + InboxChatbot: لا init هنا — تُفتح من Settings فقط
+      // تهيئة كاملة عبر InboxApp.init() (app.js)
+      if (typeof InboxApp !== 'undefined') {
+        InboxApp.init();
+      } else {
+        // fallback لو app.js ما اتحملش
+        if (typeof InboxStream    !== 'undefined') InboxStream.connect();
+        if (typeof InboxConvList  !== 'undefined') InboxConvList.init();
+        if (typeof InboxChat      !== 'undefined') InboxChat.init();
+        if (typeof InboxReply     !== 'undefined') InboxReply.init();
+        if (typeof InboxTeam      !== 'undefined') InboxTeam.init();
+        if (typeof InboxLabels    !== 'undefined') InboxLabels.init();
+        if (typeof InboxContext   !== 'undefined') InboxContext.init();
+        if (typeof InboxAI        !== 'undefined') InboxAI.init();
+        if (typeof InboxBroadcast !== 'undefined') InboxBroadcast.init();
+        if (typeof InboxInteractive !== 'undefined') InboxInteractive.init();
+        if (typeof InboxCatalog   !== 'undefined') InboxCatalog.init();
+      }
 
       // ربط أزرار الـ sidebar
       document.addEventListener('click', function _sidebarSettingsNav(e) {
