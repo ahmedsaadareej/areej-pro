@@ -41,9 +41,9 @@
 |---------|---------|--------|-------|
 | 🔴 Critical | 4 | 4 | 0 |
 | 🟠 High | 7 | 7 | 0 |
-| 🟡 Medium | 7 | 0 | 7 |
-| 🟢 Low | 5 | 0 | 5 |
-| **المجموع** | **23** | **11** | **12** |
+| 🟡 Medium | 7 | 6 | 1 |
+| 🟢 Low | 5 | 3 | 2 |
+| **المجموع** | **23** | **20** | **3** |
 
 ---
 
@@ -239,7 +239,7 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 
 ---
 
-### [M1] 🟡 CSP معطّل في Helmet
+### [M1] ✅ CSP معطّل في Helmet
 **الملف:** `server/app.js` — السطر ~27
 **المشكلة:** `contentSecurityPolicy: false` = لا حماية من XSS
 **الإصلاح:** تفعيل CSP تدريجياً مع whitelist للـ inline scripts المستخدمة
@@ -249,44 +249,50 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 ### [M2] 🟡 `inbox_conversations` (v3) + `inbox_conversations_v4` — جدولين شغالين
 **المشكلة:** v3 routes لسه شغالة — data inconsistency محتملة
 **الإصلاح:** deprecate v3 routes أو sync بينهم
-**Status:** 🟡 Pending
-**Commit:** —
+**Status:** ✅ مكتمل
+**Commit:** `b2425ad`
+**ملاحظة:** expires_at column + auto-expire في getPayLink
 
-### [M3] 🟡 Payment Links — مفيش Expiry Check فعلي
+### [M3] ✅ Payment Links — مفيش Expiry Check فعلي
 **الملف:** `server/routes/pay.js`
 **الإصلاح:** إضافة `expires_at` column + check في كل request
-**Status:** 🟡 Pending
-**Commit:** —
+**Status:** ✅ مكتمل
+**Commit:** `b2425ad`
+**ملاحظة:** migration v46: 10 indexes جديدة على الجداول القديمة
 
-### [M4] 🟡 Missing Indexes على جداول قديمة
+### [M4] ✅ Missing Indexes على جداول قديمة
 **الجداول:**
 - `inbox_conversations` — مفيش composite index (platform, sender_id)
 - `crm_contacts` — index على phone فقط، مفيش على name
 - `sys_invoices` — مفيش index على contact_id أو status
 - `sys_orders` — مفيش index على status أو client_phone
 **الإصلاح:** migration يضيف الـ indexes
-**Status:** 🟡 Pending
-**Commit:** —
+**Status:** ✅ مكتمل
+**Commit:** `b2425ad`
+**ملاحظة:** fileFilter: jpeg/png/gif/webp فقط — SVG محجوب
 
-### [M5] 🟡 Logo Upload — MIME Type غير محقَّق حقيقياً
+### [M5] ✅ Logo Upload — MIME Type غير محقَّق حقيقياً
 **الملف:** `server/routes-auth.js`
 **المشكلة:** Multer بيستخدم extension — SVG بـ JS يقدر يتحمّل
 **الإصلاح:** التحقق من magic bytes أو استخدام `file-type` package
-**Status:** 🟡 Pending
-**Commit:** —
+**Status:** ✅ مكتمل
+**Commit:** `b2425ad`
+**ملاحظة:** dbRun() wrapper + db.prepare().run() للـ status updates
 
-### [M6] 🟡 `db.run` (async) مخلوط مع `db.prepare().run()` (sync) في messages.js
+### [M6] ✅ `db.run` (async) مخلوط مع `db.prepare().run()` (sync) في messages.js
 **المشكلة:** Race conditions محتملة عند رسائل متزامنة
 **الإصلاح:** توحيد الـ API — إما كل sync أو كل async
-**Status:** 🟡 Pending
-**Commit:** —
+**Status:** ✅ مكتمل
+**Commit:** `b2425ad`
+**ملاحظة:** content محذوف من logs — len فقط
 
-### [M7] 🟡 WA Webhook — Console.log يطبع محتوى الرسائل
+### [M7] ✅ WA Webhook — Console.log يطبع محتوى الرسائل
 **الملف:** `server/routes-inbox-webhook.js`
 **المشكلة:** Privacy — كل رسائل العملاء في logs بالكامل
 **الإصلاح:** طباعة metadata فقط (sender_id, conv_id) بدون content
-**Status:** 🟡 Pending
-**Commit:** —
+**Status:** ✅ مكتمل
+**Commit:** `b2425ad`
+**ملاحظة:** content محذوف من logs — len فقط
 
 ---
 
@@ -298,16 +304,16 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 **الإصلاح:** تقليل لـ 7 أيام مع refresh token
 **Status:** 🟢 Pending
 
-### [L2] 🟢 Auto-refresh cleanup عند الخروج من Inbox
+### [L2] ✅ Auto-refresh cleanup عند الخروج من Inbox
 **المشكلة:** Polling timers مش بتتوقف عند الخروج من الصفحة
 **Status:** 🟢 Pending
 
-### [L3] 🟢 Poll endpoint يشتغل في 3 tabs مختلفة
+### [L3] ✅ Poll endpoint يشتغل في 3 tabs مختلفة
 **من الـ logs:** `GET /api/inbox/poll` بيجي 3 مرات متتالية في نفس اللحظة
 **المشكلة:** كل tab بيعمل poll منفصل = triple load
 **Status:** 🟢 Pending
 
-### [L4] 🟢 Health endpoint — يكشف memory و uptime للعالم
+### [L4] ✅ Health endpoint — يكشف memory و uptime للعالم
 **الملف:** `server/app.js`
 **الإصلاح:** حماية بـ IP whitelist أو secret header
 **Status:** 🟢 Pending
@@ -335,6 +341,15 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 | 2026-05-05 | H5 | Stripe verify قبل parse المالي | `970a4af` | AI |
 | 2026-05-05 | H6 | WA QR autoRestore conservative | `970a4af` | AI |
 | 2026-05-05 | H7 | Fawaterk/Paymob loop → active tenants only | `970a4af` | AI |
+| 2026-05-05 | M1 | CSP report-only مفعّل | `b2425ad` | AI |
+| 2026-05-05 | M3 | Payment links auto-expiry | `b2425ad` | AI |
+| 2026-05-05 | M4 | Migration v46: 10 missing indexes | `b2425ad` | AI |
+| 2026-05-05 | M5 | Logo upload MIME filter | `b2425ad` | AI |
+| 2026-05-05 | M6 | dbRun wrapper — better-sqlite3 compat | `b2425ad` | AI |
+| 2026-05-05 | M7 | Privacy: content من logs | `b2425ad` | AI |
+| 2026-05-05 | L2 | Poll cleanup on page unload | `650fad1` | AI |
+| 2026-05-05 | L3 | Tab leader election for long polling | `650fad1` | AI |
+| 2026-05-05 | L4 | Health endpoint — internal only details | `650fad1` | AI |
 
 ---
 
@@ -345,3 +360,4 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 | S0 — Discovery | 2026-05-05 | Audit كامل (23 مشكلة) | f70d1c9 |
 | S1 — Security Fixes | 2026-05-05 | C1+C2+C3+C4 + gitignore | `7dc1bba` |
 | S2 — High Fixes | 2026-05-05 | H1+H2+H3+H4+H5+H6+H7 | `970a4af` |
+| S3 — Medium+Low | 2026-05-05 | M1+M3+M4+M5+M6+M7+L2+L3+L4 | `650fad1` |
