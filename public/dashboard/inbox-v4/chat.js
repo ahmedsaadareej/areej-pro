@@ -164,9 +164,9 @@ const InboxChat = (() => {
     const oldest = reset ? null : (InboxStore.state.messages[0] || null);
     const beforeId = oldest ? oldest.id : null;
 
-    const { data, error } = await InboxAPI.conversations.messages(convId, {
+    const { data, error } = await InboxAPI.messages.list(convId, {
       limit: 30,
-      before_id: beforeId,
+      before: beforeId,
     });
 
     _showSkeleton(false);
@@ -1166,10 +1166,12 @@ ${transcriptHtml}`.trim();
   // ─── UI Helpers ───────────────────────────────────────────────────────────
 
   function _showEmpty(show) {
-    const panel   = $panel();
     const empty   = $emptyState();
     const msgs    = $messages();
     const header  = $header();
+    // iv4-chat-area يظهر عند فتح أي محادثة أو عرض empty state
+    const chatArea = document.getElementById('iv4-chat-area');
+    if (chatArea) chatArea.classList.remove('hidden');
 
     if (empty)  empty.classList.toggle('hidden', !show);
     if (msgs)   msgs.classList.toggle('hidden', show);
