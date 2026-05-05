@@ -20,14 +20,20 @@ const PageReports = (() => {
         return;
       }
 
-      // حقن container داخلي
+      // FIX-006c: حقن container داخلي + querySelector بدل getElementById
       container.innerHTML = `<div id="iv4-analytics-container" style="height:100%;overflow:auto;"></div>`;
 
-      const section     = (params && params.section) || 'overview';
-      const anchorEl    = document.getElementById('iv4-analytics-container');
+      const section  = (params && params.section) || 'overview';
+      // querySelector بدل getElementById لضمان البحث داخل container فقط
+      const anchorEl = container.querySelector('#iv4-analytics-container');
 
-      // استخدام mount() الرسمي (D-031)
-      InboxAnalytics.mount(anchorEl, { section });
+      if (!anchorEl) {
+        container.innerHTML = '<div style="padding:40px;color:red">خطأ: container التقارير غير موجود</div>';
+        return;
+      }
+
+      // requestAnimationFrame يضمن أن الـ DOM جاهز
+      requestAnimationFrame(() => InboxAnalytics.mount(anchorEl, { section }));
     },
 
     unmount() {
