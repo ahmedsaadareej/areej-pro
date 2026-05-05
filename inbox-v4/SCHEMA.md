@@ -1,5 +1,5 @@
 # SCHEMA.md — تصميم قاعدة البيانات v4
-> آخر تحديث: 2026-05-03
+> آخر تحديث: 2026-05-05 (GTS Zone H3 — إضافة inbox_users + inbox_roles)
 
 ---
 
@@ -185,6 +185,49 @@ CREATE TABLE IF NOT EXISTS inbox_automation_v4 (
   created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
   updated_at  INTEGER NOT NULL DEFAULT (unixepoch())
 );
+```
+
+---
+
+### inbox_users (Inbox Agents — جديد GTS Zone A)
+
+```sql
+CREATE TABLE inbox_users (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  email           TEXT    NOT NULL,
+  name            TEXT    NOT NULL,
+  inbox_role_id   INTEGER NOT NULL DEFAULT 4 REFERENCES inbox_roles(id),
+  tenant_user_id  INTEGER DEFAULT NULL,           -- FK → tenant_users.id (اختياري)
+  status          TEXT    NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive')),
+  created_at      INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at      INTEGER NOT NULL DEFAULT (unixepoch())
+);
+-- Indexes
+CREATE UNIQUE INDEX idx_inbox_users_email ON inbox_users(email);
+CREATE INDEX idx_inbox_users_tenant_user ON inbox_users(tenant_user_id) WHERE tenant_user_id IS NOT NULL;
+CREATE INDEX idx_inbox_users_role ON inbox_users(inbox_role_id);
+```
+
+⚠️ ملاحظة: inbox_users فارغة في معظم tenants → النظام يعمل بـ fallback mode (owner permissions)
+
+---
+
+### inbox_roles (Inbox Permissions — جديد GTS Zone A)
+
+```sql
+CREATE TABLE inbox_roles (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  name        TEXT    NOT NULL UNIQUE,
+  description TEXT,
+  is_system   INTEGER NOT NULL DEFAULT 0,
+  permissions TEXT    NOT NULL DEFAULT '{}',      -- JSON: {"team_manage":true, "bulk_action":true, ...}
+  created_at  INTEGER NOT NULL DEFAULT (unixepoch())
+);
+-- الأدوار الافتراضية المسيدة (is_system=1):
+-- 1: Owner    → كل permissions = true
+-- 2: Manager  → team_manage + bulk + settings
+-- 3: Agent    → reply + assign_self + notes
+-- 4: Viewer   → read-only (default)
 ```
 
 ---
