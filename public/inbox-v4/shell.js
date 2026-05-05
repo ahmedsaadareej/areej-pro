@@ -305,9 +305,13 @@ const InboxShell = (() => {
     _bootstrapEmbedToken();
     _listenParentMessages();
 
-    // إخفاء standalone elements في embed mode
+    // إخفاء standalone elements في embed mode — نضيف الـ class فوراً
     if (_isEmbedMode()) {
       document.documentElement.classList.add('iv4-embed-mode');
+      document.documentElement.dataset.embed = '1';
+      // إخفاء الـ topbar مباشرة بدل انتظار CSS
+      const topbar = document.getElementById('shell-topbar');
+      if (topbar) topbar.style.display = 'none';
     }
 
     // 1. جلب بيانات المستخدم (يُعيد null لو مفيش token صالح)
