@@ -245,3 +245,36 @@
 - **القرار:** الـ DB columns هي `channel` و`active` — الـ backend يعمل mapping في الـ response
 - **السبب:** migration v23 كتب `channel`/`active` — الـ backend كُتب لاحقاً بـ `channel_type`/`is_active`
 - **الشرط:** أي كود يتعامل مع هذا الجدول يستخدم اسم الـ DB (`channel`/`active`) في الـ query، ويعمل mapping في الـ response
+
+## D-047 | Long Polling fallback بدل SSE مع Cloudflare (P11-C)
+- **التاريخ:** 2026-05-04
+- **القرار:** عند وجود Cloudflare buffering، يتحول stream.js تلقائياً لـ Long Polling
+- **كيف:** auto-detection: إذا فشل SSE بعد 5 ثوانٍ → Long Polling (commit 43c8d34)
+- **السبب:** Cloudflare Enterprise يبفّر SSE ويمنع real-time — Long Polling يعمل بلا مشاكل
+- **الشرط:** يحتاج config flag في server: `FORCE_LONG_POLLING=true` بيئة Production
+
+## D-048 | /inbox يُحوَّل رسمياً لـ v4 (P12-A)
+- **التاريخ:** 2026-05-04
+- **القرار:** المسار `/inbox` يخدم Inbox v4 مباشرة بعد نجاح Pilot على Tenant 2
+- **Pilot:** Tenant 2 (pro-test) — 11 محادثة + 466 رسالة مهاجرة بنجاح (commit 6ff7186)
+- **السبب:** v4 مستقرة وتعمل — v3 deprecated ولا تحتاج صيانة
+
+## D-049 | POST /inbox/new-conversation endpoint (GTS C1)
+- **التاريخ:** 2026-05-05
+- **القرار:** نضيف endpoint لإنشاء محادثة جديدة من الـ inbox مباشرة
+- **الـ endpoint:** POST /api/inbox/conversations/new-conversation
+- **الـ behavior:** يعيد `{ ok, created, conversation }` — created=false لو كانت موجودة
+- **السبب:** كان ناقصاً في backend (commit 43893c0)
+
+## D-050 | iv4-new-conv-btn يفتح Modal (GTS D1)
+- **التاريخ:** 2026-05-05
+- **القرار:** زر ✏️ في conv sidebar header يفتح modal لإنشاء محادثة جديدة
+- **الـ Modal:** platform dropdown + phone/name/message fields
+- **بعد الإنشاء:** auto-open المحادثة الجديدة في chat area
+- **السبب:** الزر كان موجوداً في HTML بدون listener (commit b8eba4b)
+
+## D-051 | inbox_timeline_v4.data (ليس meta) — GTS E1
+- **التاريخ:** 2026-05-05
+- **القرار:** الـ column الوحيد لـ JSON payload في inbox_timeline_v4 هو `data`
+- **السبب:** كود timeline كان يحاول COALESCE(data, meta) والـ `meta` غير موجود
+- **الإصلاح:** استخدم COALESCE(data, '{}') (commit b9fc367)
