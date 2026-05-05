@@ -39,11 +39,11 @@
 
 | الخطورة | الإجمالي | مكتمل | متبقي |
 |---------|---------|--------|-------|
-| 🔴 Critical | 4 | 0 | 4 |
+| 🔴 Critical | 4 | 4 | 0 |
 | 🟠 High | 7 | 0 | 7 |
 | 🟡 Medium | 7 | 0 | 7 |
 | 🟢 Low | 5 | 0 | 5 |
-| **المجموع** | **23** | **0** | **23** |
+| **المجموع** | **23** | **4** | **19** |
 
 ---
 
@@ -65,9 +65,9 @@ WHERE c.id = ? AND c.tenant_id = ?
 -- أو التحقق إن req.inboxUser.id يملك المحادثة
 ```
 **الاختبار:** طلب محادثة من tenant مختلف يرجع 404
-**Status:** 🔴 Pending
-**Commit:** —
-**ملاحظة:** —
+**Status:** ✅ مكتمل
+**Commit:** `56eba4e`
+**ملاحظة:** الـ _scopeClause موجود أصلاً — طبّقناه على GET/:id
 
 ---
 
@@ -86,9 +86,9 @@ const safeUrl = /^https?:\/\//i.test(url) ? url : '#';
 url => `<a href="${safeUrl}" target="_blank" rel="noopener">${_escHtml(url)}</a>`
 ```
 **الاختبار:** رسالة تحتوي `javascript:alert(1)` — الرابط يظهر كنص فقط
-**Status:** 🔴 Pending
-**Commit:** —
-**ملاحظة:** —
+**Status:** ✅ مكتمل
+**Commit:** `56eba4e`
+**ملاحظة:** URL الآن يمر عبر _escHtml في href أيضاً
 
 ---
 
@@ -111,9 +111,9 @@ if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
 ```
 **ملاحظة إضافية:** يحتاج `express.raw()` قبل JSON parse لحفظ الـ rawBody
 **الاختبار:** POST بدون signature يرجع 401
-**Status:** 🔴 Pending
-**Commit:** —
-**ملاحظة:** —
+**Status:** ✅ مكتمل
+**Commit:** `56eba4e`
+**ملاحظة:** express.raw() + crypto.timingSafeEqual — يعمل فقط لو wa_app_secret موجود في settings
 
 ---
 
@@ -132,9 +132,9 @@ app.use('/api/auth/otp/send', rateLimit({ windowMs: 60*1000, max: 3, ... }));
 app.use('/api/auth/register', rateLimit({ windowMs: 60*60*1000, max: 5, ... }));
 ```
 **الاختبار:** 11 محاولة login في 15 دقيقة → 429
-**Status:** 🔴 Pending
-**Commit:** —
-**ملاحظة:** —
+**Status:** ✅ مكتمل
+**Commit:** `56eba4e`
+**ملاحظة:** Login(10/15min) + OTP(3/min) + Register(5/hr)
 
 ---
 
@@ -323,7 +323,11 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 
 | التاريخ | المهمة | الإجراء | Commit | المنفّذ |
 |---------|--------|---------|--------|---------|
-| — | — | — | — | — |
+| 2026-05-05 | C4 | Auth Rate Limiting (Login+OTP+Register) | `56eba4e` | AI |
+| 2026-05-05 | C2 | XSS _linkify — URL escape في href | `56eba4e` | AI |
+| 2026-05-05 | C1 | Tenant Scope في GET /conversations/:id | `56eba4e` | AI |
+| 2026-05-05 | C3 | WA Webhook HMAC Signature Verification | `56eba4e` | AI |
+| 2026-05-05 | chore | .gitignore wa-sessions + removed from git | `7dc1bba` | AI |
 
 ---
 
@@ -332,4 +336,4 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 | الجلسة | التاريخ | المهام المنجزة | آخر commit |
 |--------|---------|---------------|-----------|
 | S0 — Discovery | 2026-05-05 | Audit كامل (23 مشكلة) | f70d1c9 |
-| S1 — | — | — | — |
+| S1 — Security Fixes | 2026-05-05 | C1+C2+C3+C4 + gitignore | `7dc1bba` |
