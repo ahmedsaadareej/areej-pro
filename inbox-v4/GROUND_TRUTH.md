@@ -1,81 +1,73 @@
 # GROUND_TRUTH.md — الحقائق الثابتة للمشروع
-> هذا الملف يُقرأ أولاً في كل جلسة
-> آخر تحديث: 2026-05-05 (GTS Zone H1 ✅)
+> هذا الملف يُقرأ أولاً في كل جلسة Phase 9+
+> آخر تحديث: 2026-05-05 (H1 — Zone H Sync)
 > ⚠️ لا تعدّل هذا الملف إلا بموافقة صريحة من أحمد
 
 ---
 
 ## 🏗️ ما تم بناؤه فعلاً (Phase 0–12 ✅ مكتملة)
 
-### الـ Backend — `/home/areej/areej-pro/server/routes/inbox/` (17 ملف)
+### الـ Backend — `/home/areej/areej-pro/server/routes/inbox/`
 ```
 ai.js          ← AI Suggestions + Summary + Sentiment
-analytics.js   ← تقارير كاملة (Overview, Agent, Channel, SLA, CSAT, Export)
+analytics.js   ← تقارير كاملة (Overview, Agent, Channel, SLA, CSAT, Export, Scheduled)
 automation.js  ← Keywords + Welcome/Away + Auto-close + Scheduled + Webhooks
 broadcast.js   ← Broadcast V2 multi-platform
 chatbot.js     ← Chatbot Flows (visual builder backend)
-contacts.js    ← Contacts Page (P11-E2) — بحث + عرض + تعديل contacts
-context.js     ← Customer Info + ERP Context + Orders + Payment Links + Timeline
-conversations.js ← CRUD + Status + Priority + Snooze + Bulk + SLA + new-conversation
+contacts.js    ← صفحة Contacts — إدارة جهات الاتصال (P11-E2) ✅ جديد
+context.js     ← Customer Info + CRM + Orders + Payment Links + Timeline
+conversations.js ← CRUD + Status + Priority + Snooze + Bulk + SLA
 email.js       ← Email Channel (SMTP + IMAP)
 index.js       ← Entry point + Auth middleware + loadInboxPermissions
 labels.js      ← Labels CRUD + Assignment
 messages.js    ← Send/Receive + Media + WA Interactive + Catalog
-permissions.js ← loadInboxPermissions middleware + requirePermission + inbox_roles
+permissions.js ← loadInboxPermissions middleware + requirePermission ✅ جديد
 search.js      ← Quick + Deep search
-settings.js    ← Roles API + Users API + Org + Channels + Inbox Settings + Automation Hub
-stream.js      ← SSE real-time endpoint (10 event types)
+settings.js    ← Settings API (Roles T05 + Users T06 + Channels + Org + Canned + SLA + Attrs + CSAT) ✅ موسَّع
+stream.js      ← SSE real-time endpoint (Long Polling fallback لـ Cloudflare)
 team.js        ← Assignment + Status + Collision + Transfer
-utils/         ← مساعدات مشتركة
+
+utils/
+  business-hours.js ← مساعد حساب ساعات العمل + SLA (M2 T37) ✅ جديد
 ```
 
 ### الـ Frontend — `/home/areej/areej-pro/public/dashboard/inbox-v4/`
 ```
 ai.js          ← AI UI
-analytics.js   ← Analytics UI
-api.js         ← كل الـ fetch calls (InboxAPI layer — 762+ سطر)
-app.js         ← Entry point + init + new-conv-btn modal
+analytics.js   ← Analytics UI (Overview + Charts + Scheduled Reports)
+api.js         ← كل الـ fetch calls (InboxAPI layer) — 762+ سطر
+app.js         ← Entry point + init
 automation.js  ← Automation UI
 broadcast.js   ← Broadcast UI
-catalog.js     ← WA Catalog UI
+catalog.js     ← WA Catalog UI ✅ موجود (غير موثق سابقاً)
 chatbot.js     ← Chatbot Flow Builder UI
 chat.js        ← Chat Window + Message Rendering + Collision
-context.js     ← Context Panel (7 tabs: contact/invoices/orders/pay/clv/notes/timeline)
+context.js     ← Context Panel (Contact + Invoices + Orders + Pay + CLV + Notes + Timeline)
 conv-list.js   ← Conversations List + Filters + Bulk Actions
 email.js       ← Email UI
-inbox.css      ← الـ stylesheet الكامل (1238+ سطر)
-index.html     ← Layout (3 columns + shell) — ?v=20260505
-interactive.js ← WA Interactive Messages UI
+inbox.css      ← الـ stylesheet الكامل
+index.html     ← Layout (3 columns + shell) — cache-busted ?v=20260505
+interactive.js ← WA Interactive Messages UI ✅ موجود (غير موثق سابقاً)
 labels.js      ← Labels UI
-reply.js       ← Reply + Note + @Mentions + Media (all platforms)
-scheduled.js   ← Scheduled Messages UI
+reply.js       ← Reply + Note + @Mentions + Media (whatsapp/telegram/instagram/messenger/email)
+scheduled.js   ← Scheduled Messages UI ✅ موجود (غير موثق سابقاً)
 search.js      ← Search UI
 store.js       ← InboxStore (Single Source of Truth)
-stream.js      ← SSE receiver (10 event handlers)
+stream.js      ← SSE receiver + Long Polling fallback
 team.js        ← Team Assignment + Status + Transfer UI
-components/    ← مكونات مشتركة
-settings/      ← Settings modules (8 ملفات — انظر أدناه)
-```
 
-### الـ Settings modules — `public/dashboard/inbox-v4/settings/`
-```
-automation-hub.js  ← Automation Hub UI
-channels.js        ← Channels Settings UI
-inbox-settings.js  ← Inbox Settings (Canned / SLA / Attrs / CSAT)
-org.js             ← Organization Settings UI
-roles.js           ← Roles Management UI
-settings-page.js   ← Router: 5 tabs (org / team / channels / inbox / automation)
-team.js            ← Team Settings UI
-users.js           ← Users Management UI
-```
+settings/
+  settings-page.js   ← Shell رئيسي لصفحة الإعدادات (M2 T43) ✅ جديد
+  org.js             ← إعدادات المؤسسة + ساعات العمل (M2 T44) ✅ جديد
+  channels.js        ← إعدادات القنوات/التطبيقات (M2 T45) ✅ جديد
+  inbox-settings.js  ← Canned + SLA + Custom Attrs + CSAT + Appearance (M2 T46) ✅ جديد
+  team.js            ← غلاف قسم الفريق في Settings Shell (M2 T47) ✅ جديد
+  automation-hub.js  ← غلاف Automation في Settings Shell (M2 T47) ✅ جديد
+  roles.js           ← Roles CRUD UI (T10) ✅ جديد
+  users.js           ← Users CRUD UI (T11) ✅ جديد
 
-### الـ Shell — `public/inbox-v4/`
-```
-index.html   ← Shell entry point
-pages/       ← Shell pages
-router.js    ← Client-side router
-shell.css    ← Shell styles
-shell.js     ← Shell init
+components/
+  (فارغ حالياً — مخصص للمكونات المشتركة مستقبلاً)
 ```
 
 ---
@@ -86,6 +78,7 @@ shell.js     ← Shell init
 - **نوع DB:** SQLite (WAL mode) — قرار D-001
 - **كل tenant له DB منفصلة** في: `/home/areej/areej-pro/data/tenants/<id>.db`
 - **المسار:** `getTenantDb(req.user.id)` → يرجع الـ DB الصحيحة
+- **آخر migration:** v44
 
 ### نظام المستخدمين الموجود فعلاً في tenant DB
 ```sql
@@ -99,7 +92,7 @@ id, name, permissions (JSON), created_at
 -- مثال permissions: {"invoices":true, "orders":true, "crm":false, ...}
 ```
 
-### الأدوار الموجودة فعلاً في النظام
+### الأدوار الموجودة فعلاً في النظام (ERP)
 ```
 1 - مدير    (orders, products, suppliers)
 2 - محاسب   (invoices, wallets, reports)
@@ -107,115 +100,143 @@ id, name, permissions (JSON), created_at
 4 - مخزن    (orders, products, suppliers)
 ```
 
-### نظام Inbox Auth (الوضع الفعلي — مُحدَّث 2026-05-05)
-- `inbox_users` + `inbox_roles` جداول منفصلة في كل tenant DB
-- `loadInboxPermissions` middleware مُطبَّق في `index.js` ✅
-- `req.inboxUser` مُحقون بـ: `{ id, name, email, inbox_role_id, permissions, has_erp, has_payment }`
-- `inbox_users` فارغة في معظم tenants → fallback mode (inbox_role_id=1 / owner)
-- `inbox_roles` تحتوي على 4 أدوار افتراضية: Owner / Manager / Agent / Viewer
+### نظام Inbox Roles (جديد — مستقل عن ERP)
+```sql
+-- inbox_roles: أدوار الـ inbox (مستقلة عن tenant_roles)
+id, name, description, is_system(0/1), permissions (JSON), created_at
+-- 4 أدوار افتراضية مبنية في النظام (is_system=1)
+
+-- inbox_users: مستخدمو الـ inbox
+id, email, name, inbox_role_id (→inbox_roles), tenant_user_id (→tenant_users),
+status (active/inactive), created_at, updated_at
+-- inbox_users فارغة في معظم tenants → fallback mode
+```
+
+### ⚠️ ملاحظة نظام الـ Permissions
+- `tenant_roles.permissions` تغطي **ERP modules** فقط
+- `inbox_roles.permissions` تغطي **Inbox modules** فقط
+- النظامان مستقلان — `permissions.js` middleware يقرأ من inbox_roles
+- في حالة fallback (inbox_users فارغة): الكل يأخذ full permissions
 
 ---
 
-## 🔑 نظام الـ Auth الموجود (مُحدَّث 2026-05-05 ✅)
+## 🔑 نظام الـ Auth الموجود
 
 ```javascript
-// في server/routes/inbox/index.js — الترتيب الفعلي:
-router.use(requireAuth);          // يتحقق من الـ JWT token
+// في server/routes/inbox/index.js
+router.use(requireAuth);  // يتحقق من الـ session
 router.use((req, res, next) => {
   req.db = getTenantDb(req.user.id);  // يحقن الـ tenant DB
   next();
 });
-router.use(inboxAuthAdapter);     // يُهيّئ req.inboxUser من req.user
-router.use(loadInboxPermissions); // يُحمّل permissions من inbox_roles
+router.use(loadInboxPermissions);  // يحقن req.inboxUser مع permissions
 
-// req.inboxUser يحتوي على:
-// { id, name, email, inbox_role_id, permissions: {...}, has_erp, has_payment }
-```
-
-### الـ role checks الموجودة حالياً في الـ backend
-```javascript
-// ✅ الـ pattern الصحيح المُطبَّق الآن:
-const isAdmin = req.inboxUser?.permissions?.team_manage === true;
-// تم تصحيح req.user.role → req.inboxUser.permissions في GTS Zone A ✅
+// req.user: { id, name, email, role_id, ... }  (من ERP auth)
+// req.inboxUser: { id, name, email, inbox_role_id, permissions: {...} }
+//   → إذا inbox_users فارغة: req.inboxUser.permissions = full access
 ```
 
 ---
 
-## 📋 الـ Tables الموجودة فعلاً في tenant DB (الكاملة — v44)
+## 📋 الـ Tables الموجودة فعلاً في tenant DB (Inbox-related — v44)
 
-### Inbox v4 Core
+### Core Tables
 ```
-inbox_conversations_v4          inbox_messages_v4
-inbox_timeline_v4               inbox_agent_status_v4
-inbox_conversation_labels       inbox_channel_settings_v4
-inbox_labels                    inbox_conv_notes_v4
-```
-
-### Inbox Users & Permissions (جديد — GTS Zone A)
-```
-inbox_users     ← Inbox-specific agents (id, email, name, inbox_role_id, tenant_user_id)
-inbox_roles     ← Inbox roles مع permissions JSON (Owner/Manager/Agent/Viewer)
+inbox_conversations_v4      inbox_messages_v4
+inbox_timeline_v4           inbox_agent_status_v4
+inbox_conversation_labels   inbox_channel_settings_v4
+inbox_labels                inbox_migration_log
 ```
 
-### Automation & Bots
+### Automation & Messaging
 ```
-inbox_automation_v4             inbox_welcome_away_v4
-inbox_auto_close_v4             inbox_keywords
-inbox_chatbot_flows_v4          inbox_chatbot_steps_v4
-inbox_chatbot_sessions_v4
-```
-
-### Broadcast & Scheduled
-```
-inbox_broadcasts_v4             inbox_broadcast_recipients_v4
-inbox_broadcasts                inbox_broadcast_recipients  ← v3 (لا تمس)
-inbox_scheduled_messages_v4     inbox_scheduled_reports_v4
-```
-
-### Channels & Settings
-```
-inbox_email_accounts_v4         inbox_email_messages_v4
-inbox_channel_routing           inbox_settings
-inbox_appearance_v4             inbox_business_days_v4
-inbox_business_hours_v4
-```
-
-### SLA & CSAT & Custom Attrs
-```
-inbox_sla_policies_v4           inbox_csat_settings_v4
-inbox_custom_attrs_v4           inbox_attr_values_v4
-inbox_contact_attrs
-```
-
-### CRM & ERP Integration
-```
-inbox_team_channels             inbox_team_members
-inbox_teams                     inbox_work_hours
-inbox_distribution_settings     inbox_drip_campaigns
-```
-
-### Webhooks & Templates
-```
-inbox_webhooks_v4               inbox_webhook_logs_v4
+inbox_automation_v4         inbox_keywords
+inbox_welcome_away_v4       inbox_auto_close_v4
+inbox_scheduled_messages_v4 inbox_drip_campaigns
 inbox_templates
 ```
 
-### Misc
+### Team & Routing
 ```
-inbox_migration_log             inbox_notes  ← v3 (لا تمس)
-inbox_conversations             ← v3 (لا تمس)
-inbox_messages                  ← v3 (لا تمس)
-inbox_agent_status              ← v3 (لا تمس)
-inbox_chatbot_flows             ← v3 (لا تمس)
-tenant_users                    tenant_roles
-tenant_profile
+inbox_team_members          inbox_teams
+inbox_team_channels         inbox_channel_routing
+inbox_distribution_settings inbox_work_hours
 ```
 
-### ⚠️ تصحيحات columns مهمة (محققة في GTS Zone B)
-- `inbox_channel_settings_v4.channel` (ليس `channel_type`)
-- `inbox_channel_settings_v4.active` (ليس `is_active`)
-- `inbox_timeline_v4.data` (ليس `meta`) — تم إصلاح timeline endpoint ✅
-- settings.js يعمل mapping: channel→channel_type، active→is_active في الـ response
+### Chatbot
+```
+inbox_chatbot_flows_v4      inbox_chatbot_steps_v4
+inbox_chatbot_sessions_v4
+```
+
+### Broadcast
+```
+inbox_broadcasts_v4         inbox_broadcast_recipients_v4
+```
+
+### Email
+```
+inbox_email_accounts_v4     inbox_email_messages_v4
+```
+
+### Permissions & Users (Inbox-native)
+```
+inbox_roles                 inbox_users
+```
+
+### Settings & Configuration
+```
+inbox_settings              inbox_appearance_v4
+inbox_business_hours_v4     inbox_business_days_v4
+inbox_canned_responses_v4   inbox_sla_policies_v4
+inbox_custom_attrs_v4       inbox_attr_values_v4
+inbox_csat_settings_v4
+```
+
+### Analytics
+```
+inbox_scheduled_reports_v4
+inbox_conv_notes_v4
+```
+
+### Webhooks
+```
+inbox_webhooks_v4           inbox_webhook_logs_v4
+```
+
+### Contact Attrs (Legacy/Custom)
+```
+inbox_contact_attrs
+```
+
+### Legacy v3 Tables (لا تمسّها)
+```
+inbox_conversations         inbox_messages
+inbox_broadcasts            inbox_broadcast_recipients
+inbox_chatbot_flows         inbox_notes
+inbox_agent_status
+```
+
+### ERP/CRM Tables (مرجع فقط)
+```
+tenant_users    tenant_roles    tenant_profile
+crm_contacts    crm_contact_tags  crm_notes  crm_personas  crm_tags
+hr_attendance   hr_employees    hr_payroll
+payment_links   notifications   persons
+order_forms     order_form_submissions
+```
+
+---
+
+## ⚠️ تصحيحات مهمة (Column Names الفعلية)
+
+| الجدول | Column الصحيح | Column الخاطئ (قديم) |
+|--------|--------------|---------------------|
+| inbox_channel_settings_v4 | `channel` | `channel_type` |
+| inbox_channel_settings_v4 | `active` | `is_active` |
+| inbox_timeline_v4 | لا يوجد `meta` | ~~`meta`~~ (حُذف في fix) |
+
+> settings.js يعمل mapping عند الـ response: channel→channel_type، active→is_active (للتوافق مع frontend)
 
 ---
 
@@ -223,28 +244,20 @@ tenant_profile
 
 | الخطر | التفاصيل | الحل |
 |---|---|---|
-| v3 tables | inbox_conversations / messages / agent_status / chatbot_flows موجودة معاً | لا تمس v3 tables أبداً |
-| inbox_users فارغة | 8 من 10 tenants في fallback mode | I2 سيعمل seed |
-| تعديل SCHEMA.md | أي تعديل يؤثر على tenant DB الحية | موافقة أحمد أولاً |
-| max_concurrent | tenant_users.max_concurrent = 10 افتراضي | استخدمه — لا تُعيد بناءه |
-| inbox_active | tenant_users.inbox_active = تفعيل الموظف | استخدمه — لا تُعيد بناءه |
+| v3 tables موجودة | inbox_conversations + inbox_messages v3 لا تزال موجودة | لا تمسّها |
+| inbox_users فارغة | 8 من 10 tenants في fallback mode | I2 تعالجه |
+| max_concurrent موجود | tenant_users.max_concurrent = Agent Capacity | استخدمه لا تُعيد بناؤه |
+| inbox_active موجود | tenant_users.inbox_active = تفعيل الموظف | استخدمه لا تُعيد بناؤه |
 
 ---
 
-## 🎯 الوضع الحالي (2026-05-05)
+## 🎯 ما Phase 9+ تفعله
 
-### ✅ مكتمل (GTS Zones A-G)
-- Auth Unification: `loadInboxPermissions` مُطبَّق + `req.user.role` مُصحَّح
-- Schema Audit: كل columns صحيحة + timeline bug مُصلَّح
-- API Contract: كل endpoints موجودة + POST /new-conversation مُضافة
-- UI Bindings: كل buttons مربوطة + new-conv modal مبني
-- ERP Integration: context panel 7 tabs يعملون
-- SSE: 10 events backend ↔ frontend مطابقة
-- Performance: cache-busting ?v=20260505 + analytics 12ms
+✅ تعديل backend + frontend
+✅ إضافة migrations
+✅ توثيق القرارات في DECISIONS.md
+✅ تحديث هذا الملف بعد كل تغيير جوهري
 
-### 🔴 باقي للتنفيذ (GTS Zone H + I)
-- H2: تحديث DECISIONS.md
-- H3: تحديث SCHEMA.md
-- I1: هجرة باقي 28 tenant لـ v4
-- I2: inbox_users seed لكل tenant
-- I3: Meta Business Verification docs
+❌ لا تحذف migrations قديمة
+❌ لا تعدل v3 tables
+❌ لا تكسر tenant_roles/tenant_users
