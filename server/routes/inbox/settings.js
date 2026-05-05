@@ -706,18 +706,96 @@ router.put('/appearance', (req, res) => {
 
 // ── Channels ─────────────────────────────────────────────────
 const ALLOWED_CHANNELS = ['whatsapp_api','whatsapp_qr','telegram','instagram','messenger','email'];
+/**
+ * A2: Bridge — القنوات لها columns خاصة في inbox_settings القديم
+ * inbox_channel_settings_v4 يخزّن config JSON فقط كإشارة (is_active)
+ * البيانات الحقيقية موجودة في inbox_settings (wa_token, wa_phone_id, ...)
+ */
+const CHANNEL_BRIDGE = {
+  whatsapp_api: {
+    read:  (s) => ({
+      phone_number_id:      s.wa_phone_id       || '',
+      waba_id:              s.wa_account_id     || '',
+      access_token:         s.wa_token          || '',
+      webhook_verify_token: s.wa_verify_token   || '',
+    }),
+    write: (config) => ({
+      wa_phone_id:     config.phone_number_id      || null,
+      wa_account_id:   config.waba_id              || null,
+      wa_token:        config.access_token         || null,
+      wa_verify_token: config.webhook_verify_token || null,
+    }),
+    active_col: 'wa_active',
+  },
+  whatsapp_qr: {
+    read:  () => ({}),
+    write: () => ({}),
+    active_col: 'wa_qr_active',
+  },
+  telegram: {
+    read:  (s) => ({ bot_token: s.telegram_token || '' }),
+    write: (config) => ({ telegram_token: config.bot_token || null }),
+    active_col: 'telegram_active',
+  },
+  instagram: {
+    read:  (s) => ({ page_id: s.ig_account_id || '', access_token: s.ig_token || '' }),
+    write: (config) => ({ ig_account_id: config.page_id || null, ig_token: config.access_token || null }),
+    active_col: 'ig_active',
+  },
+  messenger: {
+    read:  (s) => ({ page_id: s.meta_page_id || '', access_token: s.meta_token || '' }),
+    write: (config) => ({ meta_page_id: config.page_id || null, meta_token: config.access_token || null }),
+    active_col: 'meta_active',
+  },
+  // email: ليس له columns خاصة في inbox_settings — يظل في inbox_channel_settings_v4
+  email: null,
+};
+
+/** جلب inbox_settings مع أمان من null */
+function _getInboxSettings(db) {
+  try { return db.prepare('SELECT * FROM inbox_settings WHERE id=1').get() || {}; }
+  catch (_) { return {}; }
+}
+
+/** تحديث inbox_settings بأدنى عدد من columns دفعة واحدة */
+function _patchInboxSettings(db, patch) {
+  const keys = Object.keys(patch).filter(k => patch[k] !== undefined);
+  if (!keys.length) return;
+  const exists = db.prepare('SELECT id FROM inbox_settings WHERE id=1').get();
+  if (exists) {
+    const setClauses = keys.map(k => `${k}=?`).join(', ');
+    db.prepare(`UPDATE inbox_settings SET ${setClauses}, updated_at=unixepoch() WHERE id=1`)
+      .run(...keys.map(k => patch[k]));
+  } else {
+    const cols = ['id', ...keys].join(', ');
+    const vals = ['?', ...keys.map(() => '?')].join(', ');
+    db.prepare(`INSERT INTO inbox_settings (${cols}) VALUES (${vals})`)
+      .run(1, ...keys.map(k => patch[k]));
+  }
+}
 
 // GET /inbox/settings/channels — قائمة كل القنوات
+// A2: يدمج config من inbox_settings (للقنوات ذات ال bridge) + inbox_channel_settings_v4 (للباقي)
 router.get('/channels', requirePermission('channels'), (req, res) => {
   const db = req.db;
   try {
     const rows = db.prepare('SELECT * FROM inbox_channel_settings_v4 ORDER BY channel').all();
-    return res.json({ channels: rows.map(r => ({
-      channel_type: r.channel,
-      is_active: r.active,
-      config: _parseJSON(r.config, {}),
-      updated_at: r.updated_at
-    })) });
+    const s    = _getInboxSettings(db);
+    return res.json({ channels: rows.map(r => {
+      const bridge = CHANNEL_BRIDGE[r.channel];
+      const liveActive = bridge
+        ? (s[bridge.active_col] ? 1 : 0)
+        : r.active;
+      const liveConfig = bridge
+        ? bridge.read(s)
+        : _parseJSON(r.config, {});
+      return {
+        channel_type: r.channel,
+        is_active:    liveActive,
+        config:       liveConfig,
+        updated_at:   r.updated_at,
+      };
+    }) });
   } catch (err) {
     console.error('[settings/channels GET]', err.message);
     return res.status(500).json({ error: 'db_error' });
@@ -725,18 +803,29 @@ router.get('/channels', requirePermission('channels'), (req, res) => {
 });
 
 // GET /inbox/settings/channels/:channel — قناة محددة
+// A2: bridge — يقرأ من inbox_settings للقنوات ذات ال bridge
 router.get('/channels/:channel', requirePermission('channels'), (req, res) => {
   const db = req.db;
   const { channel } = req.params;
   if (!ALLOWED_CHANNELS.includes(channel)) return res.status(400).json({ error: 'invalid_channel' });
   try {
-    const row = db.prepare('SELECT * FROM inbox_channel_settings_v4 WHERE channel=?').get(channel);
+    const row    = db.prepare('SELECT * FROM inbox_channel_settings_v4 WHERE channel=?').get(channel);
+    const bridge = CHANNEL_BRIDGE[channel];
+    if (bridge) {
+      const s = _getInboxSettings(db);
+      return res.json({ channel: {
+        channel_type: channel,
+        is_active:    s[bridge.active_col] ? 1 : 0,
+        config:       bridge.read(s),
+        updated_at:   row?.updated_at || null,
+      } });
+    }
     if (!row) return res.json({ channel: { channel_type: channel, is_active: 0, config: {} } });
     return res.json({ channel: {
       channel_type: row.channel,
-      is_active: row.active,
-      config: _parseJSON(row.config, {}),
-      updated_at: row.updated_at
+      is_active:    row.active,
+      config:       _parseJSON(row.config, {}),
+      updated_at:   row.updated_at,
     } });
   } catch (err) {
     console.error('[settings/channels/:channel GET]', err.message);
@@ -745,12 +834,38 @@ router.get('/channels/:channel', requirePermission('channels'), (req, res) => {
 });
 
 // PUT /inbox/settings/channels/:channel — تحديث إعدادات قناة
+// A2: bridge — يكتب في inbox_settings للقنوات ذات ال bridge + يحدّث active في inbox_channel_settings_v4
 router.put('/channels/:channel', requirePermission('channels'), (req, res) => {
   const db = req.db;
   const { channel } = req.params;
   if (!ALLOWED_CHANNELS.includes(channel)) return res.status(400).json({ error: 'invalid_channel' });
   const { is_active, config } = req.body;
+  const bridge = CHANNEL_BRIDGE[channel];
+
   try {
+    if (bridge) {
+      // كتابة في inbox_settings
+      const patch = {};
+      if (is_active !== undefined) patch[bridge.active_col] = is_active ? 1 : 0;
+      if (config) Object.assign(patch, bridge.write(config));
+      _patchInboxSettings(db, patch);
+
+      // تحديث active في v4 للتزامن
+      if (is_active !== undefined) {
+        db.prepare(
+          `UPDATE inbox_channel_settings_v4 SET active=?, updated_at=unixepoch() WHERE channel=?`
+        ).run(is_active ? 1 : 0, channel);
+      }
+
+      const s = _getInboxSettings(db);
+      return res.json({ ok: true, channel: {
+        channel_type: channel,
+        is_active:    s[bridge.active_col] ? 1 : 0,
+        config:       bridge.read(s),
+      } });
+    }
+
+    // channels بدون bridge (email) — inbox_channel_settings_v4 فقط
     const existing = db.prepare('SELECT id FROM inbox_channel_settings_v4 WHERE channel=?').get(channel);
     if (existing) {
       db.prepare(
@@ -768,9 +883,9 @@ router.put('/channels/:channel', requirePermission('channels'), (req, res) => {
     const row = db.prepare('SELECT * FROM inbox_channel_settings_v4 WHERE channel=?').get(channel);
     return res.json({ ok: true, channel: {
       channel_type: row.channel,
-      is_active: row.active,
-      config: _parseJSON(row.config, {}),
-      updated_at: row.updated_at
+      is_active:    row.active,
+      config:       _parseJSON(row.config, {}),
+      updated_at:   row.updated_at,
     } });
   } catch (err) {
     console.error('[settings/channels PUT]', err.message);
