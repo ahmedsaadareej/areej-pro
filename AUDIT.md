@@ -41,9 +41,9 @@
 |---------|---------|--------|-------|
 | 🔴 Critical | 4 | 4 | 0 |
 | 🟠 High | 7 | 7 | 0 |
-| 🟡 Medium | 7 | 6 | 1 |
-| 🟢 Low | 5 | 3 | 2 |
-| **المجموع** | **23** | **20** | **3** |
+| 🟡 Medium | 7 | 7 | 0 |
+| 🟢 Low | 5 | 4 | 1 |
+| **المجموع** | **23** | **22** | **1** |
 
 ---
 
@@ -243,8 +243,9 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 **الملف:** `server/app.js` — السطر ~27
 **المشكلة:** `contentSecurityPolicy: false` = لا حماية من XSS
 **الإصلاح:** تفعيل CSP تدريجياً مع whitelist للـ inline scripts المستخدمة
-**Status:** 🟡 Pending
-**Commit:** —
+**Status:** ✅ مكتمل
+**Commit:** `b2425ad`
+**ملاحظة:** report-only mode مفعّل — يرصد الانتهاكات بدون حجب
 
 ### [M2] 🟡 `inbox_conversations` (v3) + `inbox_conversations_v4` — جدولين شغالين
 **المشكلة:** v3 routes لسه شغالة — data inconsistency محتملة
@@ -300,9 +301,11 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 
 ---
 
-### [L1] 🟢 JWT Expiry — 30 يوم طويلة جداً
-**الإصلاح:** تقليل لـ 7 أيام مع refresh token
-**Status:** 🟢 Pending
+### [L1] ✅ JWT Expiry — 30 يوم طويلة جداً
+**الإصلاح:** تقليل لـ 7 أيام + إضافة `/api/auth/token/refresh` endpoint
+**Status:** ✅ مكتمل
+**Commit:** `PENDING`
+**ملاحظة:** makeToken: 30d → 7d + POST /api/auth/token/refresh يُجدّد token الصالح فقط
 
 ### [L2] ✅ Auto-refresh cleanup عند الخروج من Inbox
 **المشكلة:** Polling timers مش بتتوقف عند الخروج من الصفحة
@@ -350,6 +353,8 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 | 2026-05-05 | L2 | Poll cleanup on page unload | `650fad1` | AI |
 | 2026-05-05 | L3 | Tab leader election for long polling | `650fad1` | AI |
 | 2026-05-05 | L4 | Health endpoint — internal only details | `650fad1` | AI |
+| 2026-05-05 | M1 | تحديث Status فقط (كان commit b2425ad) | `b2425ad` | AI |
+| 2026-05-05 | L1 | JWT 30d → 7d + /api/auth/token/refresh | PENDING | AI |
 
 ---
 

@@ -30,8 +30,9 @@ const logoUpload = multer({
   },
 });
 
+// L1: JWT مقلّل من 30d → 7d لتقليل نافذة السرقة
 function makeToken(user) {
-  return jwt.sign({ id: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: '30d' });
+  return jwt.sign({ id: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 }
 
 // ── Register ─────────────────────────────────────────────────────────────
@@ -274,6 +275,26 @@ router.post('/upload-logo', require('./auth-middleware').requireAuth, logoUpload
     masterDb.prepare("UPDATE users SET logo_url=? WHERE id=?").run(url, req.user.id);
     res.json({ ok: true, url });
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── L1: Token Refresh ────────────────────────────────────────────────────
+// يستقبل token صالح ويُعيد token جديد بعمر 7 أيام
+// آمن: لا يُجدّد tokens منتهية الصلاحية
+router.post('/token/refresh', (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : req.body?.token;
+    if (!token) return res.status(401).json({ ok: false, error: 'token مطلوب' });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = master.prepare('SELECT id, email, role, status FROM users WHERE id=?').get(decoded.id);
+    if (!user || user.status === 'banned') return res.status(401).json({ ok: false, error: 'حساب غير صالح' });
+
+    const newToken = makeToken(user);
+    res.json({ ok: true, token: newToken });
+  } catch (e) {
+    return res.status(401).json({ ok: false, error: 'token غير صالح أو منتهي' });
+  }
 });
 
 module.exports = router;
