@@ -521,8 +521,8 @@ head -30 /home/areej/areej-pro/inbox-v4/SCHEMA.md
 
 **التعديل:** أضف أي جدول أو column جديد جاء في v25-v44
 
-**Commit:** d9e034c
-**ملاحظة:** أضفنا inbox_users + inbox_roles — 254 سطر ✅
+**Commit:** 6f4bf52
+**ملاحظة:** أضفنا 14 جدول جديد (canned/sla/custom_attrs/appearance/business_hours/csat/scheduled_reports/...) + inbox_agent_status_v4 — 519 سطر ✅
 
 ---
 
@@ -560,7 +560,7 @@ sqlite3 /home/areej/areej-pro/data/tenants/10.db \
 
 ---
 
-### [I2] 🔴 inbox_users seed لكل tenant (owner auto-seed)
+### [I2] ✅ inbox_users seed لكل tenant (owner auto-seed)
 **المشكلة:** inbox_users فارغة لكل tenant → fallback mode دائماً
 
 **الهدف:** كل صاحب tenant يكون له record في inbox_users تلقائياً (Owner role)
@@ -584,12 +584,12 @@ done
 sqlite3 /home/areej/areej-pro/data/tenants/10.db "SELECT id, name, inbox_role_id FROM inbox_users;" 2>/dev/null
 ```
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** 912cb51
+**ملاحظة:** Tenant 1 (1 inbox_user) + Tenant 2 (1) + Tenant 26 (أضفنا 1) ✔ — باقي tenants ليس لديهم tenant_users نشطين
 
 ---
 
-### [I3] 🔴 WhatsApp Live Mode — Meta Business Verification docs
+### [I3] ✅ WhatsApp Live Mode — Meta Business Verification docs
 **الملف:** `inbox-v4/docs/meta-verification.md` (ينشأ)
 
 **المحتوى المطلوب:**
@@ -598,8 +598,8 @@ sqlite3 /home/areej/areej-pro/data/tenants/10.db "SELECT id, name, inbox_role_id
 - الوثائق المطلوبة من أحمد
 - بعد الموافقة: كيفية تغيير App Mode من Development → Live
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** 69b1ffe
+**ملاحظة:** ملف inbox-v4/docs/meta-verification.md — تحتوي على خطوات + checklist + روابط مفيدة ✅
 
 ---
 
@@ -670,7 +670,7 @@ sqlite3 /home/areej/areej-pro/data/tenants/10.db "SELECT id, name, inbox_role_id
 - مشاكل ظهرت: لا — توثيق فقط
 
 ### Zone I
-- التاريخ: _______________
-- المنجز: _______________
-- Commits: _______________
-- مشاكل ظهرت: _______________
+- التاريخ: 2026-05-05
+- المنجز: I1 + I2 + I3 — كل Zone I مكتملة ✅
+- Commits: 912cb51 (I1) + 912cb51 (I2) + 69b1ffe (I3)
+- مشاكل ظهرت: لا — الهجرة كانت مكتملة مسبقاً
