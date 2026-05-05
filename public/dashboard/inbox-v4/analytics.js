@@ -22,6 +22,13 @@ const InboxAnalytics = (() => {
   let _to   = null;   // YYYY-MM-DD
   let _preset = '30'; // 7 | 30 | 90 | custom
   let _loading = false;
+
+  // FIX-006b: _setLoading stub للـ page mode (لا يوجد loading bar في page mode)
+  function _setLoading(state) {
+    const bar = document.getElementById('iv4-an-loading');
+    if (bar) bar.classList.toggle('hidden', !state);
+    _loading = !!state;
+  }
   let _overlay = null;
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -1673,11 +1680,12 @@ const InboxAnalytics = (() => {
   function _loadAll_page() {
     if (!_from || !_to) _applyPreset('30');
     _setLoading(true);
+    // FIX-006: استخدام InboxAPI._get بدل fetch() الخام (كان بيفشل 401)
     Promise.all([
-      fetch(`/api/inbox/analytics/overview?from=${_from}&to=${_to}`).then(r => r.json()),
-      fetch(`/api/inbox/analytics/volume?from=${_from}&to=${_to}`).then(r => r.json()),
-      fetch(`/api/inbox/analytics/hourly?from=${_from}&to=${_to}`).then(r => r.json()),
-      fetch(`/api/inbox/analytics/platforms?from=${_from}&to=${_to}`).then(r => r.json()),
+      InboxAPI._get(`/inbox/analytics/overview?from=${_from}&to=${_to}`).then(r => r.data || r),
+      InboxAPI._get(`/inbox/analytics/volume?from=${_from}&to=${_to}`).then(r => r.data || r),
+      InboxAPI._get(`/inbox/analytics/hourly?from=${_from}&to=${_to}`).then(r => r.data || r),
+      InboxAPI._get(`/inbox/analytics/platforms?from=${_from}&to=${_to}`).then(r => r.data || r),
     ]).then(([ov, vol, hr, plat]) => {
       _setLoading(false);
       const body = document.getElementById('iv4-an-body');
@@ -1704,13 +1712,17 @@ const InboxAnalytics = (() => {
       if (vol.ok)  _renderVolumeChart(vol.volume || []);
       if (hr.ok)   _renderHourly(hr.hourly || []);
       if (plat.ok) _renderPlatforms(plat.platforms || []);
-    }).catch(() => _setLoading(false));
+    }).catch((err) => {
+      _setLoading(false);
+      const body = document.getElementById('iv4-an-body');
+      if (body) body.innerHTML = '<div class="iv4-an-empty" style="color:#ef4444;padding:32px">❌ حدث خطأ أثناء تحميل التقارير</div>';
+    });
   }
 
   // تحميل قسم الموظفين
   function _loadAgents_page() {
-    fetch(`/api/inbox/analytics/agents?from=${_from}&to=${_to}`)
-      .then(r => r.json())
+    InboxAPI._get(`/inbox/analytics/agents?from=${_from}&to=${_to}`)
+      .then(r => r.data || r)
       .then(data => {
         const body = document.getElementById('iv4-an-body');
         if (!body) return;
@@ -1749,8 +1761,8 @@ const InboxAnalytics = (() => {
 
   function _loadAgentDetail_page(agentId) {
     // تحميل تفاصيل موظف واحد (للـ agent role)
-    fetch(`/api/inbox/analytics/agents/${agentId}?from=${_from}&to=${_to}`)
-      .then(r => r.json())
+    InboxAPI._get(`/inbox/analytics/agents/${agentId}?from=${_from}&to=${_to}`)
+      .then(r => r.data || r)
       .then(data => {
         const body = document.getElementById('iv4-an-body');
         if (!body) return;
@@ -1768,8 +1780,8 @@ const InboxAnalytics = (() => {
   // آخر تحديث: 2026-05-04
 
   function _loadLabels_page() {
-    fetch(`/api/inbox/analytics/labels?from=${_from}&to=${_to}`)
-      .then(r => r.json())
+    InboxAPI._get(`/inbox/analytics/labels?from=${_from}&to=${_to}`)
+      .then(r => r.data || r)
       .then(data => {
         const body = document.getElementById('iv4-an-body');
         if (!body) return;
@@ -1827,8 +1839,8 @@ const InboxAnalytics = (() => {
 
   function _loadAutomation_page() {
     Promise.all([
-      fetch(`/api/inbox/analytics/automation?from=${_from}&to=${_to}`).then(r => r.json()),
-      fetch(`/api/inbox/analytics/sentiment?from=${_from}&to=${_to}`).then(r => r.json()).catch(() => null),
+      InboxAPI._get(`/inbox/analytics/automation?from=${_from}&to=${_to}`).then(r => r.data || r),
+      InboxAPI._get(`/inbox/analytics/sentiment?from=${_from}&to=${_to}`).then(r => r.data || r).catch(() => null),
     ]).then(([auto, sentiment]) => {
       const body = document.getElementById('iv4-an-body');
       if (!body) return;
@@ -1892,8 +1904,8 @@ const InboxAnalytics = (() => {
 
   // SLA page
   function _loadSLA_page() {
-    fetch(`/api/inbox/analytics/sla?from=${_from}&to=${_to}`)
-      .then(r => r.json())
+    InboxAPI._get(`/inbox/analytics/sla?from=${_from}&to=${_to}`)
+      .then(r => r.data || r)
       .then(data => {
         const body = document.getElementById('iv4-an-body');
         if (!body) return;
@@ -1908,8 +1920,8 @@ const InboxAnalytics = (() => {
 
   // CSAT page
   function _loadCSAT_page() {
-    fetch(`/api/inbox/analytics/csat?from=${_from}&to=${_to}`)
-      .then(r => r.json())
+    InboxAPI._get(`/inbox/analytics/csat?from=${_from}&to=${_to}`)
+      .then(r => r.data || r)
       .then(data => {
         const body = document.getElementById('iv4-an-body');
         if (!body) return;
@@ -1927,8 +1939,8 @@ const InboxAnalytics = (() => {
   // آخر تحديث: 2026-05-04
 
   function _loadScheduled_page() {
-    fetch('/api/inbox/analytics/scheduled')
-      .then(r => r.json())
+    InboxAPI._get('/inbox/analytics/scheduled')
+      .then(r => r.data || r)
       .then(data => {
         const body = document.getElementById('iv4-an-body');
         if (!body) return;
@@ -2033,8 +2045,8 @@ const InboxAnalytics = (() => {
         body.querySelectorAll('.iv4-an-del-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             if (!confirm('حذف هذا التقرير؟')) return;
-            fetch(`/api/inbox/analytics/scheduled/${btn.dataset.id}`, { method: 'DELETE' })
-              .then(r => r.json())
+            InboxAPI._fetch(`/inbox/analytics/scheduled/${btn.dataset.id}`, { method: 'DELETE' })
+              .then(r => r.data || r)
               .then(d => { if (d.ok) _loadScheduled_page(); });
           });
         });
@@ -2042,11 +2054,11 @@ const InboxAnalytics = (() => {
         body.querySelectorAll('.iv4-an-toggle-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             const newActive = btn.dataset.active === '1' ? 0 : 1;
-            fetch(`/api/inbox/analytics/scheduled/${btn.dataset.id}`, {
+            InboxAPI._fetch(`/inbox/analytics/scheduled/${btn.dataset.id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ active: newActive }),
-            }).then(r => r.json()).then(d => { if (d.ok) _loadScheduled_page(); });
+            }).then(r => r.data || r).then(d => { if (d.ok) _loadScheduled_page(); });
           });
         });
 
@@ -2073,7 +2085,7 @@ const InboxAnalytics = (() => {
               return;
             }
 
-            fetch('/api/inbox/analytics/scheduled', {
+            InboxAPI._fetch('/inbox/analytics/scheduled', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -2081,7 +2093,7 @@ const InboxAnalytics = (() => {
                 send_hour: hour, recipients: recips, format: 'csv',
               }),
             })
-              .then(r => r.json())
+              .then(r => r.data || r)
               .then(d => {
                 if (d.ok) {
                   document.getElementById('iv4-an-sched-modal')?.classList.add('hidden');
@@ -2106,8 +2118,8 @@ const InboxAnalytics = (() => {
     if (_liveInterval) { clearInterval(_liveInterval); _liveInterval = null; }
 
     const refresh = () => {
-      fetch('/api/inbox/analytics/overview?live=1')
-        .then(r => r.json())
+      InboxAPI._get('/inbox/analytics/overview?live=1')
+        .then(r => r.data || r)
         .then(data => {
           const openEl   = document.getElementById('iv4-an-live-open');
           const agentsEl = document.getElementById('iv4-an-live-agents');
