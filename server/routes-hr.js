@@ -14,6 +14,21 @@ router.use((req, res, next) => {
   next();
 });
 
+// L5: Query builder آمن ومنظّم — بديل string concatenation
+// الاستخدام: const { clause, params } = buildWhere([...conditions])
+// كل condition: { sql: 'col = ?', val: value } أو { sql: 'col IN (?,?)', vals: [a,b] }
+function buildWhere(conditions) {
+  const clauses = ['1=1'];
+  const params = [];
+  for (const c of conditions) {
+    if (c == null) continue;
+    clauses.push(c.sql);
+    if (Array.isArray(c.vals)) params.push(...c.vals);
+    else if (c.val !== undefined) params.push(c.val);
+  }
+  return { clause: 'WHERE ' + clauses.join(' AND '), params };
+}
+
 // ============================================================
 // EMPLOYEES
 // ============================================================
@@ -23,12 +38,13 @@ router.get('/employees', (req, res) => {
   try {
     const db = req.db;
     const { search, active } = req.query;
-    let where = 'WHERE 1=1';
-    const params = [];
-    if (search) { where += ' AND (name LIKE ? OR job_title LIKE ? OR department LIKE ?)'; const s='%'+search+'%'; params.push(s,s,s); }
-    if (active !== undefined) { where += ' AND active=?'; params.push(active === '1' ? 1 : 0); }
+    const s = search ? '%' + search + '%' : null;
+    const { clause, params } = buildWhere([
+      s ? { sql: '(name LIKE ? OR job_title LIKE ? OR department LIKE ?)', vals: [s, s, s] } : null,
+      active !== undefined ? { sql: 'active=?', val: active === '1' ? 1 : 0 } : null,
+    ]);
 
-    const employees = db.prepare(`SELECT * FROM hr_employees ${where} ORDER BY name ASC`).all(...params);
+    const employees = db.prepare(`SELECT * FROM hr_employees ${clause} ORDER BY name ASC`).all(...params);
 
     // Enrich with current month attendance summary
     const currentMonth = new Date().toISOString().slice(0,7);
@@ -117,16 +133,16 @@ router.get('/attendance', (req, res) => {
   try {
     const db = req.db;
     const { employee_id, month } = req.query;
-    let where = 'WHERE 1=1';
-    const params = [];
-    if (employee_id) { where += ' AND a.employee_id=?'; params.push(employee_id); }
-    if (month) { where += " AND strftime('%Y-%m', a.work_date)=?"; params.push(month); }
+    const { clause, params } = buildWhere([
+      employee_id ? { sql: 'a.employee_id=?', val: employee_id } : null,
+      month       ? { sql: "strftime('%Y-%m', a.work_date)=?", val: month } : null,
+    ]);
 
     const rows = db.prepare(`
       SELECT a.*, e.name as employee_name, e.job_title
       FROM hr_attendance a
       JOIN hr_employees e ON e.id = a.employee_id
-      ${where}
+      ${clause}
       ORDER BY a.work_date DESC, e.name ASC
     `).all(...params);
 
@@ -182,9 +198,9 @@ router.get('/payroll', (req, res) => {
   try {
     const db = req.db;
     const { month } = req.query;
-    let where = 'WHERE 1=1';
-    const params = [];
-    if (month) { where += ' AND p.period_month=?'; params.push(month); }
+    const { clause, params } = buildWhere([
+      month ? { sql: 'p.period_month=?', val: month } : null,
+    ]);
 
     const rows = db.prepare(`
       SELECT p.*, e.name as employee_name, e.job_title, e.department,
@@ -192,7 +208,7 @@ router.get('/payroll', (req, res) => {
       FROM hr_payroll p
       JOIN hr_employees e ON e.id = p.employee_id
       LEFT JOIN sys_wallets w ON w.id = p.wallet_id
-      ${where}
+      ${clause}
       ORDER BY p.period_month DESC, e.name ASC
     `).all(...params);
     res.json({ ok: true, data: rows });

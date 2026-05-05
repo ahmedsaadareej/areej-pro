@@ -42,8 +42,8 @@
 | 🔴 Critical | 4 | 4 | 0 |
 | 🟠 High | 7 | 7 | 0 |
 | 🟡 Medium | 7 | 7 | 0 |
-| 🟢 Low | 5 | 4 | 1 |
-| **المجموع** | **23** | **22** | **1** |
+| 🟢 Low | 5 | 5 | 0 |
+| **المجموع** | **23** | **23** | **0** |
 
 ---
 
@@ -321,10 +321,12 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 **الإصلاح:** حماية بـ IP whitelist أو secret header
 **Status:** 🟢 Pending
 
-### [L5] 🟢 HR Search — `where` بناء string (آمن حالياً لكن fragile)
+### [L5] ✅ HR Search — `where` بناء string (آمن حالياً لكن fragile)
 **الملف:** `server/routes-hr.js` — السطر ~31
 **الإصلاح:** refactor لـ query builder أكثر أماناً
-**Status:** 🟢 Pending
+**Status:** ✅ مكتمل
+**Commit:** `PENDING`
+**ملاحظة:** `buildWhere()` helper — 3 endpoints (employees/attendance/payroll) تستخدمه بدل concatenation
 
 ---
 
@@ -355,6 +357,7 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 | 2026-05-05 | L4 | Health endpoint — internal only details | `650fad1` | AI |
 | 2026-05-05 | M1 | تحديث Status فقط (كان commit b2425ad) | `b2425ad` | AI |
 | 2026-05-05 | L1 | JWT 30d → 7d + /api/auth/token/refresh | `0410975` | AI |
+| 2026-05-05 | L5 | HR buildWhere() query builder refactor | PENDING | AI |
 
 ---
 
