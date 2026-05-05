@@ -36,8 +36,9 @@ const InboxSettingsUsers = (() => {
   async function _loadAll() {
     try {
       const [usersRes, rolesRes] = await Promise.all([
-        fetch('/api/inbox/settings/users'),
-        fetch('/api/inbox/settings/roles'),
+        // FIX-009
+        InboxAPI._fetch('/inbox/settings/users').then(r=>({ok:true,...(r.data||{})})),
+        InboxAPI._fetch('/inbox/settings/roles').then(r=>({ok:true,...(r.data||{})})),
       ]);
       const ud = await usersRes.json();
       const rd = await rolesRes.json();
@@ -236,19 +237,16 @@ const InboxSettingsUsers = (() => {
     submitBtn.textContent = '…جاري الحفظ';
 
     try {
-      const url    = id ? `/api/inbox/settings/users/${id}` : '/api/inbox/settings/users';
+      const path2  = id ? `/inbox/settings/users/${id}` : '/inbox/settings/users';
       const method = id ? 'PUT' : 'POST';
       const body   = id
         ? { name, inbox_role_id: roleId, status }
         : { email, name, inbox_role_id: roleId };
 
-      const res  = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'server_error');
+      // FIX-009
+      const { data, error } = await InboxAPI._fetch(path2, { method, body: JSON.stringify(body) });
+      if (error) throw new Error(error);
+      if (!data || !data.ok) throw new Error((data && data.error) || 'server_error');
 
       _closeDrawer();
       _render();
@@ -270,10 +268,10 @@ const InboxSettingsUsers = (() => {
     if (!confirm(`هل تريد إزالة "${user.name}" من الـ Inbox؟`)) return;
 
     try {
-      const res  = await fetch(`/api/inbox/settings/users/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (!res.ok) {
-        if (data.error === 'last_owner') {
+      // FIX-009
+      const { data, error } = await InboxAPI._fetch(`/inbox/settings/users/${id}`, { method: 'DELETE' });
+      if (error || (data && !data.ok)) {
+        if (data && data.error === 'last_owner') {
           _showError('لا يمكن إزالة آخر مالك (Owner) — أضف مالكاً آخر أولاً');
         } else {
           _showError('لا يمكن إزالة هذا الموظف');

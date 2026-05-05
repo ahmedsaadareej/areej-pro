@@ -17,10 +17,12 @@
   // ─── Helpers ────────────────────────────────────────────────────────────
   const $ = id => document.getElementById(id);
   const toast = (msg, type = 'info') => {
+    const container = $('iv4-toasts');
+    if (!container) return; // FIX-008: guard — iv4-toasts absent outside main inbox
     const el = document.createElement('div');
     el.className = `iv4-toast ${type}`;
     el.textContent = msg;
-    $('iv4-toasts').appendChild(el);
+    container.appendChild(el);
     setTimeout(() => el.remove(), 3500);
   };
 

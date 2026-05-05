@@ -50,9 +50,9 @@ const InboxSettingsRoles = (() => {
   // ── Fetch ──────────────────────────────────────────────────────────────
   async function _load() {
     try {
-      const res  = await fetch('/api/inbox/settings/roles');
-      const data = await res.json();
-      _roles = data.roles || [];
+      // FIX-009
+      const { data } = await InboxAPI._fetch('/inbox/settings/roles');
+      _roles = (data && data.roles) || [];
     } catch (_) {
       _roles = [];
     }
@@ -236,15 +236,12 @@ const InboxSettingsRoles = (() => {
     submitBtn.textContent = '…جاري الحفظ';
 
     try {
-      const url    = id ? `/api/inbox/settings/roles/${id}` : '/api/inbox/settings/roles';
+      const path2  = id ? `/inbox/settings/roles/${id}` : '/inbox/settings/roles';
       const method = id ? 'PUT' : 'POST';
-      const res    = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ name, description: desc, permissions }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'server_error');
+      // FIX-009
+      const { data, error } = await InboxAPI._fetch(path2, { method, body: JSON.stringify({ name, description: desc, permissions }) });
+      if (error) throw new Error(error);
+      if (!data || !data.ok) throw new Error((data && data.error) || 'server_error');
 
       _closeDrawer();
       _render(); // reload
@@ -261,10 +258,10 @@ const InboxSettingsRoles = (() => {
     if (!confirm(`هل تريد حذف دور "${role.name}"؟ لا يمكن التراجع عن هذا.`)) return;
 
     try {
-      const res  = await fetch(`/api/inbox/settings/roles/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (!res.ok) {
-        if (data.error === 'role_has_users') {
+      // FIX-009
+      const { data, error } = await InboxAPI._fetch(`/inbox/settings/roles/${id}`, { method: 'DELETE' });
+      if (error || (data && !data.ok)) {
+        if (data && data.error === 'role_has_users') {
           _showError(`لا يمكن حذف الدور — يوجد ${data.count} موظف مرتبط به`);
         } else {
           _showError('لا يمكن حذف هذا الدور');
