@@ -1281,3 +1281,19 @@
 - قرارات: لا جديد
 - آخر commit: fe2ab4f
 - **Phase 11 مكتملة بالكامل ✅** — كل المحاور A→B→C→D→E1→E2→E3
+
+---
+
+## جلسة 2026-05-05 00:00 UTC — P12-A: تحويل /inbox لـ v4 رسمياً
+- الحالة: مكتملة ✅
+- ما تم:
+  - تحقق: `/inbox*` كان يشير لـ `public/inbox-v4/index.html` من P11-A ✅
+  - **P12-A2**: إضافة `/inbox-legacy*` → `public/dashboard/index.html` (v3 fallback للطوارئ)
+  - **P12-A3**: اختبار شامل — كل Deep Links تعمل بـ 200 ✅
+    - /inbox ✅ + /inbox/test-deep ✅ + /contacts ✅ + /reports/overview ✅ + /settings/org ✅ + /inbox-legacy ✅
+    - كل الـ 11 script/CSS تُخدَّم بـ 200 ✅
+    - /health → ok ✅
+  - pm2 reload ناجح ✅
+  - **P12-A4**: commit 74d1e88 + push ✅
+- الملف المُعدَّل: `server/app.js` (سطر واحد → 3 أسطر)
+- المهمة القادمة: **P12-B** — هجرة باقي الـ Tenants

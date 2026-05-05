@@ -241,11 +241,16 @@ function migrateTenant(id, mode) {
       console.log(`   ✅ محادثات: ${migratedConvs}/${v3Convs.length} مهاجرة`);
 
       // 2. هجرة الرسائل
+      // تحقق من الـ columns الموجودة فعلياً (بعض الـ tenants القديمة ليس لديها media_id)
+      const msgCols = db.prepare("PRAGMA table_info(inbox_messages)").all().map(r => r.name);
+      const hasMediaId  = msgCols.includes('media_id');
+      const mediaIdSql  = hasMediaId ? ', media_id' : '';
+
       const v3Msgs = db.prepare(`
         SELECT
           id, conversation_id, platform, direction,
           content, message_type,
-          media_url, media_type, file_id, media_id,
+          media_url, media_type, file_id${mediaIdSql},
           platform_msg_id, sent_at, is_read
         FROM inbox_messages
         ORDER BY id ASC

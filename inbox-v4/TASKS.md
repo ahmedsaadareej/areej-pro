@@ -152,10 +152,10 @@
 
 | # | المهمة | الملفات | الحالة |
 |---|--------|---------|--------|
-| P12-A1 | تغيير route `/inbox` في app.js → يخدم `inbox-v4/index.html` | `server/app.js` | ⏳ |
-| P12-A2 | إبقاء `/inbox-legacy` → يخدم `inbox-v4/index.html` القديم (v3 fallback) | `server/app.js` | ⏳ |
-| P12-A3 | اختبار نهائي: فتح `/inbox` + تحقق SSE + لا console errors | — | ⏳ |
-| P12-A4 | commit + push + pm2 reload | — | ⏳ |
+| P12-A1 | تغيير route `/inbox` في app.js → يخدم `inbox-v4/index.html` | `server/app.js` | ✅ |
+| P12-A2 | إبقاء `/inbox-legacy` → يخدم dashboard (v3 fallback) | `server/app.js` | ✅ |
+| P12-A3 | اختبار نهائي: فتح `/inbox` + تحقق SSE + لا console errors | — | ✅ |
+| P12-A4 | commit + push + pm2 reload | — | ✅ |
 
 ---
 
