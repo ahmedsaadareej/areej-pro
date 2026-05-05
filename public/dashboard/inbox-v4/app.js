@@ -1,6 +1,6 @@
 /**
  * app.js — Inbox v4 Entry Point
- * آخر تحديث: 2026-05-03 (P8-4 Broadcast V2)
+ * آخر تحديث: 2026-05-05 (D1 — new-conv-btn binding)
  *
  * يُشغَّل آخر script في index.html بعد تحميل:
  *   store.js → api.js → stream.js → [conv-list.js → chat.js → ...] → app.js
@@ -302,11 +302,114 @@
     // Phase 8-1 — Email Channel
     if (typeof InboxEmail !== 'undefined') InboxEmail.init();               // P8-1 ✅
 
+    // ─── New Conversation Button (D1) ──────────────────────────────────
+    const newConvBtn = $('iv4-new-conv-btn');
+    if (newConvBtn) {
+      newConvBtn.addEventListener('click', () => {
+        _openNewConvModal();
+      });
+    }
+
     // expose showInboxToast + guardRoute globally (for modules)
     window.showInboxToast = toast;
     window.inboxGuard = guardRoute;
 
     console.log('[Inbox v4] ✅ جاهز');
+  }
+
+  // ─── New Conversation Modal ────────────────────────────────────────
+  function _openNewConvModal() {
+    // أزل أي modal سابق
+    const existing = document.getElementById('iv4-new-conv-modal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'iv4-new-conv-modal';
+    overlay.style.cssText = [
+      'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999',
+      'display:flex;align-items:center;justify-content:center',
+    ].join(';');
+
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:12px;padding:24px;width:420px;max-width:95vw;direction:rtl">
+        <h3 style="margin:0 0 16px;font-size:17px">&#x2709;&#xFE0F; محادثة جديدة</h3>
+        <div style="margin-bottom:12px">
+          <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">المنصة</label>
+          <select id="iv4-nc-platform" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px">
+            <option value="whatsapp_api">WhatsApp API</option>
+            <option value="whatsapp_qr">WhatsApp QR</option>
+            <option value="telegram">Telegram</option>
+            <option value="instagram">Instagram</option>
+            <option value="messenger">Messenger</option>
+            <option value="email">Email</option>
+          </select>
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">رقم الهاتف / ID</label>
+          <input id="iv4-nc-phone" type="text" placeholder="مثال: 201012345678" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box">
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">الاسم (اختياري)</label>
+          <input id="iv4-nc-name" type="text" placeholder="اسم العميل" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box">
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">رسالة أولى (اختيارية)</label>
+          <textarea id="iv4-nc-message" rows="3" placeholder="كتب رسالتك هنا..." style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;resize:vertical"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button id="iv4-nc-cancel" style="padding:8px 16px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;cursor:pointer;font-size:14px">إلغاء</button>
+          <button id="iv4-nc-submit" style="padding:8px 16px;border:none;border-radius:8px;background:#1B5E30;color:#fff;cursor:pointer;font-size:14px;font-weight:600">إنشاء</button>
+        </div>
+        <div id="iv4-nc-error" style="color:red;font-size:13px;margin-top:8px;display:none"></div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // close on overlay click
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.getElementById('iv4-nc-cancel').addEventListener('click', () => overlay.remove());
+
+    // submit
+    document.getElementById('iv4-nc-submit').addEventListener('click', async () => {
+      const platform = document.getElementById('iv4-nc-platform').value;
+      const phone    = document.getElementById('iv4-nc-phone').value.trim();
+      const name     = document.getElementById('iv4-nc-name').value.trim();
+      const message  = document.getElementById('iv4-nc-message').value.trim();
+      const errEl    = document.getElementById('iv4-nc-error');
+      const submitBtn = document.getElementById('iv4-nc-submit');
+
+      if (!phone) {
+        errEl.textContent = 'رقم الهاتف / ID مطلوب';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'جاري...';
+      errEl.style.display = 'none';
+
+      const { data, error } = await InboxAPI.newConversation.create({
+        platform, phone, name, message: message || undefined
+      });
+
+      if (error) {
+        errEl.textContent = error.message || 'حدث خطأ — حاول مرة أخرى';
+        errEl.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'إنشاء';
+        return;
+      }
+
+      overlay.remove();
+      toast(data.created ? '✅ تم إنشاء المحادثة' : 'المحادثة موجودة بالفعل', 'success');
+
+      // افتح المحادثة الجديدة تلقائياً
+      if (data.conversation && data.conversation.id) {
+        InboxStore.upsertConversation(data.conversation);
+        InboxStore.setActive(data.conversation.id);
+      }
+    });
   }
 
   // شغّل بعد تحميل الـ DOM
