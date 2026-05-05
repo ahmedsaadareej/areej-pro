@@ -352,6 +352,33 @@ const PageInbox = (() => {
       if (typeof InboxEmail    !== 'undefined') InboxEmail.init();
       if (typeof InboxChatbot  !== 'undefined') InboxChatbot.init();
 
+      // ربط أزرار الـ sidebar التي تنتقل لـ Settings
+      document.addEventListener('click', function _sidebarSettingsNav(e) {
+        const action = e.target.closest('[data-action]')?.dataset?.action;
+        if (!action) return;
+        const nav = {
+          'open-chatbot':      '/settings/automation',
+          'open-welcome-away': '/settings/automation',
+          'open-webhooks':     '/settings/automation',
+        };
+        if (nav[action]) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof InboxRouter !== 'undefined') InboxRouter.navigate(nav[action]);
+        }
+      });
+
+      // ربط زر Email بـ Settings → التطبيقات
+      const emailNavBtn = document.getElementById('iv4-email-btn');
+      if (emailNavBtn && !emailNavBtn.dataset.navBound) {
+        emailNavBtn.dataset.navBound = '1';
+        emailNavBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof InboxRouter !== 'undefined') InboxRouter.navigate('/settings/channels');
+        });
+      }
+
       // لو فيه convId في الـ params → افتح المحادثة مباشرة (Deep Link)
       if (params && params.convId) {
         // تأخير بسيط حتى تنتهي الـ init
