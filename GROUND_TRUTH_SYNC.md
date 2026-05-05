@@ -530,7 +530,7 @@ head -30 /home/areej/areej-pro/inbox-v4/SCHEMA.md
 > الهدف: الـ Inbox جاهز لكل 29 tenant بشكل كامل
 > المدة المتوقعة: 2 جلسات
 
-### [I1] 🔴 هجرة باقي الـ Tenants (P12-B)
+### [I1] ✅ هجرة باقي الـ Tenants (P12-B)
 **المشكلة:** Tenant 2 (pro-test) مهاجر — لكن باقي الـ 28 tenant لا يزالون على v3
 
 **التحقق:**
@@ -555,8 +555,8 @@ sqlite3 /home/areej/areej-pro/data/tenants/10.db \
   "SELECT COUNT(*) FROM inbox_conversations_v4;" 2>/dev/null
 ```
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** 4608bfe
+**ملاحظة:** dry-run أثبت كل tenants مهاجرة — tenant 2/26/29 عندهم v3=v4 ✅ — باقي tenants v3 فارغة لا تحتاج هجرة
 
 ---
 
