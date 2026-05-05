@@ -475,7 +475,7 @@ time curl -s "http://localhost:3002/api/inbox/analytics/overview" \
 > الهدف: GROUND_TRUTH.md + DECISIONS.md + PROJECT.md تعكس الواقع الفعلي 100%
 > المدة المتوقعة: 1 جلسة
 
-### [H1] 🔴 تحديث GROUND_TRUTH.md — الوضع الفعلي لكل ملف
+### [H1] ✅ تحديث GROUND_TRUTH.md — الوضع الفعلي لكل ملف
 **التحقق:**
 ```bash
 # قارن قائمة الملفات في GROUND_TRUTH مع ما هو موجود فعلاً
@@ -485,12 +485,12 @@ ls /home/areej/areej-pro/public/dashboard/inbox-v4/ | sort
 
 **التعديل:** أضف أي ملف جديد غير موثّق + حذف أي ملف تم حذفه
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** 5ba36c7
+**ملاحظة:** أضفنا 17 ملف backend + 8 settings modules + قائمة tables كاملة + Auth محدَّث ✅
 
 ---
 
-### [H2] 🔴 تحديث DECISIONS.md — كل قرار تقني موثّق
+### [H2] ✅ تحديث DECISIONS.md — كل قرار تقني موثّق
 **التحقق:**
 ```bash
 tail -30 /home/areej/areej-pro/inbox-v4/DECISIONS.md
@@ -502,12 +502,12 @@ tail -30 /home/areej/areej-pro/inbox-v4/DECISIONS.md
 - قرار تحويل `/inbox` لـ v4 رسمياً (P12-A)
 - قرار loadInboxPermissions كـ middleware
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** 6c6ef01
+**ملاحظة:** أضفنا D-047→D-051 (5 قرارات جديدة) — الإجمالي 45 قرار ✅
 
 ---
 
-### [H3] 🔴 تحديث SCHEMA.md — يطابق الـ migrations الفعلية
+### [H3] ✅ تحديث SCHEMA.md — يطابق الـ migrations الفعلية
 **الملف:** `inbox-v4/SCHEMA.md`
 
 **التحقق:**
@@ -521,8 +521,8 @@ head -30 /home/areej/areej-pro/inbox-v4/SCHEMA.md
 
 **التعديل:** أضف أي جدول أو column جديد جاء في v25-v44
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** d9e034c
+**ملاحظة:** أضفنا inbox_users + inbox_roles — 254 سطر ✅
 
 ---
 
@@ -664,10 +664,10 @@ sqlite3 /home/areej/areej-pro/data/tenants/10.db "SELECT id, name, inbox_role_id
 - مشاكل ظهرت: لا — cache-busting موجود + analytics سريع
 
 ### Zone H
-- التاريخ: _______________
-- المنجز: _______________
-- Commits: _______________
-- مشاكل ظهرت: _______________
+- التاريخ: 2026-05-05
+- المنجز: H1 + H2 + H3 — كل Zone H مكتملة ✅
+- Commits: 5ba36c7 (H1) + 6c6ef01 (H2) + d9e034c (H3)
+- مشاكل ظهرت: لا — توثيق فقط
 
 ### Zone I
 - التاريخ: _______________
