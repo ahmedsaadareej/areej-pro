@@ -1,0 +1,1518 @@
+/**
+ * Inbox v4 — Design System v2
+ * ===========================
+ * نظام بصري احترافي — classes مبنية على الـ HTML الحقيقي
+ * مستوحى من Respond.io / Wati / Intercom
+ * آخر تحديث: 2026-05-05
+ */
+
+/* ─── Google Fonts ──────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+/* ─── Design Tokens ─────────────────────────────────────────────────────── */
+:root {
+  /* Brand */
+  --iv4-accent:        #4f46e5;
+  --iv4-accent-hover:  #4338ca;
+  --iv4-accent-light:  #eef2ff;
+  --iv4-accent-mid:    #c7d2fe;
+
+  /* Surfaces */
+  --iv4-bg:            #f8fafc;
+  --iv4-surface:       #ffffff;
+  --iv4-surface-2:     #f1f5f9;
+  --iv4-surface-3:     #e2e8f0;
+
+  /* Borders */
+  --iv4-border:        #e2e8f0;
+  --iv4-border-light:  #f1f5f9;
+
+  /* Text */
+  --iv4-text:          #0f172a;
+  --iv4-text-2:        #475569;
+  --iv4-text-3:        #94a3b8;
+  --iv4-text-inv:      #ffffff;
+
+  /* Status */
+  --iv4-green:         #10b981;
+  --iv4-green-light:   #d1fae5;
+  --iv4-red:           #ef4444;
+  --iv4-red-light:     #fee2e2;
+  --iv4-orange:        #f97316;
+  --iv4-orange-light:  #ffedd5;
+  --iv4-yellow:        #f59e0b;
+  --iv4-yellow-light:  #fef3c7;
+  --iv4-blue:          #3b82f6;
+  --iv4-blue-light:    #eff6ff;
+
+  /* Shadows */
+  --iv4-shadow:        0 1px 3px rgba(15,23,42,.06), 0 1px 2px rgba(15,23,42,.04);
+  --iv4-shadow-md:     0 4px 12px rgba(15,23,42,.08), 0 2px 4px rgba(15,23,42,.04);
+  --iv4-shadow-lg:     0 8px 24px rgba(15,23,42,.10), 0 4px 8px rgba(15,23,42,.06);
+  --iv4-shadow-accent: 0 4px 14px rgba(79,70,229,.25);
+
+  /* Layout */
+  --iv4-sidebar-w:     240px;
+  --iv4-conv-w:        320px;
+  --iv4-ctx-w:         300px;
+  --iv4-radius:        12px;
+  --iv4-radius-sm:     8px;
+  --iv4-radius-xs:     6px;
+  --iv4-radius-full:   9999px;
+
+  /* Typography */
+  --iv4-font:          'Cairo', 'Inter', system-ui, sans-serif;
+  --iv4-transition:    .15s cubic-bezier(.4,0,.2,1);
+}
+
+/* ─── Base ──────────────────────────────────────────────────────────────── */
+.iv4-body, #shell-root, .iv4-root {
+  font-family: var(--iv4-font) !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── SIDEBAR ───────────────────────────────────────────────────────────── */
+.iv4-sidebar {
+  background: var(--iv4-surface) !important;
+  border-left: 1px solid var(--iv4-border) !important;
+  padding: 16px 10px !important;
+  gap: 2px !important;
+}
+
+.iv4-sidebar-brand {
+  padding: 4px 10px 18px !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  color: var(--iv4-text) !important;
+}
+
+/* Nav items */
+.iv4-nav-btn {
+  border-radius: var(--iv4-radius-sm) !important;
+  padding: 9px 12px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--iv4-text-2) !important;
+  transition: all var(--iv4-transition) !important;
+  background: transparent !important;
+  border: none !important;
+  width: 100% !important;
+  text-align: right !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  font-family: var(--iv4-font) !important;
+}
+
+.iv4-nav-btn:hover {
+  background: var(--iv4-surface-2) !important;
+  color: var(--iv4-text) !important;
+}
+
+.iv4-nav-btn.active {
+  background: var(--iv4-accent-light) !important;
+  color: var(--iv4-accent) !important;
+  font-weight: 600 !important;
+}
+
+.iv4-nav-count {
+  background: var(--iv4-accent) !important;
+  color: #fff !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  min-width: 18px !important;
+  height: 18px !important;
+  border-radius: var(--iv4-radius-full) !important;
+  padding: 0 5px !important;
+  line-height: 18px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.iv4-sidebar-divider {
+  color: var(--iv4-text-3) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.6px !important;
+  text-transform: uppercase !important;
+  padding: 14px 12px 4px !important;
+}
+
+/* ─── CONV LIST PANEL ───────────────────────────────────────────────────── */
+.iv4-conv-col {
+  background: var(--iv4-surface) !important;
+  border-left: 1px solid var(--iv4-border) !important;
+}
+
+.iv4-conv-header {
+  background: var(--iv4-surface) !important;
+  border-bottom: 1px solid var(--iv4-border) !important;
+  padding: 12px 16px !important;
+}
+
+.iv4-col-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: var(--iv4-text) !important;
+  font-family: var(--iv4-font) !important;
+}
+
+/* Search */
+.iv4-search-bar {
+  padding: 8px 12px !important;
+  border-bottom: 1px solid var(--iv4-border-light) !important;
+  background: var(--iv4-surface) !important;
+}
+
+.iv4-search-input {
+  background: var(--iv4-surface-2) !important;
+  border: 1.5px solid transparent !important;
+  border-radius: var(--iv4-radius-sm) !important;
+  font-size: 13px !important;
+  padding: 8px 12px !important;
+  width: 100% !important;
+  color: var(--iv4-text) !important;
+  font-family: var(--iv4-font) !important;
+  transition: all var(--iv4-transition) !important;
+}
+
+.iv4-search-input:focus {
+  background: var(--iv4-surface) !important;
+  border-color: var(--iv4-accent) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--iv4-accent-light) !important;
+}
+
+/* Conv items */
+.iv4-conv-item {
+  padding: 12px 14px !important;
+  border-bottom: 1px solid var(--iv4-border-light) !important;
+  transition: background var(--iv4-transition) !important;
+  gap: 10px !important;
+  cursor: pointer !important;
+}
+
+.iv4-conv-item:hover {
+  background: var(--iv4-surface-2) !important;
+}
+
+.iv4-conv-item.active {
+  background: var(--iv4-accent-light) !important;
+  border-right: 3px solid var(--iv4-accent) !important;
+}
+
+.iv4-conv-avatar {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: var(--iv4-radius-full) !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  flex-shrink: 0 !important;
+}
+
+.iv4-conv-name {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--iv4-text) !important;
+  line-height: 1.3 !important;
+  font-family: var(--iv4-font) !important;
+}
+
+.iv4-conv-preview {
+  font-size: 12px !important;
+  color: var(--iv4-text-2) !important;
+  line-height: 1.4 !important;
+  font-family: var(--iv4-font) !important;
+}
+
+.iv4-conv-time {
+  font-size: 11px !important;
+  color: var(--iv4-text-3) !important;
+  font-family: var(--iv4-font) !important;
+}
+
+.iv4-conv-badge {
+  background: var(--iv4-accent) !important;
+  color: #fff !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  min-width: 18px !important;
+  height: 18px !important;
+  border-radius: var(--iv4-radius-full) !important;
+  padding: 0 5px !important;
+  line-height: 18px !important;
+}
+
+/* Status badges */
+.iv4-status-badge {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  padding: 2px 8px !important;
+  border-radius: var(--iv4-radius-full) !important;
+  font-family: var(--iv4-font) !important;
+}
+
+.iv4-status-badge--open {
+  background: var(--iv4-green-light) !important;
+  color: #065f46 !important;
+}
+
+/* ─── CHAT AREA ─────────────────────────────────────────────────────────── */
+.iv4-chat-col {
+  background: var(--iv4-bg) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Chat Header */
+.iv4-chat-header {
+  background: var(--iv4-surface) !important;
+  border-bottom: 1px solid var(--iv4-border) !important;
+  padding: 10px 18px !important;
+  min-height: 58px !important;
+  box-shadow: var(--iv4-shadow) !important;
+  gap: 12px !important;
+}
+
+.iv4-header-avatar {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: var(--iv4-radius-full) !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  flex-shrink: 0 !important;
+  cursor: pointer !important;
+}
+
+.iv4-header-name {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: var(--iv4-text) !important;
+  letter-spacing: -0.2px !important;
+  font-family: var(--iv4-font) !important;
+}
+
+.iv4-header-phone,
+.iv4-header-sub {
+  font-size: 12px !important;
+  color: var(--iv4-text-2) !important;
+  font-family: var(--iv4-font) !important;
+}
+
+.iv4-header-status {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  padding: 2px 8px !important;
+  border-radius: var(--iv4-radius-full) !important;
+  background: var(--iv4-green-light) !important;
+  color: #065f46 !important;
+}
+
+/* Header buttons */
+.iv4-header-btn,
+.iv4-header-btn--secondary,
+.iv4-header-btn--transfer,
+.iv4-icon-btn,
+.iv4-ctx-toggle {
+  background: var(--iv4-surface-2) !important;
+  border: none !important;
+  border-radius: var(--iv4-radius-sm) !important;
+  color: var(--iv4-text-2) !important;
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all var(--iv4-transition) !important;
+  font-family: var(--iv4-font) !important;
+  white-space: nowrap !important;
+}
+
+.iv4-header-btn:hover,
+.iv4-header-btn--secondary:hover,
+.iv4-icon-btn:hover,
+.iv4-ctx-toggle:hover {
+  background: var(--iv4-surface-3) !important;
+  color: var(--iv4-text) !important;
+}
+
+/* Close/reopen button - prominent */
+.iv4-header-btn:not(.iv4-header-btn--secondary):not(.iv4-header-btn--transfer) {
+  background: var(--iv4-accent-light) !important;
+  color: var(--iv4-accent) !important;
+}
+
+.iv4-header-btn:not(.iv4-header-btn--secondary):not(.iv4-header-btn--transfer):hover {
+  background: var(--iv4-accent) !important;
+  color: #fff !important;
+}
+
+/* ─── MESSAGES ──────────────────────────────────────────────────────────── */
+.iv4-messages {
+  padding: 20px 24px !important;
+  gap: 2px !important;
+  background: var(--iv4-bg) !important;
+  flex: 1 !important;
+  overflow-y: auto !important;
+}
+
+/* Message row */
+.iv4-msg {
+  display: flex !important;
+  flex-direction: column !important;
+  max-width: 72% !important;  /* matches inbox.css */
+  margin-bottom: 6px !important;
+}
+
+/* Outgoing — right aligned */
+/* RTL: flex-start = اليمين، flex-end = اليسار */
+.iv4-msg--out {
+  align-items: flex-start !important;  /* يمين في RTL */
+}
+
+.iv4-msg:not(.iv4-msg--out) {
+  align-items: flex-end !important;    /* يسار في RTL */
+}
+
+/* Bubble — outgoing */
+.iv4-msg--out .iv4-msg-bubble {
+  background: var(--iv4-accent) !important;
+  color: #ffffff !important;
+  border-radius: var(--iv4-radius) var(--iv4-radius-xs) var(--iv4-radius) var(--iv4-radius) !important;
+  padding: 10px 14px !important;
+  max-width: 68% !important;
+  box-shadow: var(--iv4-shadow-accent) !important;
+  word-break: break-word !important;
+}
+
+/* Bubble — incoming */
+.iv4-msg:not(.iv4-msg--out) .iv4-msg-bubble {
+  background: var(--iv4-surface) !important;
+  color: var(--iv4-text) !important;
+  border: 1px solid var(--iv4-border) !important;
+  border-radius: var(--iv4-radius-xs) var(--iv4-radius) var(--iv4-radius) var(--iv4-radius) !important;
+  padding: 10px 14px !important;
+  max-width: 68% !important;
+  box-shadow: var(--iv4-shadow) !important;
+  word-break: break-word !important;
+}
+
+.iv4-msg-text {
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  font-family: var(--iv4-font) !important;
+}
+
+.iv4-msg-meta {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  margin-top: 4px !important;
+}
+
+.iv4-msg-time {
+  font-size: 11px !important;
+  color: var(--iv4-text-3) !important;
+  font-family: var(--iv4-font) !important;
+}
+
+/* Outgoing time in white */
+.iv4-msg--out .iv4-msg-time {
+  color: rgba(255,255,255,.65) !important;
+}
+
+/* Date divider */
+.iv4-date-divider {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 14px 0 !important;
+}
+
+.iv4-date-divider span {
+  background: var(--iv4-surface-2) !important;
+  color: var(--iv4-text-3) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  border-radius: var(--iv4-radius-full) !important;
+  padding: 3px 12px !important;
+  font-family: var(--iv4-font) !important;
+}
+
+/* Reply button on hover */
+.iv4-msg-reply-btn {
+  background: var(--iv4-surface-2) !important;
+  border: none !important;
+  border-radius: var(--iv4-radius-full) !important;
+  color: var(--iv4-text-3) !important;
+  width: 26px !important;
+  height: 26px !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  opacity: 0 !important;
+  transition: opacity var(--iv4-transition) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-bottom: 4px !important;
+}
+
+.iv4-msg:hover .iv4-msg-reply-btn {
+  opacity: 1 !important;
+}
+
+/* ─── REPLY BOX ─────────────────────────────────────────────────────────── */
+.iv4-reply-box {
+  background: var(--iv4-surface) !important;
+  border-top: 1px solid var(--iv4-border) !important;
+  padding: 14px 18px !important;
+  box-shadow: 0 -2px 8px rgba(15,23,42,.04) !important;
+  flex-shrink: 0 !important;
+}
+
+/* Tabs */
+.iv4-reply-tabs {
+  display: flex !important;
+  gap: 4px !important;
+  margin-bottom: 10px !important;
+  border-bottom: 1px solid var(--iv4-border) !important;
+  padding-bottom: 8px !important;
+}
+
+.iv4-reply-tab {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 5px 14px !important;
+  border-radius: var(--iv4-radius-sm) !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: all var(--iv4-transition) !important;
+  background: transparent !important;
+  color: var(--iv4-text-2) !important;
+  font-family: var(--iv4-font) !important;
+}
+
+.iv4-reply-tab.active {
+  background: var(--iv4-accent-light) !important;
+  color: var(--iv4-accent) !important;
+}
+
+.iv4-reply-tab:hover:not(.active) {
+  background: var(--iv4-surface-2) !important;
+  color: var(--iv4-text) !important;
+}
+
+/* Textarea */
+.iv4-reply-textarea {
+  background: var(--iv4-surface-2) !important;
+  border: 1.5px solid transparent !important;
+  border-radius: var(--iv4-radius-sm) !important;
+  font-family: var(--iv4-font) !important;
+  font-size: 14px !important;
+  color: var(--iv4-text) !important;
+  padding: 10px 14px !important;
+  min-height: 80px !important;
+  resize: none !important;
+  width: 100% !important;
+  line-height: 1.6 !important;
+  transition: all var(--iv4-transition) !important;
+  display: block !important;
+}
+
+.iv4-reply-textarea:focus {
+  background: var(--iv4-surface) !important;
+  border-color: var(--iv4-accent) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--iv4-accent-light) !important;
+}
+
+.iv4-reply-textarea::placeholder {
+  color: var(--iv4-text-3) !important;
+}
+
+/* Toolbar */
+.iv4-reply-toolbar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-top: 10px !important;
+  gap: 6px !important;
+}
+
+.iv4-toolbar-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+}
+
+.iv4-fmt-btn {
+  background: transparent !important;
+  border: none !important;
+  border-radius: var(--iv4-radius-xs) !important;
+  color: var(--iv4-text-2) !important;
+  width: 28px !important;
+  height: 28px !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all var(--iv4-transition) !important;
+  font-family: var(--iv4-font) !important;
+}
+
+.iv4-fmt-btn:hover {
+  background: var(--iv4-surface-2) !important;
+  color: var(--iv4-text) !important;
+}
+
+.iv4-toolbar-sep {
+  width: 1px !important;
+  height: 16px !important;
+  background: var(--iv4-border) !important;
+  margin: 0 4px !important;
+}
+
+/* AI toolbar button */
+.iv4-ai-toolbar-btn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: var(--iv4-radius-xs) !important;
+  padding: 4px 10px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  font-family: var(--iv4-font) !important;
+  transition: all var(--iv4-transition) !important;
+}
+
+.iv4-ai-toolbar-btn:hover {
+  opacity: .9 !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Send button */
+.iv4-send-btn {
+  background: var(--iv4-accent) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: var(--iv4-radius-sm) !important;
+  padding: 8px 22px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all var(--iv4-transition) !important;
+  font-family: var(--iv4-font) !important;
+  box-shadow: var(--iv4-shadow-accent) !important;
+  letter-spacing: 0.2px !important;
+}
+
+.iv4-send-btn:hover:not(:disabled) {
+  background: var(--iv4-accent-hover) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 18px rgba(79,70,229,.35) !important;
+}
+
+.iv4-send-btn:disabled {
+  opacity: .45 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Channel select */
+.iv4-channel-select {
+  border: 1px solid var(--iv4-border) !important;
+  border-radius: var(--iv4-radius-xs) !important;
+  font-size: 12px !important;
+  padding: 4px 8px !important;
+  color: var(--iv4-text-2) !important;
+  background: var(--iv4-surface-2) !important;
+  font-family: var(--iv4-font) !important;
+}
+
+/* Toolbar right */
+.iv4-toolbar-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* Char count */
+.iv4-char-count {
+  font-size: 11px !important;
+  color: var(--iv4-text-3) !important;
+  font-family: var(--iv4-font) !important;
+}
+
+/* ─── CONTEXT PANEL ─────────────────────────────────────────────────────── */
+.iv4-context-panel {
+  background: var(--iv4-surface) !important;
+  border-left: 1px solid var(--iv4-border) !important;
+  overflow-y: auto !important;
+}
+
+.iv4-ctx-tabs {
+  display: flex !important;
+  gap: 0 !important;
+  border-bottom: 1px solid var(--iv4-border) !important;
+  padding: 0 16px !important;
+}
+
+.iv4-ctx-tab {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 12px 14px !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--iv4-text-2) !important;
+  cursor: pointer !important;
+  border-bottom: 2px solid transparent !important;
+  margin-bottom: -1px !important;
+  font-family: var(--iv4-font) !important;
+  transition: all var(--iv4-transition) !important;
+}
+
+.iv4-ctx-tab.active {
+  color: var(--iv4-accent) !important;
+  border-bottom-color: var(--iv4-accent) !important;
+}
+
+.iv4-ctx-close {
+  background: var(--iv4-surface-2) !important;
+  border: none !important;
+  border-radius: var(--iv4-radius-full) !important;
+  color: var(--iv4-text-2) !important;
+  width: 28px !important;
+  height: 28px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  transition: all var(--iv4-transition) !important;
+}
+
+.iv4-ctx-close:hover {
+  background: var(--iv4-surface-3) !important;
+  color: var(--iv4-text) !important;
+}
+
+/* ─── SHELL TOPBAR ──────────────────────────────────────────────────────── */
+.shell-topbar {
+  background: var(--iv4-surface) !important;
+  border-bottom: 1px solid var(--iv4-border) !important;
+  height: 52px !important;
+  box-shadow: var(--iv4-shadow) !important;
+}
+
+.shell-logo {
+  color: var(--iv4-accent) !important;
+  font-family: var(--iv4-font) !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  letter-spacing: -0.3px !important;
+}
+
+.shell-breadcrumb {
+  font-family: var(--iv4-font) !important;
+  color: var(--iv4-text-2) !important;
+  font-size: 13px !important;
+}
+
+.shell-user-name {
+  font-family: var(--iv4-font) !important;
+  color: var(--iv4-text) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+/* Shell Sidebar */
+.shell-sidebar {
+  background: var(--iv4-surface) !important;
+  border-left: 1px solid var(--iv4-border) !important;
+}
+
+.shell-nav-item {
+  border-radius: var(--iv4-radius-sm) !important;
+  font-family: var(--iv4-font) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--iv4-text-2) !important;
+  transition: all var(--iv4-transition) !important;
+  margin: 1px 4px !important;
+}
+
+.shell-nav-item:hover {
+  background: var(--iv4-surface-2) !important;
+  color: var(--iv4-text) !important;
+}
+
+.shell-nav-item.active {
+  background: var(--iv4-accent-light) !important;
+  color: var(--iv4-accent) !important;
+  font-weight: 600 !important;
+}
+
+.shell-badge {
+  background: var(--iv4-accent) !important;
+  color: #fff !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  min-width: 18px !important;
+  height: 18px !important;
+  border-radius: var(--iv4-radius-full) !important;
+  padding: 0 5px !important;
+}
+
+.shell-agent-status {
+  border-top: 1px solid var(--iv4-border) !important;
+  padding: 12px 14px !important;
+  background: var(--iv4-surface) !important;
+}
+
+.shell-status-select {
+  font-family: var(--iv4-font) !important;
+  font-size: 12px !important;
+  border: 1px solid var(--iv4-border) !important;
+  border-radius: var(--iv4-radius-xs) !important;
+  padding: 4px 8px !important;
+  background: var(--iv4-surface) !important;
+  color: var(--iv4-text) !important;
+}
+
+/* ─── TOAST ─────────────────────────────────────────────────────────────── */
+#iv4-toasts {
+  bottom: 24px !important;
+  left: 24px !important;
+  gap: 8px !important;
+}
+
+/* ─── EMPTY STATE ────────────────────────────────────────────────────────── */
+.iv4-empty-state {
+  color: var(--iv4-text-2) !important;
+  font-family: var(--iv4-font) !important;
+}
+
+.iv4-empty-icon {
+  font-size: 44px !important;
+  opacity: .35 !important;
+  margin-bottom: 14px !important;
+}
+
+.iv4-empty-text {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: var(--iv4-text-2) !important;
+  font-family: var(--iv4-font) !important;
+}
+
+/* ─── STATUS FILTERS ────────────────────────────────────────────────────── */
+.iv4-status-nav {
+  padding: 8px 12px !important;
+  border-bottom: 1px solid var(--iv4-border-light) !important;
+}
+
+/* Platform filter pills */
+.iv4-platform-filter {
+  padding: 6px 12px !important;
+  border-bottom: 1px solid var(--iv4-border-light) !important;
+  gap: 4px !important;
+}
+
+.iv4-plat-btn {
+  border-radius: var(--iv4-radius-full) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  padding: 3px 10px !important;
+  border: 1px solid var(--iv4-border) !important;
+  background: var(--iv4-surface) !important;
+  color: var(--iv4-text-2) !important;
+  cursor: pointer !important;
+  transition: all var(--iv4-transition) !important;
+  font-family: var(--iv4-font) !important;
+}
+
+.iv4-plat-btn.active,
+.iv4-plat-btn:hover {
+  background: var(--iv4-accent-light) !important;
+  border-color: var(--iv4-accent-mid) !important;
+  color: var(--iv4-accent) !important;
+}
+
+/* ─── SCROLLBARS ────────────────────────────────────────────────────────── */
+.iv4-messages::-webkit-scrollbar,
+.iv4-conv-list::-webkit-scrollbar,
+.iv4-sidebar::-webkit-scrollbar,
+.shell-sidebar::-webkit-scrollbar,
+.iv4-context-panel::-webkit-scrollbar {
+  width: 4px;
+}
+.iv4-messages::-webkit-scrollbar-track,
+.iv4-conv-list::-webkit-scrollbar-track,
+.iv4-sidebar::-webkit-scrollbar-track,
+.shell-sidebar::-webkit-scrollbar-track,
+.iv4-context-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.iv4-messages::-webkit-scrollbar-thumb,
+.iv4-conv-list::-webkit-scrollbar-thumb,
+.iv4-sidebar::-webkit-scrollbar-thumb,
+.shell-sidebar::-webkit-scrollbar-thumb,
+.iv4-context-panel::-webkit-scrollbar-thumb {
+  background: var(--iv4-surface-3);
+  border-radius: 2px;
+}
+
+/* ─── SKELETON ──────────────────────────────────────────────────────────── */
+.iv4-skeleton-item {
+  background: linear-gradient(90deg, var(--iv4-surface-2) 25%, var(--iv4-surface-3) 50%, var(--iv4-surface-2) 75%);
+  background-size: 200% 100%;
+  animation: iv4-shimmer 1.4s infinite;
+  border-radius: var(--iv4-radius-xs);
+}
+
+@keyframes iv4-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── ASSIGN / SNOOZE ───────────────────────────────────────────────────── */
+.iv4-header-assign-btn,
+.iv4-assign-nav {
+  font-family: var(--iv4-font) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  border-radius: var(--iv4-radius-sm) !important;
+}
+
+/* ─── EMBED MODE ────────────────────────────────────────────────────────── */
+html.iv4-embed-mode .shell-topbar { display: none !important; }
+html.iv4-embed-mode #shell-wrap   { grid-template-rows: 0 1fr; }
+html.iv4-embed-mode .shell-content { height: 100vh; }
+html.iv4-embed-mode #shell-logout-btn { display: none !important; }
+
+/* ─── CRITICAL: chat col must fill remaining grid space ──────────────────── */
+#iv4-chat-col,
+.iv4-chat-col {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* iv4-chat-area fills chat-col */
+#iv4-chat-area,
+.iv4-chat-area {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* messages area scrollable, fills remaining space */
+.iv4-messages {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* reply box fixed at bottom, never shrinks beyond minHeight */
+#iv4-reply-box,
+.iv4-reply-box {
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+}
+
+/* ─── COMPACT HEADER & REPLY (fit in 570px viewport) ──────────────────────
+   header: ~160px | messages: flex-1 | reply: ~150px = workable layout
+   ─────────────────────────────────────────────────────────────────────── */
+
+/* Compact header */
+#iv4-chat-header,
+.iv4-chat-header {
+  flex-shrink: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Header main row — tighter */
+.iv4-header-main {
+  padding: 0 !important;
+  min-height: 0 !important;
+}
+
+/* Labels mount — compact */
+.iv4-label-picker-mount {
+  min-height: 0 !important;
+  padding: 0 !important;
+}
+
+/* Compact reply box — smaller textarea */
+#iv4-reply-box .iv4-reply-tabs {
+  margin-bottom: 6px !important;
+  padding-bottom: 6px !important;
+}
+
+#iv4-reply-box .iv4-reply-textarea {
+  min-height: 60px !important;
+  max-height: 120px !important;
+  overflow-y: auto !important;
+}
+
+#iv4-reply-box .iv4-reply-toolbar {
+  margin-top: 6px !important;
+}
+
+/* Ensure messages fills ALL remaining space */
+#iv4-messages,
+.iv4-messages {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════
+   LAYOUT FIX v5 — force correct proportions in 570px viewport
+   header≈160  |  messages=flex-1  |  reply≈150
+   ════════════════════════════════════════════════════════════ */
+
+/* Chat area: full height flex column */
+div#iv4-chat-area.iv4-chat-area {
+  height: 100% !important;
+  max-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+}
+
+/* Header: max 160px */
+div#iv4-chat-header.iv4-chat-header {
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  max-height: 160px !important;
+  overflow: hidden !important;
+}
+
+/* Messages: grow to fill everything between header and reply */
+div#iv4-messages.iv4-messages {
+  flex: 1 1 0px !important;
+  min-height: 0px !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Reply box: max 160px */
+div#iv4-reply-box.iv4-reply-box {
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  max-height: 160px !important;
+  overflow: hidden !important;
+}
+
+div#iv4-reply-box .iv4-reply-textarea {
+  min-height: 52px !important;
+  max-height: 80px !important;
+  overflow-y: auto !important;
+}
+
+/* ════════════════════════════════════════════════════════════
+   MSG HEIGHT FIX v2
+   - messages container: stretch (full width for each row) ✓
+   - each .iv4-msg: height auto, no stretch on cross-axis
+   ════════════════════════════════════════════════════════════ */
+
+div#iv4-messages.iv4-messages {
+  align-items: stretch !important;
+}
+
+/* Each msg row: full width but auto height */
+div#iv4-messages > .iv4-msg {
+  height: auto !important;
+  min-height: 0 !important;
+  flex-shrink: 0 !important;
+  /* align-self set by inbox.css per message direction */
+}
+
+/* Bubble: display inline-block so it wraps content */
+div#iv4-messages .iv4-msg-bubble {
+  display: inline-block !important;
+  height: auto !important;
+  min-height: 0 !important;
+  vertical-align: top !important;
+}
+
+/* ════════════════════════════════════════════════════════════
+   MSG HEIGHT FIX v3 — force fit-content on msg and bubble
+   ════════════════════════════════════════════════════════════ */
+
+/* Each .iv4-msg must be exactly as tall as its content */
+div#iv4-messages > .iv4-msg {
+  height: fit-content !important;
+  min-height: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+/* Bubble: block, auto height */
+div#iv4-messages .iv4-msg > .iv4-msg-bubble {
+  display: block !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+/* ════════════════════════════════════════════════════════════
+   BUBBLE HEIGHT FIX — white-space:pre-wrap renders \n as lines
+   inbox.css has white-space:pre-wrap + JS puts \n in innerHTML
+   Fix: use pre-line to collapse spaces but keep \n only when needed
+   ════════════════════════════════════════════════════════════ */
+
+.iv4-msg-bubble {
+  white-space: normal !important;
+}
+
+/* For text messages, allow pre-wrap only for intentional line breaks */
+.iv4-msg-bubble .iv4-msg-text {
+  white-space: pre-wrap !important;
+}
+
+/* ════════════════════════════════════════════════════════════
+   MSG ALIGNMENT & COLORS FIX
+   inbox.css uses .iv4-msg.out / .iv4-msg.in (old classes)
+   actual HTML uses .iv4-msg--out (BEM modifier)
+   ════════════════════════════════════════════════════════════ */
+
+/* Outgoing (--out): align right, indigo bubble */
+.iv4-msg.iv4-msg--out {
+  align-self: flex-start !important;
+  align-items: flex-start !important;
+}
+
+.iv4-msg--out .iv4-msg-bubble {
+  background: var(--iv4-accent) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 12px 2px 12px 12px !important;
+  box-shadow: 0 2px 8px rgba(79,70,229,.25) !important;
+}
+
+.iv4-msg--out .iv4-msg-time {
+  color: rgba(255,255,255,.65) !important;
+}
+
+/* Incoming (no --out): align left */
+.iv4-msg:not(.iv4-msg--out):not(.iv4-msg--note) {
+  align-self: flex-end !important;
+  align-items: flex-end !important;
+}
+
+.iv4-msg:not(.iv4-msg--out):not(.iv4-msg--note) .iv4-msg-bubble {
+  background: var(--iv4-surface) !important;
+  color: var(--iv4-text) !important;
+  border: 1px solid var(--iv4-border) !important;
+  border-radius: 2px 12px 12px 12px !important;
+  box-shadow: var(--iv4-shadow) !important;
+}
+
+/* Internal note */
+.iv4-msg--note .iv4-msg-bubble {
+  background: #fffbeb !important;
+  border: 1px dashed #fbbf24 !important;
+  color: #78350f !important;
+  border-radius: 8px !important;
+}
+
+/* Messages area: justify from top */
+div#iv4-messages.iv4-messages {
+  justify-content: flex-start !important;
+  padding-bottom: 16px !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════
+   MESSAGES FINAL OVERRIDE — v16
+   هذا القسم يأتي في النهاية ويغلب على كل شيء
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Container */
+div#iv4-messages.iv4-messages {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  padding: 16px 20px !important;
+  gap: 6px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* كل رسالة: auto height, max 70% width */
+div#iv4-messages > .iv4-msg {
+  display: flex !important;
+  flex-direction: column !important;
+  max-width: 70% !important;
+  min-width: 80px !important;
+  height: auto !important;
+  min-height: 0 !important;
+  flex-shrink: 0 !important;
+  margin-bottom: 2px !important;
+}
+
+/* رسائل صادرة: يمين (flex-start في RTL) */
+div#iv4-messages > .iv4-msg--out {
+  align-self: flex-start !important;
+  align-items: flex-start !important;
+}
+
+/* رسائل واردة: يسار (flex-end في RTL) */
+div#iv4-messages > .iv4-msg--in {
+  align-self: flex-end !important;
+  align-items: flex-end !important;
+}
+
+/* ملاحظات داخلية: وسط */
+div#iv4-messages > .iv4-msg--note {
+  align-self: center !important;
+  max-width: 85% !important;
+}
+
+/* Bubble base */
+div#iv4-messages .iv4-msg-bubble {
+  display: inline-block !important;
+  padding: 10px 14px !important;
+  border-radius: 12px !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  word-break: break-word !important;
+  white-space: normal !important;
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* Bubble صادر: indigo */
+div#iv4-messages .iv4-msg--out .iv4-msg-bubble {
+  background: var(--iv4-accent) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 14px 2px 14px 14px !important;
+  box-shadow: 0 2px 8px rgba(79,70,229,.3) !important;
+}
+
+/* Bubble وارد: أبيض */
+div#iv4-messages .iv4-msg--in .iv4-msg-bubble {
+  background: var(--iv4-surface) !important;
+  color: var(--iv4-text) !important;
+  border: 1px solid var(--iv4-border) !important;
+  border-radius: 2px 14px 14px 14px !important;
+  box-shadow: var(--iv4-shadow) !important;
+}
+
+/* Bubble ملاحظة: أصفر */
+div#iv4-messages .iv4-msg--note .iv4-msg-bubble {
+  background: #fffbeb !important;
+  border: 1px dashed #fbbf24 !important;
+  color: #78350f !important;
+  border-radius: 8px !important;
+}
+
+/* نص الرسالة */
+div#iv4-messages .iv4-msg-text {
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}
+
+/* وقت الرسالة */
+div#iv4-messages .iv4-msg-time {
+  font-size: 11px !important;
+  opacity: .75 !important;
+  margin-top: 3px !important;
+}
+
+div#iv4-messages .iv4-msg--out .iv4-msg-time {
+  color: rgba(255,255,255,.7) !important;
+}
+
+div#iv4-messages .iv4-msg--in .iv4-msg-time {
+  color: var(--iv4-text-3) !important;
+}
+
+/* sender name */
+div#iv4-messages .iv4-msg-sender {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--iv4-text-3) !important;
+  margin-bottom: 2px !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   REPLY BOX FINAL DESIGN — v17
+   Layout: tabs → textarea → toolbar-row1 (format) → toolbar-row2 (send)
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Reply box container */
+div#iv4-reply-box.iv4-reply-box {
+  background: var(--iv4-surface) !important;
+  border-top: 1px solid var(--iv4-border) !important;
+  padding: 10px 14px 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  max-height: 200px !important;
+}
+
+/* Tabs row */
+div#iv4-reply-box .iv4-reply-tabs {
+  display: flex !important;
+  gap: 4px !important;
+  margin-bottom: 8px !important;
+  border-bottom: 1px solid var(--iv4-border) !important;
+  padding-bottom: 6px !important;
+  flex-shrink: 0 !important;
+}
+
+div#iv4-reply-box .iv4-reply-tab {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 4px 12px !important;
+  border-radius: 6px !important;
+  border: none !important;
+  cursor: pointer !important;
+  background: transparent !important;
+  color: var(--iv4-text-2) !important;
+  font-family: var(--iv4-font) !important;
+  transition: all var(--iv4-transition) !important;
+}
+
+div#iv4-reply-box .iv4-reply-tab.active {
+  background: var(--iv4-accent-light) !important;
+  color: var(--iv4-accent) !important;
+}
+
+div#iv4-reply-box .iv4-reply-tab:hover:not(.active) {
+  background: var(--iv4-surface-2) !important;
+}
+
+/* Textarea */
+div#iv4-reply-box .iv4-reply-textarea {
+  background: var(--iv4-surface-2) !important;
+  border: 1.5px solid transparent !important;
+  border-radius: 8px !important;
+  font-family: var(--iv4-font) !important;
+  font-size: 13.5px !important;
+  color: var(--iv4-text) !important;
+  padding: 8px 12px !important;
+  min-height: 52px !important;
+  max-height: 90px !important;
+  resize: none !important;
+  width: 100% !important;
+  line-height: 1.55 !important;
+  transition: border-color var(--iv4-transition) !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  overflow-y: auto !important;
+}
+
+div#iv4-reply-box .iv4-reply-textarea:focus {
+  background: var(--iv4-surface) !important;
+  border-color: var(--iv4-accent) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--iv4-accent-light) !important;
+}
+
+div#iv4-reply-box .iv4-reply-textarea::placeholder {
+  color: var(--iv4-text-3) !important;
+  font-size: 13px !important;
+}
+
+/* Toolbar: flex-wrap so it wraps to 2 rows naturally */
+div#iv4-reply-box .iv4-reply-toolbar {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  justify-content: space-between !important;
+  margin-top: 8px !important;
+  gap: 4px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Left side: format buttons */
+div#iv4-reply-box .iv4-toolbar-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  flex-wrap: nowrap !important;
+  overflow: hidden !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+/* Format buttons */
+div#iv4-reply-box .iv4-fmt-btn {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 5px !important;
+  color: var(--iv4-text-2) !important;
+  width: 26px !important;
+  height: 26px !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all var(--iv4-transition) !important;
+  flex-shrink: 0 !important;
+  padding: 0 !important;
+}
+
+div#iv4-reply-box .iv4-fmt-btn:hover {
+  background: var(--iv4-surface-2) !important;
+  color: var(--iv4-accent) !important;
+}
+
+/* Icon buttons (attach, catalog, AI, interactive) */
+div#iv4-reply-box .iv4-icon-btn,
+div#iv4-reply-box #iv4-attach-btn,
+div#iv4-reply-box #iv4-catalog-btn,
+div#iv4-reply-box #iv4-interactive-btn {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 5px !important;
+  color: var(--iv4-text-2) !important;
+  width: 26px !important;
+  height: 26px !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all var(--iv4-transition) !important;
+  flex-shrink: 0 !important;
+  padding: 0 !important;
+}
+
+div#iv4-reply-box .iv4-icon-btn:hover {
+  background: var(--iv4-surface-2) !important;
+  color: var(--iv4-text) !important;
+}
+
+/* AI button - special gradient */
+div#iv4-reply-box #iv4-ai-toolbar-btn {
+  background: linear-gradient(135deg,#6366f1,#8b5cf6) !important;
+  color: #fff !important;
+  border-radius: 5px !important;
+  padding: 0 8px !important;
+  width: auto !important;
+  height: 24px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+div#iv4-reply-box #iv4-ai-toolbar-btn:hover {
+  opacity: .9 !important;
+  background: linear-gradient(135deg,#4f46e5,#7c3aed) !important;
+}
+
+/* Toolbar separator */
+div#iv4-reply-box .iv4-toolbar-sep {
+  width: 1px !important;
+  height: 14px !important;
+  background: var(--iv4-border) !important;
+  margin: 0 3px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Right side: channel select + char count + SEND */
+div#iv4-reply-box .iv4-toolbar-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Char count */
+div#iv4-reply-box .iv4-char-count,
+div#iv4-reply-box #iv4-char-count {
+  font-size: 10px !important;
+  color: var(--iv4-text-3) !important;
+  font-family: var(--iv4-font) !important;
+  white-space: nowrap !important;
+}
+
+/* Channel select */
+div#iv4-reply-box .iv4-channel-select,
+div#iv4-reply-box #iv4-channel-select {
+  border: 1px solid var(--iv4-border) !important;
+  border-radius: 6px !important;
+  font-size: 11px !important;
+  padding: 3px 6px !important;
+  height: 26px !important;
+  color: var(--iv4-text-2) !important;
+  background: var(--iv4-surface-2) !important;
+  font-family: var(--iv4-font) !important;
+  cursor: pointer !important;
+  max-width: 90px !important;
+}
+
+/* SEND BUTTON — always visible, prominent */
+div#iv4-reply-box #iv4-send-btn,
+div#iv4-reply-box .iv4-send-btn {
+  background: var(--iv4-accent) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 6px 18px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  height: 32px !important;
+  cursor: pointer !important;
+  transition: all var(--iv4-transition) !important;
+  font-family: var(--iv4-font) !important;
+  box-shadow: 0 2px 8px rgba(79,70,229,.3) !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+div#iv4-reply-box #iv4-send-btn:hover:not(:disabled),
+div#iv4-reply-box .iv4-send-btn:hover:not(:disabled) {
+  background: var(--iv4-accent-hover) !important;
+  box-shadow: 0 4px 14px rgba(79,70,229,.4) !important;
+  transform: translateY(-1px) !important;
+}
+
+div#iv4-reply-box #iv4-send-btn:disabled,
+div#iv4-reply-box .iv4-send-btn:disabled {
+  opacity: .45 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   REPLY TOOLBAR RTL FIX — v18
+   في RTL: toolbar-right (send) يجب أن يكون على اليمين فعلياً
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Toolbar: row-reverse عشان في RTL الـ right يكون فعلاً على اليمين */
+div#iv4-reply-box .iv4-reply-toolbar {
+  flex-direction: row !important;
+}
+
+/* Send button دايماً على اليمين في RTL */
+div#iv4-reply-box .iv4-toolbar-right {
+  order: -1 !important;  /* يجي الأول في الـ row = يمين في RTL */
+}
+
+div#iv4-reply-box .iv4-toolbar-left {
+  order: 1 !important;  /* يجي الثاني = يسار في RTL */
+}
