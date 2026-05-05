@@ -325,7 +325,7 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 **الملف:** `server/routes-hr.js` — السطر ~31
 **الإصلاح:** refactor لـ query builder أكثر أماناً
 **Status:** ✅ مكتمل
-**Commit:** `PENDING`
+**Commit:** `1cc5d4b`
 **ملاحظة:** `buildWhere()` helper — 3 endpoints (employees/attendance/payroll) تستخدمه بدل concatenation
 
 ---
@@ -357,7 +357,7 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 | 2026-05-05 | L4 | Health endpoint — internal only details | `650fad1` | AI |
 | 2026-05-05 | M1 | تحديث Status فقط (كان commit b2425ad) | `b2425ad` | AI |
 | 2026-05-05 | L1 | JWT 30d → 7d + /api/auth/token/refresh | `0410975` | AI |
-| 2026-05-05 | L5 | HR buildWhere() query builder refactor | PENDING | AI |
+| 2026-05-05 | L5 | HR buildWhere() query builder refactor | `1cc5d4b` | AI |
 
 ---
 
