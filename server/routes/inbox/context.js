@@ -200,7 +200,7 @@ router.post('/conversations/:id/context/link', erpGuard, (req, res) => {
       // سجّل في timeline
       try {
         db.prepare(`
-          INSERT INTO inbox_timeline_v4 (conversation_id, event_type, actor_id, actor_name, meta, created_at)
+          INSERT INTO inbox_timeline_v4 (conversation_id, event_type, actor_id, actor_name, data, created_at)
           VALUES (?, 'contact_linked', ?, ?, ?, ?)
         `).run(
           convId,
@@ -224,7 +224,7 @@ router.post('/conversations/:id/context/link', erpGuard, (req, res) => {
 
       try {
         db.prepare(`
-          INSERT INTO inbox_timeline_v4 (conversation_id, event_type, actor_id, actor_name, meta, created_at)
+          INSERT INTO inbox_timeline_v4 (conversation_id, event_type, actor_id, actor_name, data, created_at)
           VALUES (?, 'contact_unlinked', ?, ?, ?, ?)
         `).run(
           convId,
@@ -538,7 +538,7 @@ router.post('/conversations/:id/context/invoice', erpGuard, (req, res) => {
     try {
       db.prepare(`
         INSERT INTO inbox_timeline_v4
-          (conversation_id, event_type, actor_id, actor_name, meta, created_at)
+          (conversation_id, event_type, actor_id, actor_name, data, created_at)
         VALUES (?, 'invoice_created', ?, ?, ?, ?)
       `).run(
         convId, req.inboxUser.id, req.inboxUser.name,
@@ -609,7 +609,7 @@ router.post('/conversations/:id/context/paylink', erpGuard, (req, res) => {
     try {
       db.prepare(`
         INSERT INTO inbox_timeline_v4
-          (conversation_id, event_type, actor_id, actor_name, meta, created_at)
+          (conversation_id, event_type, actor_id, actor_name, data, created_at)
         VALUES (?, 'paylink_created', ?, ?, ?, ?)
       `).run(
         convId, req.inboxUser.id, req.inboxUser.name,
