@@ -2,7 +2,7 @@
 > آخر تحديث: 2026-05-05
 
 ## الحالة الحالية
-- **آخر commit:** `b314818`
+- **آخر commit:** `0db96ab`
 - **السيرفر:** areej-server — Ubuntu 24.04 — port 3002
 - **PM2:** `pm2 reload areej-pro`
 
@@ -86,8 +86,8 @@
 17. ~~**[C] UX:** Label Manager + Settings page~~ ✅
 
 ### 🟢 أولوية منخفضة
-13. Auto-refresh cleanup عند الخروج من صفحة الـ Inbox
-14. New Conversation Modal — Smart Default للمنصة (جزئياً مكتمل)
+13. ~~Auto-refresh cleanup عند الخروج من صفحة الـ Inbox~~ ✅ (موجود — analytics.unmount)
+14. ~~New Conversation Modal — Smart Default للمنصة~~ ✅ (modal كامل + smart default)
 
 ---
 
