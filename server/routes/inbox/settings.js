@@ -711,8 +711,13 @@ const ALLOWED_CHANNELS = ['whatsapp_api','whatsapp_qr','telegram','instagram','m
 router.get('/channels', requirePermission('channels'), (req, res) => {
   const db = req.db;
   try {
-    const rows = db.prepare('SELECT * FROM inbox_channel_settings_v4 ORDER BY channel_type').all();
-    return res.json({ channels: rows.map(r => ({ ...r, config: _parseJSON(r.config, {}) })) });
+    const rows = db.prepare('SELECT * FROM inbox_channel_settings_v4 ORDER BY channel').all();
+    return res.json({ channels: rows.map(r => ({
+      channel_type: r.channel,
+      is_active: r.active,
+      config: _parseJSON(r.config, {}),
+      updated_at: r.updated_at
+    })) });
   } catch (err) {
     console.error('[settings/channels GET]', err.message);
     return res.status(500).json({ error: 'db_error' });
@@ -725,9 +730,14 @@ router.get('/channels/:channel', requirePermission('channels'), (req, res) => {
   const { channel } = req.params;
   if (!ALLOWED_CHANNELS.includes(channel)) return res.status(400).json({ error: 'invalid_channel' });
   try {
-    const row = db.prepare('SELECT * FROM inbox_channel_settings_v4 WHERE channel_type=?').get(channel);
+    const row = db.prepare('SELECT * FROM inbox_channel_settings_v4 WHERE channel=?').get(channel);
     if (!row) return res.json({ channel: { channel_type: channel, is_active: 0, config: {} } });
-    return res.json({ channel: { ...row, config: _parseJSON(row.config, {}) } });
+    return res.json({ channel: {
+      channel_type: row.channel,
+      is_active: row.active,
+      config: _parseJSON(row.config, {}),
+      updated_at: row.updated_at
+    } });
   } catch (err) {
     console.error('[settings/channels/:channel GET]', err.message);
     return res.status(500).json({ error: 'db_error' });
@@ -741,22 +751,27 @@ router.put('/channels/:channel', requirePermission('channels'), (req, res) => {
   if (!ALLOWED_CHANNELS.includes(channel)) return res.status(400).json({ error: 'invalid_channel' });
   const { is_active, config } = req.body;
   try {
-    const existing = db.prepare('SELECT id FROM inbox_channel_settings_v4 WHERE channel_type=?').get(channel);
+    const existing = db.prepare('SELECT id FROM inbox_channel_settings_v4 WHERE channel=?').get(channel);
     if (existing) {
       db.prepare(
         `UPDATE inbox_channel_settings_v4
-         SET is_active=COALESCE(?,is_active), config=COALESCE(?,config), updated_at=datetime('now')
-         WHERE channel_type=?`
+         SET active=COALESCE(?,active), config=COALESCE(?,config), updated_at=unixepoch()
+         WHERE channel=?`
       ).run(is_active !== undefined ? (is_active ? 1 : 0) : null,
             config !== undefined ? JSON.stringify(config) : null, channel);
     } else {
       db.prepare(
-        `INSERT INTO inbox_channel_settings_v4 (channel_type, is_active, config)
+        `INSERT INTO inbox_channel_settings_v4 (channel, active, config)
          VALUES (?, ?, ?)`
       ).run(channel, is_active ? 1 : 0, JSON.stringify(config || {}));
     }
-    const row = db.prepare('SELECT * FROM inbox_channel_settings_v4 WHERE channel_type=?').get(channel);
-    return res.json({ ok: true, channel: { ...row, config: _parseJSON(row.config, {}) } });
+    const row = db.prepare('SELECT * FROM inbox_channel_settings_v4 WHERE channel=?').get(channel);
+    return res.json({ ok: true, channel: {
+      channel_type: row.channel,
+      is_active: row.active,
+      config: _parseJSON(row.config, {}),
+      updated_at: row.updated_at
+    } });
   } catch (err) {
     console.error('[settings/channels PUT]', err.message);
     return res.status(500).json({ error: 'db_error' });
