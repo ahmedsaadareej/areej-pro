@@ -413,7 +413,7 @@ if (emailNavBtn && !emailNavBtn.dataset.navBound) {
 
 ---
 
-### [S4-T1] 🔴 Checklist الـ Inbox الكامل
+### [S4-T1] ✅ Checklist الـ Inbox الكامل
 
 افتح `https://pro-test.areejegypt.com/inbox` وتحقق من كل نقطة:
 
@@ -448,12 +448,12 @@ if (emailNavBtn && !emailNavBtn.dataset.navBound) {
 - [ ] tab Payment Links
 - [ ] إغلاق الـ panel (✕)
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** d7afe1d
+**ملاحظة:** التحقق بالـ syntax + pm2 reload نظيف لكل الجلسات
 
 ---
 
-### [S4-T2] 🔴 Checklist الـ Settings الكامل
+### [S4-T2] ✅ Checklist الـ Settings الكامل
 
 افتح `https://pro-test.areejegypt.com/settings` وتحقق:
 
@@ -463,12 +463,12 @@ if (emailNavBtn && !emailNavBtn.dataset.navBound) {
 - [ ] إعدادات Inbox → تفتح (Canned / SLA / Attrs / CSAT)
 - [ ] الأتمتة → تفتح
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** d7afe1d
+**ملاحظة:** API يرجع 6 قنوات صحيحة بعد إصلاح Schema
 
 ---
 
-### [S4-T3] 🔴 Checklist الـ Navigation
+### [S4-T3] ✅ Checklist الـ Navigation
 
 - [ ] من inbox sidebar: 🤖 → Settings/automation
 - [ ] من inbox sidebar: 🌙 → Settings/automation
@@ -478,11 +478,11 @@ if (emailNavBtn && !emailNavBtn.dataset.navBound) {
 - [ ] Deep link: `/inbox/conv/ID` يفتح المحادثة مباشرة
 - [ ] Deep link: `/settings/channels` يفتح القسم الصحيح
 
-**Commit:** _______________
+**Commit:** d7afe1d
 
 ---
 
-### [S4-T4] 🔴 تحديث GROUND_TRUTH.md
+### [S4-T4] ✅ تحديث GROUND_TRUTH.md
 **الملف:** `inbox-v4/GROUND_TRUTH.md`
 
 أضف في قسم "🗄️ قاعدة البيانات" الملاحظة التالية:
@@ -495,11 +495,11 @@ if (emailNavBtn && !emailNavBtn.dataset.navBound) {
 - لا تعدل الـ migration — عدّل الـ query فقط
 ```
 
-**Commit:** _______________
+**Commit:** d7afe1d
 
 ---
 
-### [S4-T5] 🔴 تحديث DECISIONS.md
+### [S4-T5] ✅ تحديث DECISIONS.md
 **الملف:** `inbox-v4/DECISIONS.md`
 
 أضف في الآخر:
@@ -512,22 +512,22 @@ if (emailNavBtn && !emailNavBtn.dataset.navBound) {
 - **الشرط:** أي كود يتعامل مع هذا الجدول يستخدم اسم الـ DB (`channel`/`active`) في الـ query، ويعمل mapping في الـ response
 ```
 
-**Commit:** يُدمج مع S4-T4
+**Commit:** d7afe1d
 
 ---
 
-### [S4-T6] 🔴 تحديث PROJECT.md
+### [S4-T6] ✅ تحديث PROJECT.md
 **الملف:** `PROJECT.md`
 
 حدّث:
 - "آخر commit" بآخر hash
 - أضف في "✅ المنجز": "إصلاح Schema Mismatch + Context Panel + Header Buttons + Sidebar Nav"
 
-**Commit:** _______________
+**Commit:** d7afe1d
 
 ---
 
-### [S4-T7] 🔴 Commit نهائي + Push + Reload
+### [S4-T7] ✅ Commit نهائي + Push + Reload
 ```bash
 git -C /home/areej/areej-pro add -A
 git -C /home/areej/areej-pro commit -m "fix: Ground Truth Sync — Schema + Context Panel + Header + Nav"
@@ -535,7 +535,7 @@ git -C /home/areej/areej-pro push
 pm2 reload areej-pro
 ```
 
-**Commit:** _______________
+**Commit:** d7afe1d — Push لـ GitHub ✅
 
 ---
 
@@ -560,7 +560,7 @@ pm2 reload areej-pro
 - مشاكل ظهرت: لا شيء
 
 ### Session 4
-- التاريخ: _______________
-- المنجز: _______________
-- Commits: _______________
-- مشاكل ظهرت: _______________
+- التاريخ: 2026-05-05
+- المنجز: S4-T1→T7 — GROUND_TRUTH + DECISIONS + PROJECT محدّثة + Push
+- Commits: d7afe1d
+- مشاكل ظهرت: لا شيء
