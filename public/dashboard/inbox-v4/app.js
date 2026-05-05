@@ -215,7 +215,9 @@
    */
   async function loadCurrentUser() {
     try {
-      const res = await fetch('/api/user/me');
+      // FIX-010: استخدام token في loadCurrentUser
+      const _token = InboxAPI._getToken ? InboxAPI._getToken() : '';
+      const res = await fetch('/api/user/me', { headers: { 'Authorization': 'Bearer ' + _token } });
       if (!res.ok) return;
       const data = await res.json();
       // data قد يحتوي على: id, name, email, inbox_role_id, role_name, permissions

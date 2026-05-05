@@ -47,13 +47,12 @@ const InboxAI = (() => {
 
   async function _apiPost(convId, action, body = {}) {
     try {
-      const res = await fetch(`/api/inbox/conversations/${convId}/ai/${action}`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(body),
+      // FIX-010: استخدام InboxAPI._fetch بدل fetch() الخام
+      const { data: json, error: fetchErr } = await InboxAPI._fetch(`/inbox/conversations/${convId}/ai/${action}`, {
+        method: 'POST',
+        body:   JSON.stringify(body),
       });
-      const json = await res.json().catch(() => ({ error: 'فشل في قراءة الرد' }));
-      if (!res.ok) return { error: json.error || `HTTP ${res.status}` };
+      if (fetchErr) return { error: fetchErr };
       return { data: json };
     } catch (e) {
       return { error: e.message || 'خطأ في الاتصال' };

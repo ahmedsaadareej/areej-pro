@@ -275,8 +275,11 @@ const InboxReply = (() => {
         if (_quotedMsg?.id) formData.append('quoted_msg_id', _quotedMsg.id);
         if (channel) formData.append('channel_override', channel);
 
+        // FIX-010: أضف Authorization header لـ media upload
+        const _mToken = InboxAPI._getToken ? InboxAPI._getToken() : '';
         const res = await fetch(`/api/inbox/conversations/${convId}/messages/media`, {
           method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + _mToken },
           body:   formData,
           // لا Content-Type — browser يضبطه تلقائياً مع boundary
         });
