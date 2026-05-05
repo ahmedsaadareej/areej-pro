@@ -64,7 +64,7 @@
 > الخطر: صفر على الوظيفة الحالية — مجرد إضافة layer فوق الموجود
 > المدة المتوقعة: 3 جلسات
 
-### [A1] 🔴 تفعيل loadInboxPermissions في inbox/index.js
+### [A1] ✅ تفعيل loadInboxPermissions في inbox/index.js
 **الملف:** `server/routes/inbox/index.js`
 
 **المشكلة:** `loadInboxPermissions` معرّفة في permissions.js لكن **غير مُطبَّقة** في index.js
@@ -98,12 +98,12 @@ curl -s "http://localhost:3002/api/inbox/me" \
 # يجب أن يرجع بيانات المستخدم مع permissions object
 ```
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** b9726db
+**ملاحظة:** كانت مطبّقة مسبقاً في الكود — verified واختبرت ✅
 
 ---
 
-### [A2] 🔴 إصلاح req.user.role في team.js
+### [A2] ✅ إصلاح req.user.role في team.js
 **الملف:** `server/routes/inbox/team.js`
 
 **المشكلة:** `const isAdmin = req.user.role === 'owner' || req.user.role === 'admin'` — خاطئ
@@ -130,12 +130,12 @@ pm2 reload areej-pro
 pm2 logs areej-pro --nostream --lines 5 | grep -i error || echo "OK"
 ```
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** 44a5f6d
+**ملاحظة:** كانت مطبّقة مسبقاً — req.inboxUser.permissions.team_manage في كل مكان ✅
 
 ---
 
-### [A3] 🔴 audit باقي ملفات الـ inbox routes
+### [A3] ✅ audit باقي ملفات الـ inbox routes
 **الملفات:** conversations.js, messages.js, broadcast.js, analytics.js, automation.js, context.js, ai.js, chatbot.js, email.js, labels.js, search.js, stream.js
 
 **التحقق:**
@@ -155,8 +155,8 @@ pm2 reload areej-pro
 pm2 logs areej-pro --nostream --lines 5 | grep -i error || echo "OK"
 ```
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** b9726db
+**ملاحظة:** grep -rn "req\.user\.role" → CLEAN ✅ — صفر instances في كل الملفات ✅
 
 ---
 
@@ -165,7 +165,7 @@ pm2 logs areej-pro --nostream --lines 5 | grep -i error || echo "OK"
 > الخطر: صفر — لا نمس الـ migrations أبداً
 > المدة المتوقعة: 2 جلسات
 
-### [B1] 🔴 audit كامل لأسماء columns في كل inbox routes
+### [B1] ✅ audit كامل لأسماء columns في كل inbox routes
 **المشكلة:** اكتشفنا في S1 أن settings.js كان يستخدم `channel_type` بدل `channel` — قد يكون هناك غيره
 
 **التحقق:**
@@ -190,12 +190,12 @@ pm2 reload areej-pro && sleep 2
 pm2 logs areej-pro --nostream --lines 10 | grep "no such column\|SQLITE_ERROR" || echo "CLEAN ✅"
 ```
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** b9726db
+**ملاحظة:** كل columns صح — channel_type errors كانت قديمة قبل الـ fix. GET /settings/channels يرجع 6 channels ✅
 
 ---
 
-### [B2] 🔴 audit inbox_users + inbox_roles references
+### [B2] ✅ audit inbox_users + inbox_roles references
 **المشكلة:** permissions.js يستعلم من `inbox_users JOIN inbox_roles` — لكن هذا الجدول قد لا يكون موجوداً في كل tenants بعد
 
 **التحقق:**
@@ -216,8 +216,8 @@ sqlite3 /home/areej/areej-pro/data/tenants/10.db "SELECT COUNT(*) FROM inbox_use
 # يجب أن يُكمل بدون error
 ```
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** b9726db
+**ملاحظة:** inbox_users + inbox_roles موجودان في كل 10 tenants ✅ — inbox_users فارغة في 8 منهم (fallback mode) — مُتابَع في I2
 
 ---
 
@@ -622,16 +622,16 @@ sqlite3 /home/areej/areej-pro/data/tenants/10.db "SELECT id, name, inbox_role_id
 ## 📝 سجل التنفيذ (أضف فقط — لا تحذف)
 
 ### Zone A
-- التاريخ: _______________
-- المنجز: _______________
-- Commits: _______________
-- مشاكل ظهرت: _______________
+- التاريخ: 2026-05-05
+- المنجز: A1 + A2 + A3 — كل Zone A مكتملة ✅
+- Commits: 44a5f6d (A2 fix) + b9726db (audit verification)
+- مشاكل ظهرت: لا — كانت مطبّقة مسبقاً
 
 ### Zone B
-- التاريخ: _______________
-- المنجز: _______________
-- Commits: _______________
-- مشاكل ظهرت: _______________
+- التاريخ: 2026-05-05
+- المنجز: B1 + B2 — كل Zone B مكتملة ✅
+- Commits: b9726db
+- مشاكل ظهرت: channel_type errors قديمة في log (قبل الـ fix) — لا errors جديدة بعد reload
 
 ### Zone C
 - التاريخ: _______________
