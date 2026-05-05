@@ -168,15 +168,23 @@ const InboxConvList = (() => {
     const time     = _formatTime(conv.last_message_at || conv.updated_at);
 
     // اسم العميل
-    const name = _escHtml(conv.contact_name || conv.sender_name || conv.phone || 'مجهول');
+    // FIX-007: تجاهل platform IDs كـ أسماء (أرقام طويلة أو @lid)
+    function _cleanName(n) {
+      if (!n) return null;
+      if (/^\d{8,}(@lid)?$/.test(n.trim())) return null; // platform ID
+      if (n.trim().endsWith('@lid')) return null;
+      return n;
+    }
+    const rawName = _cleanName(conv.contact_name) || _cleanName(conv.sender_name) || conv.phone || null;
+    const name = _escHtml(rawName || 'مجهول');
 
     // آخر رسالة
     let preview = _escHtml(conv.last_message || '');
     if (preview.length > 60) preview = preview.slice(0, 57) + '...';
 
     // Avatar: أول حرف من الاسم
-    const initial = (conv.contact_name || conv.sender_name || '?')[0].toUpperCase();
-    const avatarColor = _nameToColor(conv.contact_name || conv.sender_name || '');
+    const initial = (rawName || '?')[0].toUpperCase();
+    const avatarColor = _nameToColor(rawName || '');
 
     // Priority badge (لا يُعرض للـ normal)
     const pri     = conv.priority || 'normal';
