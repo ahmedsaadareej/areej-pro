@@ -619,7 +619,27 @@ function showPage(name, btn, _skipHistory) {
     if (name === 'shipping')    { loadShipping(); loadShipCompaniesDropdown(); }
     if (name === 'sales-tools') { loadSalesTools(); }
     if (name === 'marketplace') { loadMarketplace(); }
-    if (name === 'inbox')      { if (typeof iv3OnPageShow === 'function') iv3OnPageShow(); } // v3: تم حذف loadInbox() القديم — iv3OnPageShow يتولى كل شيء
+    if (name === 'inbox') {
+      // EMBED-001: load inbox-v4 in iframe with token handoff
+      (function() {
+        const frame = document.getElementById('inbox-v4-frame');
+        if (!frame) return;
+        const token = (typeof getToken === 'function') ? getToken() : (localStorage.getItem('pro_token') || '');
+        // بناء الـ URL — نمرر التوكن عبر hash fragment (لا يُرسل للسيرفر)
+        const embedUrl = '/inbox?embed=1#t=' + encodeURIComponent(token);
+        // إذا الـ iframe محمّل بالفعل بنفس الجلسة — لا نعيد التحميل
+        if (frame.src && frame.src.indexOf('/inbox') !== -1 && frame.contentWindow) {
+          try {
+            // بعت الـ token مباشرة عبر postMessage للـ iframe المحمّل
+            frame.contentWindow.postMessage({ type: 'areej:token', token: token }, window.location.origin);
+            return;
+          } catch(e) { /* reload fallback */ }
+        }
+        frame.src = embedUrl;
+      })();
+      // v3 legacy (if still loaded)
+      if (typeof iv3OnPageShow === 'function') iv3OnPageShow();
+    }
     if (name === 'team-settings') { initTeamSettings(); }
     if (name === 'inbox-settings') {
       loadIntegrationsStatus();

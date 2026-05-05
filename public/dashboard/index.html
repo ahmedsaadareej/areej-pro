@@ -2247,18 +2247,15 @@
      يُدمج داخل index.html بدل الـ inbox section القديم
      آخر تحديث: 2026-05-02
      ══════════════════════════════════════════════════════════ -->
-<div class="page" id="page-inbox" style="padding:0;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px">
-  <!-- T30: Inbox v4 انتقل لـ SPA مستقلة بدل iframe (2026-05-04) -->
-  <div style="text-align:center;color:#6b7280">
-    <div style="font-size:40px">📥</div>
-    <h3 style="color:#374151;margin:8px 0">Inbox v4</h3>
-    <p style="font-size:13px;margin:0 0 16px">الـ Inbox الجديد يعمل الآن كتطبيق مستقل</p>
-    <a href="/inbox" target="_blank" style="
-      display:inline-block;background:#2563eb;color:#fff;
-      padding:10px 24px;border-radius:8px;text-decoration:none;
-      font-size:14px;font-weight:600;
-    ">فتح الـ Inbox ↗</a>
-  </div>
+<div class="page" id="page-inbox" style="padding:0;overflow:hidden;height:100%">
+  <!-- EMBED-001: Inbox v4 embedded via iframe with token handoff (2026-05-05) -->
+  <iframe
+    id="inbox-v4-frame"
+    src="about:blank"
+    style="width:100%;height:100%;border:none;display:block"
+    allow="clipboard-read; clipboard-write"
+    title="Inbox v4"
+  ></iframe>
 </div><!-- /page-inbox -->
 
 

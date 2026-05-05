@@ -267,7 +267,49 @@ const InboxShell = (() => {
   }
 
   // ── MAIN INIT ──────────────────────────────────────────────────────────
+  // ── EMBED-001: Token Handoff ──────────────────────────────────────────────
+  // عند التشغيل كـ iframe مدمج في Areej Pro، يُمرَّر الـ token عبر:
+  // 1) URL hash: /inbox?embed=1#t=TOKEN  (عند أول تحميل)
+  // 2) postMessage: { type: 'areej:token', token: '...' }  (عند refresh)
+  function _bootstrapEmbedToken() {
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const hashToken  = hashParams.get('t');
+    if (hashToken) {
+      localStorage.setItem('pro_token', decodeURIComponent(hashToken));
+      // نحذف الـ token من الـ hash (أمان)
+      hashParams.delete('t');
+      const remaining = hashParams.toString();
+      history.replaceState({}, '', window.location.pathname +
+        window.location.search +
+        (remaining ? '#' + remaining : ''));
+    }
+  }
+
+  function _listenParentMessages() {
+    window.addEventListener('message', (e) => {
+      if (e.origin !== window.location.origin) return; // نفس الـ domain فقط
+      if (!e.data || e.data.type !== 'areej:token') return;
+      if (e.data.token) {
+        localStorage.setItem('pro_token', e.data.token);
+      }
+    });
+  }
+
+  // ── تحديد إذا كنا في embed mode ─────────────────────────────────────────
+  function _isEmbedMode() {
+    return new URLSearchParams(window.location.search).get('embed') === '1';
+  }
+
   async function init() {
+    // EMBED-001: استخرج الـ token من URL hash إذا موجود (embed mode)
+    _bootstrapEmbedToken();
+    _listenParentMessages();
+
+    // إخفاء standalone elements في embed mode
+    if (_isEmbedMode()) {
+      document.documentElement.classList.add('iv4-embed-mode');
+    }
+
     // 1. جلب بيانات المستخدم (يُعيد null لو مفيش token صالح)
     const user = await _loadUserInfo();
     if (!user) return;
