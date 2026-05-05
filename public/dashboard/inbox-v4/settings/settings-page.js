@@ -1,9 +1,9 @@
 /**
  * settings-page.js — Shell رئيسي لصفحة الإعدادات (M2 T43)
  * يُعرض كـ Page Module من page-settings.js
- * الأقسام: org / team / channels / inbox / automation
+ * الأقسام: org / team / channels / inbox / automation / labels
  *
- * آخر تحديث: 2026-05-04 (M2 T43)
+ * آخر تحديث: 2026-05-05 (Labels section)
  */
 
 'use strict';
@@ -17,6 +17,7 @@ const InboxSettings = (() => {
     { id: 'channels',   label: 'التطبيقات',      icon: '📱', perm: 'channels'       },
     { id: 'inbox',      label: 'إعدادات Inbox',  icon: '⚙️',  perm: 'inbox_settings' },
     { id: 'automation', label: 'الأتمتة',        icon: '🤖', perm: null             },
+    { id: 'labels',     label: 'Labels',           icon: '🏷️',  perm: null             },
   ];
 
   let _container = null;
@@ -118,6 +119,7 @@ const InboxSettings = (() => {
       case 'channels':   _mountModule(SettingsChannels,   contentEl); break;
       case 'inbox':      _mountModule(SettingsInbox,      contentEl); break;
       case 'automation': _mountModule(SettingsAutomation, contentEl); break;
+      case 'labels':     _mountModule(SettingsLabels,     contentEl); break;
       default:
         contentEl.innerHTML = '<div class="iv4-set-no-perm">القسم غير موجود</div>';
     }

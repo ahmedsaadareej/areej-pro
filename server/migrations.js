@@ -860,6 +860,17 @@ const TENANT_MIGRATIONS = [
       ON inbox_migration_log(tenant_id, migrated_at)`,
   ]},
 
+  // v45: تأكيد وجود inbox_labels في كل تينانت (CREATE TABLE IF NOT EXISTS)
+  { version: 45, sqls: [
+    `CREATE TABLE IF NOT EXISTS inbox_labels (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      name       TEXT NOT NULL UNIQUE,
+      color      TEXT NOT NULL DEFAULT '#1B5E30',
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_inbox_labels_name ON inbox_labels(name)`,
+  ]},
+
 ];
 
 // ══════════════════════════════════════════════════════════════
