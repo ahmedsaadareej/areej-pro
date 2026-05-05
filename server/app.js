@@ -91,6 +91,36 @@ app.use(morgan('tiny'));
 app.use(require('./tenant-middleware')); // slug-based tenant context
 
 // ── API Routes FIRST (before static) ──────────────────────────────────────
+// ── Auth Rate Limiting (brute force protection) ─────────────────────────────
+// Login: 10 محاولات / 15 دقيقة لكل IP
+app.use('/api/auth/login', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: false,
+  message: { ok: false, error: 'محاولات كثيرة جداً — انتظر 15 دقيقة وحاول مرة أخرى' },
+}));
+// OTP: 3 رسائل / دقيقة لكل IP (anti-spam)
+app.use('/api/auth/otp/send', rateLimit({
+  windowMs: 60 * 1000,
+  max: 3,
+  validate: false,
+  message: { ok: false, error: 'طلبات OTP كثيرة — انتظر دقيقة' },
+}));
+app.use('/api/auth/owner-otp/send', rateLimit({
+  windowMs: 60 * 1000,
+  max: 3,
+  validate: false,
+  message: { ok: false, error: 'طلبات OTP كثيرة — انتظر دقيقة' },
+}));
+// Register: 5 تسجيلات / ساعة لكل IP
+app.use('/api/auth/register', rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  validate: false,
+  message: { ok: false, error: 'تجاوزت حد التسجيل — انتظر ساعة' },
+}));
 app.use('/api/auth',    require('./routes-auth'));
 app.use('/api/billing', require('./routes-billing'));
 app.use('/api/webhook', require('./routes-inbox-webhook'));

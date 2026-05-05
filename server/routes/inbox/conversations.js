@@ -183,8 +183,13 @@ router.get('/conversations', (req, res) => {
 router.get('/conversations/:id', (req, res) => {
   try {
     const db   = req.db;
+    const user = req.inboxUser;
     const id   = parseInt(req.params.id);
     if (!id) return res.status(400).json({ ok: false, error: 'invalid id' });
+
+    // Security: موظف عادي يشوف فقط المحادثات المعيّنة له أو غير المعيّنة
+    const { clause: scopeClause, params: scopeParams } = _scopeClause(user);
+    const whereExtra = scopeClause ? scopeClause.replace(/^AND /, '') : '1=1';
 
     const conv = db.prepare(`
       SELECT c.*,
@@ -197,8 +202,8 @@ router.get('/conversations/:id', (req, res) => {
         ) AS labels_json
       FROM inbox_conversations_v4 c
       LEFT JOIN tenant_users tu ON tu.id = c.assigned_to_id
-      WHERE c.id = ?
-    `).get(id);
+      WHERE c.id = ? AND (${whereExtra})
+    `).get(id, ...scopeParams);
 
     if (!conv) return res.status(404).json({ ok: false, error: 'not found' });
 

@@ -1421,9 +1421,15 @@ ${transcriptHtml}`.trim();
 
   /** تحويل URLs في النص لروابط قابلة للنقر */
   function _linkify(text) {
+    // Security: regex يسمح فقط بـ http/https — يمنع javascript: وغيره
+    // الـ URL في href يمر عبر _escHtml لمنع attribute injection
     return text.replace(
-      /https?:\/\/[^\s<>"]+/g,
-      url => `<a href="${url}" target="_blank" rel="noopener" class="iv4-msg-link">${url}</a>`
+      /https?:\/\/[^\s<>"']+/g,
+      url => {
+        const safeHref = _escHtml(url);           // escape أي " أو < داخل الـ URL
+        const safeText = _escHtml(url);
+        return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="iv4-msg-link">${safeText}</a>`;
+      }
     );
   }
 

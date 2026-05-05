@@ -6,7 +6,8 @@ const express = require('express');
 const router = express.Router();
 const { getTenantDb } = require('./db-tenant');
 const master = require('./db-master');
-const https = require('https');
+const https  = require('https');
+const crypto = require('crypto');
 
 // Helper: find tenant by slug or user_id
 function getTenantBySlug(slug) {
@@ -335,19 +336,44 @@ router.get('/whatsapp/:userId', (req, res) => {
 });
 
 // POST /api/webhook/whatsapp/:userId  ← Incoming Messages
-router.post('/whatsapp/:userId', express.json(), async (req, res) => {
-  res.status(200).send('OK'); // رد فوري لـ Meta
+// نستخدم express.raw() عشان نحتفظ بالـ rawBody للـ HMAC verification
+router.post('/whatsapp/:userId', express.raw({ type: 'application/json' }), async (req, res) => {
+  // ── Security: X-Hub-Signature-256 Verification ──────────────────────────
   const userId = parseInt(req.params.userId);
-  const body = req.body;
-  console.log('[WA Webhook POST] userId=' + userId + ' body=' + JSON.stringify(body));
+  if (!userId || isNaN(userId)) return res.status(200).send('OK');
+
+  const userExists = master.prepare('SELECT id FROM users WHERE id=? AND status IN (?,?,?)').get(userId, 'active', 'trial', 'grace');
+  if (!userExists) return res.status(200).send('OK');
+
+  // جلب App Secret من tenant settings
+  const db0 = getTenantDb(userId);
+  const waSettings = db0.prepare('SELECT wa_app_secret, wa_active FROM inbox_settings WHERE id=1').get();
+
+  // التحقق من الـ signature فقط لو عندنا App Secret
+  const appSecret = waSettings && waSettings.wa_app_secret;
+  if (appSecret) {
+    const sigHeader = req.headers['x-hub-signature-256'] || '';
+    const rawBody   = req.body; // Buffer من express.raw()
+    const expected  = 'sha256=' + crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex');
+    const sigBuf    = Buffer.from(sigHeader.padEnd(expected.length));
+    const expBuf    = Buffer.from(expected);
+    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+      console.warn('[WA Webhook] ❌ Signature mismatch userId=' + userId);
+      return res.status(401).send('Unauthorized');
+    }
+  }
+
+  // parse الـ body بعد التحقق
+  let body;
+  try { body = JSON.parse(req.body.toString()); } catch(e) { return res.status(200).send('OK'); }
+
+  res.status(200).send('OK'); // رد فوري لـ Meta
+
+  console.log('[WA Webhook POST] userId=' + userId + ' from=' + (body?.entry?.[0]?.id || '?'));
   if (!body || body.object !== 'whatsapp_business_account') {
     console.log('[WA Webhook POST] ignored — object=' + (body && body.object));
     return;
   }
-
-  if (!userId || isNaN(userId)) return;
-  const userExists = master.prepare('SELECT id FROM users WHERE id=?').get(userId);
-  if (!userExists) return;
 
   try {
     const db = getTenantDb(userId);
