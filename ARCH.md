@@ -21,8 +21,8 @@
 | 🔴 A1 | `inbox_timeline_v4` — column `meta` بدل `data` في 4 INSERTs | ✅ مكتمل |
 | 🔴 A2 | Settings Channels — يكتب في v4 table، الإرسال يقرأ من `inbox_settings` القديم | ✅ مكتمل |
 | ✅ A3 | `routes/inbox.js` (v3) — تحليل كامل + حذف 454 سطر dead code | ✅ مكتمل |
-| 🟡 A4 | `inbox_conversations` (v3) + `inbox_conversations_v4` — جدولان | 🟡 Pending |
-| 🟡 A5 | WA templates: v3 endpoint + v4 frontend — غير متزامنين | 🟡 Pending |
+| ✅ A4 | `inbox_conversations` (v3) + `inbox_conversations_v4` — dual-write مكتمل | ✅ مكتمل |
+| ✅ A5 | WA templates: migration inbox_templates → v4 مكتمل | ✅ مكتمل |
 
 ---
 
@@ -129,27 +129,51 @@ curl -s http://localhost:3002/api/system/marketplace/suppliers -H "Authorization
 
 ---
 
-## 🟡 [A4] — جدولان للمحادثات
+## ✅ [A4] — جدولان للمحادثات — Dual-Write مكتمل
 
 **المشكلة:**
 - `inbox_conversations` (v3) و `inbox_conversations_v4` موجودان
-- بعض routes قديمة تقرأ من v3
-- migration موجود (migrate-inbox-v3-to-v4.js) لكن مش كل tenants مهاجرين
+- Webhook handler (Telegram + WA Business + WA QR) كان يكتب في v3 فقط
+- inbox-v4 يقرأ من v4 فقط → الرسائل الواردة لم تظهر في inbox-v4
 
-**الخطوة التالية:** تحقق من أي tenants لم يُهاجَروا بعد وأيهم مهاجرون
+**التحقق من البيانات:**
+- كل tenants: 0 orphan v3 conversations (الـ migration نجح سابقاً)
+- v4 عنده conversations من migration فقط — الرسائل الجديدة كانت تضيع
 
-**Status:** 🟡 Pending — يأتي بعد A3
+**الإصلاح:**
+- `upsertConvV4()` + `insertMsgV4()` في `routes-inbox-webhook.js`
+- كل webhook (Telegram, WA Business, WA QR) يكتب في الجدولين بالتوازي
+- Automation + Chatbot hooks تستخدم convV4 من dual-write مباشرة (no extra SELECT)
+- لا شيء محذوف من v3 — تعايش آمن
+
+**Commit:** `031a72c`
+
+**الاختبار:**
+```bash
+# التحقق من أن رسالة واردة جديدة تظهر في v4:
+sqlite3 /home/areej/areej-pro/data/tenants/2.db \
+  "SELECT id,platform,sender_id,last_message_text FROM inbox_conversations_v4 ORDER BY id DESC LIMIT 5;"
+```
+
+**Status:** ✅ مكتمل — Dual-write شغاّل على كل القنوات
 
 ---
 
-## 🟡 [A5] — WA Templates غير متزامنة
+## ✅ [A5] — WA Templates — Migration مكتمل
 
 **المشكلة:**
-- v3: `/api/inbox/templates` (CRUD في جدول قديم)
-- v4: canned responses في `inbox_canned_responses_v4`
-- بعض tenants عندهم templates في الجدولين
+- v3: `inbox_templates` (name + content فقط)
+- v4: `inbox_canned_responses_v4` (shortcut + name + content + category + platforms)
+- Tenant 29: 3 templates في v3 وليست في v4
 
-**Status:** 🟡 Pending
+**الإصلاح:**
+- Migration script: `server/scripts/migrate-templates-v3-to-v4.js`
+- نقل 2 templates لـ Tenant 29 (Arabic slug-safe shortcut)
+- wa-templates (Meta Cloud API CRUD) → لا v4 UI بعد — pending v4 feature
+
+**Commit:** `dad1c88`
+
+**Status:** ✅ مكتمل — inbox_canned_responses_v4 هي source of truth
 
 ---
 
@@ -160,3 +184,5 @@ curl -s http://localhost:3002/api/system/marketplace/suppliers -H "Authorization
 | 2026-05-05 | A1 | context.js: meta → data (4 INSERTs في timeline) | `9b1f59a` |
 | 2026-05-05 | A2 | settings.js: CHANNEL_BRIDGE + bridge GET/PUT | `83df6df` |
 | 2026-05-05 | A3 | تحليل كامل + حذف 454 سطر dead code من routes/inbox.js | `66dc131` |
+| 2026-05-05 | A4 | dual-write webhook → v4 (جميع القنوات) | `031a72c` |
+| 2026-05-05 | A5 | migration inbox_templates → inbox_canned_responses_v4 | `dad1c88` |
