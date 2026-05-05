@@ -1247,3 +1247,272 @@ div#iv4-messages .iv4-msg-sender {
   color: var(--iv4-text-3) !important;
   margin-bottom: 2px !important;
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   REPLY BOX FINAL DESIGN — v17
+   Layout: tabs → textarea → toolbar-row1 (format) → toolbar-row2 (send)
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Reply box container */
+div#iv4-reply-box.iv4-reply-box {
+  background: var(--iv4-surface) !important;
+  border-top: 1px solid var(--iv4-border) !important;
+  padding: 10px 14px 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  max-height: 200px !important;
+}
+
+/* Tabs row */
+div#iv4-reply-box .iv4-reply-tabs {
+  display: flex !important;
+  gap: 4px !important;
+  margin-bottom: 8px !important;
+  border-bottom: 1px solid var(--iv4-border) !important;
+  padding-bottom: 6px !important;
+  flex-shrink: 0 !important;
+}
+
+div#iv4-reply-box .iv4-reply-tab {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 4px 12px !important;
+  border-radius: 6px !important;
+  border: none !important;
+  cursor: pointer !important;
+  background: transparent !important;
+  color: var(--iv4-text-2) !important;
+  font-family: var(--iv4-font) !important;
+  transition: all var(--iv4-transition) !important;
+}
+
+div#iv4-reply-box .iv4-reply-tab.active {
+  background: var(--iv4-accent-light) !important;
+  color: var(--iv4-accent) !important;
+}
+
+div#iv4-reply-box .iv4-reply-tab:hover:not(.active) {
+  background: var(--iv4-surface-2) !important;
+}
+
+/* Textarea */
+div#iv4-reply-box .iv4-reply-textarea {
+  background: var(--iv4-surface-2) !important;
+  border: 1.5px solid transparent !important;
+  border-radius: 8px !important;
+  font-family: var(--iv4-font) !important;
+  font-size: 13.5px !important;
+  color: var(--iv4-text) !important;
+  padding: 8px 12px !important;
+  min-height: 52px !important;
+  max-height: 90px !important;
+  resize: none !important;
+  width: 100% !important;
+  line-height: 1.55 !important;
+  transition: border-color var(--iv4-transition) !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  overflow-y: auto !important;
+}
+
+div#iv4-reply-box .iv4-reply-textarea:focus {
+  background: var(--iv4-surface) !important;
+  border-color: var(--iv4-accent) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--iv4-accent-light) !important;
+}
+
+div#iv4-reply-box .iv4-reply-textarea::placeholder {
+  color: var(--iv4-text-3) !important;
+  font-size: 13px !important;
+}
+
+/* Toolbar: flex-wrap so it wraps to 2 rows naturally */
+div#iv4-reply-box .iv4-reply-toolbar {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  justify-content: space-between !important;
+  margin-top: 8px !important;
+  gap: 4px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Left side: format buttons */
+div#iv4-reply-box .iv4-toolbar-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  flex-wrap: nowrap !important;
+  overflow: hidden !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+/* Format buttons */
+div#iv4-reply-box .iv4-fmt-btn {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 5px !important;
+  color: var(--iv4-text-2) !important;
+  width: 26px !important;
+  height: 26px !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all var(--iv4-transition) !important;
+  flex-shrink: 0 !important;
+  padding: 0 !important;
+}
+
+div#iv4-reply-box .iv4-fmt-btn:hover {
+  background: var(--iv4-surface-2) !important;
+  color: var(--iv4-accent) !important;
+}
+
+/* Icon buttons (attach, catalog, AI, interactive) */
+div#iv4-reply-box .iv4-icon-btn,
+div#iv4-reply-box #iv4-attach-btn,
+div#iv4-reply-box #iv4-catalog-btn,
+div#iv4-reply-box #iv4-interactive-btn {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 5px !important;
+  color: var(--iv4-text-2) !important;
+  width: 26px !important;
+  height: 26px !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all var(--iv4-transition) !important;
+  flex-shrink: 0 !important;
+  padding: 0 !important;
+}
+
+div#iv4-reply-box .iv4-icon-btn:hover {
+  background: var(--iv4-surface-2) !important;
+  color: var(--iv4-text) !important;
+}
+
+/* AI button - special gradient */
+div#iv4-reply-box #iv4-ai-toolbar-btn {
+  background: linear-gradient(135deg,#6366f1,#8b5cf6) !important;
+  color: #fff !important;
+  border-radius: 5px !important;
+  padding: 0 8px !important;
+  width: auto !important;
+  height: 24px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+div#iv4-reply-box #iv4-ai-toolbar-btn:hover {
+  opacity: .9 !important;
+  background: linear-gradient(135deg,#4f46e5,#7c3aed) !important;
+}
+
+/* Toolbar separator */
+div#iv4-reply-box .iv4-toolbar-sep {
+  width: 1px !important;
+  height: 14px !important;
+  background: var(--iv4-border) !important;
+  margin: 0 3px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Right side: channel select + char count + SEND */
+div#iv4-reply-box .iv4-toolbar-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Char count */
+div#iv4-reply-box .iv4-char-count,
+div#iv4-reply-box #iv4-char-count {
+  font-size: 10px !important;
+  color: var(--iv4-text-3) !important;
+  font-family: var(--iv4-font) !important;
+  white-space: nowrap !important;
+}
+
+/* Channel select */
+div#iv4-reply-box .iv4-channel-select,
+div#iv4-reply-box #iv4-channel-select {
+  border: 1px solid var(--iv4-border) !important;
+  border-radius: 6px !important;
+  font-size: 11px !important;
+  padding: 3px 6px !important;
+  height: 26px !important;
+  color: var(--iv4-text-2) !important;
+  background: var(--iv4-surface-2) !important;
+  font-family: var(--iv4-font) !important;
+  cursor: pointer !important;
+  max-width: 90px !important;
+}
+
+/* SEND BUTTON — always visible, prominent */
+div#iv4-reply-box #iv4-send-btn,
+div#iv4-reply-box .iv4-send-btn {
+  background: var(--iv4-accent) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 6px 18px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  height: 32px !important;
+  cursor: pointer !important;
+  transition: all var(--iv4-transition) !important;
+  font-family: var(--iv4-font) !important;
+  box-shadow: 0 2px 8px rgba(79,70,229,.3) !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+div#iv4-reply-box #iv4-send-btn:hover:not(:disabled),
+div#iv4-reply-box .iv4-send-btn:hover:not(:disabled) {
+  background: var(--iv4-accent-hover) !important;
+  box-shadow: 0 4px 14px rgba(79,70,229,.4) !important;
+  transform: translateY(-1px) !important;
+}
+
+div#iv4-reply-box #iv4-send-btn:disabled,
+div#iv4-reply-box .iv4-send-btn:disabled {
+  opacity: .45 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   REPLY TOOLBAR RTL FIX — v18
+   في RTL: toolbar-right (send) يجب أن يكون على اليمين فعلياً
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Toolbar: row-reverse عشان في RTL الـ right يكون فعلاً على اليمين */
+div#iv4-reply-box .iv4-reply-toolbar {
+  flex-direction: row !important;
+}
+
+/* Send button دايماً على اليمين في RTL */
+div#iv4-reply-box .iv4-toolbar-right {
+  order: -1 !important;  /* يجي الأول في الـ row = يمين في RTL */
+}
+
+div#iv4-reply-box .iv4-toolbar-left {
+  order: 1 !important;  /* يجي الثاني = يسار في RTL */
+}
