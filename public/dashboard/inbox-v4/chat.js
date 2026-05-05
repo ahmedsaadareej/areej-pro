@@ -86,6 +86,23 @@ const InboxChat = (() => {
     // SSE events
     _bindSSEEvents();
 
+    // ربط أزرار الـ header (Snooze + Priority) — event delegation
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('#iv4-snooze-btn')) {
+        const conv = InboxStore.state.activeConv;
+        if (conv && typeof InboxConvList !== 'undefined') {
+          InboxConvList.openSnoozeModal(conv.id);
+        }
+      }
+      if (e.target.closest('#iv4-priority-btn')) {
+        const conv = InboxStore.state.activeConv;
+        if (conv && typeof InboxConvList !== 'undefined') {
+          const btn = document.getElementById('iv4-priority-btn');
+          InboxConvList.openPriorityMenu(btn, conv.id, conv.priority || 'normal');
+        }
+      }
+    });
+
     // عرض الـ empty state في البداية
     _showEmpty(true);
 
@@ -110,6 +127,11 @@ const InboxChat = (() => {
    */
   async function _onConvOpen(convId) {
     if (!convId) {
+      // إخفاء زر Context Panel وإغلاق الـ panel
+      const ctxToggle = document.getElementById('iv4-ctx-toggle');
+      if (ctxToggle) ctxToggle.classList.add('hidden');
+      const ctxPanel = document.getElementById('iv4-context-panel');
+      if (ctxPanel) ctxPanel.classList.add('hidden');
       _showEmpty(true);
       return;
     }
@@ -139,6 +161,10 @@ const InboxChat = (() => {
 
     // رسم الـ header
     _renderHeader();
+
+    // إظهار زر Context Panel عند فتح محادثة
+    const ctxToggle = document.getElementById('iv4-ctx-toggle');
+    if (ctxToggle) ctxToggle.classList.remove('hidden');
 
     // P3-1: Label Picker — تمرير labels المحادثة
     if (typeof InboxLabels !== 'undefined') {

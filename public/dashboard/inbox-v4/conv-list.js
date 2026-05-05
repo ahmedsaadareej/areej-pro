@@ -1163,6 +1163,8 @@ const InboxConvList = (() => {
     fetchConversations,
     fetchCounts,
     renderList,
+    openSnoozeModal:  _openSnoozeModal,
+    openPriorityMenu: _openPriorityMenu,
   };
 
 })();
