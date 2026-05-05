@@ -304,7 +304,7 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 ### [L1] ✅ JWT Expiry — 30 يوم طويلة جداً
 **الإصلاح:** تقليل لـ 7 أيام + إضافة `/api/auth/token/refresh` endpoint
 **Status:** ✅ مكتمل
-**Commit:** `PENDING`
+**Commit:** `0410975`
 **ملاحظة:** makeToken: 30d → 7d + POST /api/auth/token/refresh يُجدّد token الصالح فقط
 
 ### [L2] ✅ Auto-refresh cleanup عند الخروج من Inbox
@@ -354,7 +354,7 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 | 2026-05-05 | L3 | Tab leader election for long polling | `650fad1` | AI |
 | 2026-05-05 | L4 | Health endpoint — internal only details | `650fad1` | AI |
 | 2026-05-05 | M1 | تحديث Status فقط (كان commit b2425ad) | `b2425ad` | AI |
-| 2026-05-05 | L1 | JWT 30d → 7d + /api/auth/token/refresh | PENDING | AI |
+| 2026-05-05 | L1 | JWT 30d → 7d + /api/auth/token/refresh | `0410975` | AI |
 
 ---
 
