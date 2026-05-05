@@ -1,5 +1,6 @@
 # SCHEMA.md — تصميم قاعدة البيانات v4
-> آخر تحديث: 2026-05-05 (GTS Zone H3 — إضافة inbox_users + inbox_roles)
+> آخر تحديث: 2026-05-05 (H3 — إضافة جداول v25-v44 الناقصة)
+> آخر migration مطبّق: **v44**
 
 ---
 
@@ -146,13 +147,27 @@ CREATE INDEX IF NOT EXISTS idx_timeline_v4_conv ON inbox_timeline_v4(conversatio
 
 ---
 
-### inbox_agent_status (حالة الموظف في الـ inbox)
+### inbox_agent_status (v3 — legacy)
 
 ```sql
 CREATE TABLE IF NOT EXISTS inbox_agent_status (
-  agent_id     INTEGER PRIMARY KEY REFERENCES sys_users(id) ON DELETE CASCADE,
-  status       TEXT NOT NULL DEFAULT 'offline', -- online | busy | away | offline
-  updated_at   INTEGER NOT NULL DEFAULT (unixepoch())
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id     INTEGER UNIQUE,
+  user_name   TEXT,
+  status      TEXT DEFAULT 'online',
+  updated_at  DATETIME DEFAULT (datetime('now'))
+);
+```
+
+---
+
+### inbox_agent_status_v4 (حالة الموظف — v4)
+
+```sql
+CREATE TABLE IF NOT EXISTS inbox_agent_status_v4 (
+  agent_id   INTEGER PRIMARY KEY REFERENCES tenant_users(id) ON DELETE CASCADE,
+  status     TEXT NOT NULL DEFAULT 'offline',  -- online | busy | away | offline
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 ```
 
@@ -252,3 +267,267 @@ CREATE TABLE inbox_roles (
 | 005 | `005_init_conv_labels.sql` | inbox_conversation_labels |
 | 006 | `006_init_channel_settings_v4.sql` | inbox_channel_settings_v4 |
 | 007 | `007_init_automation_v4.sql` | inbox_automation_v4 |
+
+> ⚠️ ملاحظة: الـ migrations الفعلية موجودة في `server/migrations.js` (inline) — ليس ملفات منفصلة
+> آخر version: **44**
+
+---
+
+## جداول Settings & Configuration (v25-v44)
+
+---
+
+### inbox_canned_responses_v4
+
+```sql
+CREATE TABLE inbox_canned_responses_v4 (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  shortcut    TEXT NOT NULL UNIQUE,
+  name        TEXT NOT NULL,
+  content     TEXT NOT NULL,
+  category    TEXT DEFAULT 'عام',
+  platforms   TEXT DEFAULT '[]',       -- JSON array of platforms
+  created_by  INTEGER,
+  created_at  TEXT DEFAULT (datetime('now')),
+  updated_at  TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX idx_canned_shortcut ON inbox_canned_responses_v4(shortcut);
+CREATE INDEX idx_canned_category ON inbox_canned_responses_v4(category);
+```
+
+---
+
+### inbox_sla_policies_v4
+
+```sql
+CREATE TABLE inbox_sla_policies_v4 (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  name             TEXT NOT NULL,
+  is_default       INTEGER NOT NULL DEFAULT 0,
+  priority         TEXT DEFAULT 'all',   -- all | low | normal | high | urgent
+  first_response   INTEGER NOT NULL DEFAULT 120,   -- minutes
+  resolution_time  INTEGER NOT NULL DEFAULT 480,   -- minutes
+  business_hours   INTEGER NOT NULL DEFAULT 0,     -- 0=calendar, 1=business hours only
+  escalate_agent   INTEGER DEFAULT NULL,
+  created_at       TEXT DEFAULT (datetime('now'))
+);
+```
+
+---
+
+### inbox_custom_attrs_v4
+
+```sql
+CREATE TABLE inbox_custom_attrs_v4 (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  attr_type  TEXT NOT NULL CHECK(attr_type IN ('conversation','contact')),
+  key        TEXT NOT NULL,
+  label      TEXT NOT NULL,
+  field_type TEXT NOT NULL DEFAULT 'text',  -- text | number | date | boolean | list
+  options    TEXT DEFAULT '[]',             -- JSON array (for list type)
+  required   INTEGER DEFAULT 0,
+  sort_order INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX idx_custom_attrs_key ON inbox_custom_attrs_v4(attr_type, key);
+```
+
+---
+
+### inbox_attr_values_v4
+
+```sql
+CREATE TABLE inbox_attr_values_v4 (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  attr_id     INTEGER NOT NULL REFERENCES inbox_custom_attrs_v4(id) ON DELETE CASCADE,
+  entity_type TEXT NOT NULL CHECK(entity_type IN ('conversation','contact')),
+  entity_id   INTEGER NOT NULL,
+  value       TEXT,
+  updated_at  TEXT DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX idx_attr_values_unique ON inbox_attr_values_v4(attr_id, entity_id);
+```
+
+---
+
+### inbox_appearance_v4 (singleton — id=1)
+
+```sql
+CREATE TABLE inbox_appearance_v4 (
+  id          INTEGER PRIMARY KEY DEFAULT 1,
+  density     TEXT DEFAULT 'comfy' CHECK(density IN ('comfy','compact')),
+  font_size   INTEGER DEFAULT 14,
+  show_avatar INTEGER DEFAULT 1
+);
+```
+
+---
+
+### inbox_business_hours_v4 (singleton — id=1)
+
+```sql
+CREATE TABLE inbox_business_hours_v4 (
+  id       INTEGER PRIMARY KEY DEFAULT 1,
+  timezone TEXT DEFAULT 'Africa/Cairo',
+  active   INTEGER DEFAULT 0    -- 0=disabled, 1=enabled
+);
+```
+
+---
+
+### inbox_business_days_v4 (7 rows — day_of_week 0-6)
+
+```sql
+CREATE TABLE inbox_business_days_v4 (
+  day_of_week INTEGER PRIMARY KEY,  -- 0=Sunday ... 6=Saturday
+  is_working  INTEGER DEFAULT 1,
+  start_time  TEXT DEFAULT '09:00',
+  end_time    TEXT DEFAULT '17:00'
+);
+```
+
+---
+
+### inbox_csat_settings_v4 (singleton — id=1)
+
+```sql
+CREATE TABLE inbox_csat_settings_v4 (
+  id            INTEGER PRIMARY KEY DEFAULT 1,
+  enabled       INTEGER DEFAULT 0,
+  trigger       TEXT DEFAULT 'on_close' CHECK(trigger IN ('on_close','on_resolve','manual')),
+  delay_minutes INTEGER DEFAULT 0,
+  message       TEXT DEFAULT 'كيف كانت تجربتك معنا؟',
+  scale         INTEGER DEFAULT 5 CHECK(scale IN (3, 5, 10))
+);
+```
+
+---
+
+### inbox_scheduled_reports_v4
+
+```sql
+CREATE TABLE inbox_scheduled_reports_v4 (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  name        TEXT NOT NULL,
+  report_type TEXT NOT NULL CHECK(report_type IN ('overview','agents','sla','csat','labels','automation','full')),
+  frequency   TEXT NOT NULL CHECK(frequency IN ('daily','weekly','monthly')),
+  send_hour   INTEGER NOT NULL DEFAULT 8 CHECK(send_hour BETWEEN 0 AND 23),
+  send_day    INTEGER CHECK(send_day BETWEEN 0 AND 6),  -- NULL for daily
+  recipients  TEXT NOT NULL,   -- JSON array of emails
+  format      TEXT NOT NULL DEFAULT 'csv' CHECK(format IN ('csv','pdf')),
+  active      INTEGER NOT NULL DEFAULT 1,
+  last_sent   INTEGER,
+  created_at  INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  created_by  INTEGER
+);
+CREATE INDEX idx_scheduled_reports_active ON inbox_scheduled_reports_v4(active, send_hour);
+```
+
+---
+
+### inbox_channel_routing (routing platform → team)
+
+```sql
+CREATE TABLE inbox_channel_routing (
+  id        INTEGER PRIMARY KEY AUTOINCREMENT,
+  platform  TEXT NOT NULL UNIQUE,
+  team_id   INTEGER REFERENCES inbox_teams(id) ON DELETE SET NULL
+);
+```
+
+---
+
+### inbox_team_channels (platforms per team)
+
+```sql
+CREATE TABLE inbox_team_channels (
+  id        INTEGER PRIMARY KEY AUTOINCREMENT,
+  team_id   INTEGER NOT NULL REFERENCES inbox_teams(id) ON DELETE CASCADE,
+  platform  TEXT NOT NULL,
+  UNIQUE(team_id, platform)
+);
+```
+
+---
+
+### inbox_drip_campaigns
+
+```sql
+CREATE TABLE inbox_drip_campaigns (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  name       TEXT NOT NULL,
+  trigger    TEXT DEFAULT 'new_contact',  -- new_contact | manual
+  steps      TEXT,   -- JSON array: [{delay_minutes, message}]
+  active     INTEGER DEFAULT 1,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+```
+
+---
+
+### inbox_migration_log (سجل هجرة v3→v4)
+
+```sql
+CREATE TABLE inbox_migration_log (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id   TEXT NOT NULL,
+  migrated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  conv_count  INTEGER NOT NULL DEFAULT 0,
+  msg_count   INTEGER NOT NULL DEFAULT 0,
+  mode        TEXT NOT NULL,   -- dry-run | execute
+  status      TEXT NOT NULL DEFAULT 'pending',  -- pending | success | failed
+  error_msg   TEXT
+);
+CREATE INDEX idx_migration_log_tenant ON inbox_migration_log(tenant_id, migrated_at);
+```
+
+---
+
+### inbox_settings (legacy singleton — v3 + v4 columns)
+
+```sql
+-- جدول قديم يُعدَّل بـ ALTER TABLE في كل migration
+-- كل الـ config الحساسة (tokens) مخزنة هنا حتى يكتمل inbox_channel_settings_v4
+CREATE TABLE inbox_settings (
+  id              INTEGER PRIMARY KEY DEFAULT 1,
+  -- Telegram
+  telegram_token  TEXT,
+  telegram_active INTEGER DEFAULT 0,
+  -- WhatsApp QR
+  wa_qr_active    INTEGER DEFAULT 0,
+  -- WhatsApp Business API
+  wa_phone_id     TEXT,
+  wa_account_id   TEXT,
+  wa_token        TEXT,
+  wa_active       INTEGER DEFAULT 0,
+  -- WhatsApp API (legacy)
+  wa_api_token    TEXT,
+  wa_api_active   INTEGER DEFAULT 0,
+  -- Meta (Facebook/Messenger)
+  meta_token      TEXT,
+  meta_page_id    TEXT,
+  meta_active     INTEGER DEFAULT 0,
+  -- Instagram
+  ig_token        TEXT,
+  ig_account_id   TEXT,
+  ig_active       INTEGER DEFAULT 0,
+  -- Chatbot
+  chatbot_active  INTEGER DEFAULT 0,
+  chatbot_trigger TEXT DEFAULT 'مرحبا',
+  -- SLA
+  sla_minutes     INTEGER DEFAULT 120,
+  -- Welcome/Away
+  welcome_active  INTEGER DEFAULT 0,
+  welcome_message TEXT,
+  away_active     INTEGER DEFAULT 0,
+  away_message    TEXT,
+  away_start      TEXT DEFAULT '22:00',
+  away_end        TEXT DEFAULT '09:00',
+  away_message_workhours TEXT,
+  -- Work Hours
+  work_hours_active INTEGER DEFAULT 0,
+  updated_at      TEXT DEFAULT (datetime('now'))
+);
+```
+
+⚠️ ملاحظة: settings.js يقرأ من `inbox_settings` لكن يعرض البيانات كـ `channel_settings` مموحَّدة في الـ response
