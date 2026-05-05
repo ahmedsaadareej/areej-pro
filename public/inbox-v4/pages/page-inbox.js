@@ -8,6 +8,119 @@ const PageInbox = (() => {
 
   let _mounted = false;
 
+  // ── New Conversation Modal ──────────────────────────────────────────────
+  function _openNewConvModal() {
+    // نتحقق من الـ active channels لتحديد الـ Smart Default
+    const _getDefaultPlatform = () => {
+      if (typeof InboxStore !== 'undefined' && InboxStore.state) {
+        const ch = InboxStore.state.activeChannel;
+        if (ch) return ch;
+      }
+      return 'whatsapp_api';
+    };
+
+    // إنشاء الـ modal
+    const existing = document.getElementById('iv4-new-conv-modal');
+    if (existing) existing.remove();
+
+    const defPlatform = _getDefaultPlatform();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'iv4-new-conv-modal';
+    overlay.style.cssText = `
+      position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;
+      display:flex;align-items:center;justify-content:center;
+      font-family:Cairo,sans-serif;direction:rtl;
+    `;
+
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:16px;padding:28px 24px;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <h3 style="margin:0;font-size:17px;font-weight:700;color:#111">✏️ محادثة جديدة</h3>
+          <button id="iv4-ncm-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280;line-height:1">✕</button>
+        </div>
+
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">المنصة</label>
+        <select id="iv4-ncm-platform" style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px;margin-bottom:14px;color:#111">
+          <option value="whatsapp_api" ${defPlatform==='whatsapp_api'?'selected':''}>واتساب API</option>
+          <option value="whatsapp_qr"  ${defPlatform==='whatsapp_qr'?'selected':''}>واتساب QR</option>
+          <option value="telegram"     ${defPlatform==='telegram'?'selected':''}>تيليجرام</option>
+        </select>
+
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">رقم الهاتف / المعرّف</label>
+        <input id="iv4-ncm-phone" type="text" placeholder="مثال: 201012345678" style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box">
+
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">الاسم (اختياري)</label>
+        <input id="iv4-ncm-name" type="text" placeholder="اسم العميل" style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px;margin-bottom:14px;box-sizing:border-box">
+
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">رسالة أولى (اختياري)</label>
+        <textarea id="iv4-ncm-msg" rows="2" placeholder="مرحباً..." style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:13px;margin-bottom:20px;resize:vertical;box-sizing:border-box"></textarea>
+
+        <div style="display:flex;gap:10px;">
+          <button id="iv4-ncm-submit" style="flex:1;background:#2563eb;color:#fff;border:none;padding:11px;border-radius:8px;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;cursor:pointer">إنشاء المحادثة</button>
+          <button id="iv4-ncm-cancel" style="padding:11px 18px;border:1.5px solid #e5e7eb;background:#f9fafb;border-radius:8px;font-family:Cairo,sans-serif;font-size:14px;cursor:pointer;color:#374151">إلغاء</button>
+        </div>
+
+        <div id="iv4-ncm-status" style="margin-top:10px;font-size:12px;text-align:center;color:#6b7280;min-height:18px"></div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Close handlers
+    const _close = () => overlay.remove();
+    document.getElementById('iv4-ncm-close').onclick = _close;
+    document.getElementById('iv4-ncm-cancel').onclick = _close;
+    overlay.addEventListener('click', e => { if (e.target === overlay) _close(); });
+
+    // Focus phone input
+    setTimeout(() => document.getElementById('iv4-ncm-phone')?.focus(), 50);
+
+    // Submit
+    document.getElementById('iv4-ncm-submit').onclick = async () => {
+      const platform = document.getElementById('iv4-ncm-platform').value;
+      const phone    = document.getElementById('iv4-ncm-phone').value.trim().replace(/\s+/g, '');
+      const name     = document.getElementById('iv4-ncm-name').value.trim();
+      const message  = document.getElementById('iv4-ncm-msg').value.trim();
+      const status   = document.getElementById('iv4-ncm-status');
+
+      if (!phone) { status.style.color = '#ef4444'; status.textContent = '⚠️ أدخل رقم الهاتف أو المعرّف'; return; }
+
+      status.style.color = '#6b7280';
+      status.textContent = 'جاري الإنشاء...';
+      document.getElementById('iv4-ncm-submit').disabled = true;
+
+      try {
+        const res = await fetch('/api/inbox/new-conversation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ platform, phone, name: name || phone, message: message || undefined })
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'فشل الإنشاء');
+
+        _close();
+        // افتح المحادثة الجديدة
+        if (typeof InboxChat !== 'undefined' && InboxChat.openConversation) {
+          InboxChat.openConversation(data.conversation.id);
+        }
+        if (typeof InboxConvList !== 'undefined' && InboxConvList.fetchConversations) {
+          InboxConvList.fetchConversations();
+        }
+      } catch (err) {
+        status.style.color = '#ef4444';
+        status.textContent = '❌ ' + err.message;
+        document.getElementById('iv4-ncm-submit').disabled = false;
+      }
+    };
+
+    // Enter key على phone input → submit
+    document.getElementById('iv4-ncm-phone').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('iv4-ncm-submit').click();
+    });
+  }
+
   return {
     mount(container, params) {
       _mounted = true;
@@ -336,6 +449,13 @@ const PageInbox = (() => {
           if (typeof InboxRouter !== 'undefined') InboxRouter.navigate('/settings');
         }
       });
+
+      // ── New Conversation Modal ──────────────────────────────────────────────
+      const newConvBtn = document.getElementById('iv4-new-conv-btn');
+      if (newConvBtn && !newConvBtn.dataset.bound) {
+        newConvBtn.dataset.bound = '1';
+        newConvBtn.addEventListener('click', () => _openNewConvModal());
+      }
 
       // لو فيه convId في الـ params → افتح المحادثة مباشرة (Deep Link)
       if (params && params.convId) {
