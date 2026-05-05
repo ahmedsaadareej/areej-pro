@@ -1297,3 +1297,24 @@
   - **P12-A4**: commit 74d1e88 + push ✅
 - الملف المُعدَّل: `server/app.js` (سطر واحد → 3 أسطر)
 - المهمة القادمة: **P12-B** — هجرة باقي الـ Tenants
+
+---
+
+## جلسة 2026-05-05 00:03 UTC — P12-B: هجرة باقي الـ Tenants
+- الحالة: مكتملة ✅
+- ما تم:
+  - **B1**: `server/scripts/run-all-migrations.js` (جديد) — يُشغّل getTenantDb على كل tenant
+    - 10 tenants كلها على schema v44 ✅
+    - Tenant 3,4,5,22,26,29,99999: من v17 → v44 (27 migration لكل واحد)
+    - Tenant 10: من v41 → v44 (3 migrations)
+    - Tenant 1, 2: كانوا v44 بالفعل ✅
+  - **B2**: Tenant 1 — فارغ (بيانات v3=0) + inbox_users موجود ✅
+  - **B3**: هجرة بيانات v3→v4:
+    - Tenant 26: 1/1 محادثة + 2/2 رسالة ✅
+    - Tenant 29: 15/15 محادثة + 161/161 رسالة ✅
+    - **bugfix**: media_id column غير موجودة في tenants القديمة (v17)
+      → إضافة `PRAGMA table_info(inbox_messages)` check في migration script
+  - **B4**: تحقق COUNT نهائي — كل 10 tenants على v44 ✅
+  - pm2 reload + health ok ✅
+- آخر commit: 56e8f8b
+- المهمة القادمة: **P12-C** — WhatsApp Live Mode (Meta Business Verification)
