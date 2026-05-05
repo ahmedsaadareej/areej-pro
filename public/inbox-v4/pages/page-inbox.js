@@ -316,11 +316,10 @@ const PageInbox = (() => {
       if (typeof InboxSearch   !== 'undefined') InboxSearch.init();
       if (typeof InboxContext  !== 'undefined') InboxContext.init();
       if (typeof InboxAI       !== 'undefined') InboxAI.init();
-      if (typeof InboxBroadcast !== 'undefined') InboxBroadcast.init();
-      if (typeof InboxInteractive !== 'undefined') InboxInteractive.init();
-      if (typeof InboxCatalog  !== 'undefined') InboxCatalog.init();
-      if (typeof InboxEmail    !== 'undefined') InboxEmail.init();
-      if (typeof InboxChatbot  !== 'undefined') InboxChatbot.init();
+      if (typeof InboxBroadcast   !== 'undefined') InboxBroadcast.init();   // للجماعي من context
+      if (typeof InboxInteractive  !== 'undefined') InboxInteractive.init();  // أزرار WA في reply
+      if (typeof InboxCatalog      !== 'undefined') InboxCatalog.init();       // منتجات في reply
+      // InboxEmail + InboxChatbot: لا init هنا — تُفتح من Settings فقط
 
       // ربط أزرار الـ sidebar
       document.addEventListener('click', function _sidebarSettingsNav(e) {
