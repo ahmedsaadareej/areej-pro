@@ -105,40 +105,10 @@ const PageInbox = (() => {
                 <span class="iv4-nav-label">الإحصاءات</span>
               </button>
         
-              <!-- Chatbot Flows Button (P4-2) -->
-              <button class="iv4-nav-btn" data-action="open-chatbot" title="Chatbot Flows">
-                <span class="iv4-nav-icon">🤖</span>
-                <span class="iv4-nav-label">Chatbot</span>
-              </button>
-        
-              <!-- Welcome + Away Button (P4-3) -->
-              <button class="iv4-nav-btn" data-action="open-welcome-away" title="رسائل الترحيب والغياب">
-                <span class="iv4-nav-icon">🌙</span>
-                <span class="iv4-nav-label">ترحيب/غياب</span>
-              </button>
-        
-              <!-- Scheduled Messages Button (P4-5) -->
-              <button class="iv4-nav-btn" data-action="open-scheduled-dashboard" title="الرسائل المجدولة">
-                <span class="iv4-nav-icon">📅</span>
-                <span class="iv4-nav-label">مجدولة</span>
-              </button>
-        
-              <!-- P8-4: Broadcast V2 -->
-              <button id="iv4-broadcast-btn" class="iv4-nav-btn" title="الرسائل الجماعية">
-                <span class="iv4-nav-icon">📢</span>
-                <span class="iv4-nav-label">جماعي</span>
-              </button>
-        
-              <!-- P8-5 Webhook Triggers -->
-              <button class="iv4-nav-btn" data-action="open-webhooks" title="Webhook Triggers">
-                <span class="iv4-nav-icon">⚡</span>
-                <span class="iv4-nav-label">Webhooks</span>
-              </button>
-        
-              <!-- P8-1 Email Channel -->
-              <button id="iv4-email-btn" class="iv4-nav-btn" title="حسابات الإيميل">
-                <span class="iv4-nav-icon">✉️</span>
-                <span class="iv4-nav-label">إيميل</span>
+              <!-- Settings Shortcut -->
+              <button class="iv4-nav-btn" data-action="open-settings" title="الإعدادات">
+                <span class="iv4-nav-icon">⚙️</span>
+                <span class="iv4-nav-label">الإعدادات</span>
               </button>
         
               <!-- Spacer -->
@@ -352,32 +322,16 @@ const PageInbox = (() => {
       if (typeof InboxEmail    !== 'undefined') InboxEmail.init();
       if (typeof InboxChatbot  !== 'undefined') InboxChatbot.init();
 
-      // ربط أزرار الـ sidebar التي تنتقل لـ Settings
+      // ربط أزرار الـ sidebar
       document.addEventListener('click', function _sidebarSettingsNav(e) {
         const action = e.target.closest('[data-action]')?.dataset?.action;
         if (!action) return;
-        const nav = {
-          'open-chatbot':      '/settings/automation',
-          'open-welcome-away': '/settings/automation',
-          'open-webhooks':     '/settings/automation',
-        };
-        if (nav[action]) {
+        if (action === 'open-settings') {
           e.preventDefault();
           e.stopPropagation();
-          if (typeof InboxRouter !== 'undefined') InboxRouter.navigate(nav[action]);
+          if (typeof InboxRouter !== 'undefined') InboxRouter.navigate('/settings');
         }
       });
-
-      // ربط زر Email بـ Settings → التطبيقات
-      const emailNavBtn = document.getElementById('iv4-email-btn');
-      if (emailNavBtn && !emailNavBtn.dataset.navBound) {
-        emailNavBtn.dataset.navBound = '1';
-        emailNavBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (typeof InboxRouter !== 'undefined') InboxRouter.navigate('/settings/channels');
-        });
-      }
 
       // لو فيه convId في الـ params → افتح المحادثة مباشرة (Deep Link)
       if (params && params.convId) {
