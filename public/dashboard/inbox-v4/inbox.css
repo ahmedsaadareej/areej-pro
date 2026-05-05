@@ -7,72 +7,31 @@
  */
 
 /* ─── Variables ─────────────────────────────────────────────────────────── */
-/*
- * VISUAL REDESIGN v2 — 2026-05-05
- * نظام بصري موحد — مستوحى من Respond.io / Wati / Intercom
- * Brand: Indigo (#4f46e5) بدل البنفسجي الغامق (#6c5ce7)
- * Font: Cairo أولاً (عربي احترافي) بدل Segoe UI
- */
-
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap');
-
 :root {
-  /* Brand — Indigo (احترافي، هادئ، مثل Intercom / Linear) */
-  --iv4-accent:        #4f46e5;
-  --iv4-accent-hover:  #4338ca;
-  --iv4-accent-light:  #eef2ff;
-  --iv4-accent-mid:    #c7d2fe;
+  --iv4-bg:          #f5f5f7;
+  --iv4-surface:     #ffffff;
+  --iv4-surface-2:   #f0f0f5;
+  --iv4-border:      #e2e2e8;
+  --iv4-accent:      #6c5ce7;
+  --iv4-accent-light:#ede9fc;
+  --iv4-text:        #1a1a2e;
+  --iv4-text-2:      #6b7280;
+  --iv4-text-3:      #9ca3af;
+  --iv4-green:       #10b981;
+  --iv4-red:         #ef4444;
+  --iv4-orange:      #f97316;
+  --iv4-yellow:      #eab308;
+  --iv4-blue:        #3b82f6;
 
-  /* Surfaces — أبيض/رمادي فاتح (مريح للعين، مثل Respond.io) */
-  --iv4-bg:            #f8fafc;
-  --iv4-surface:       #ffffff;
-  --iv4-surface-2:     #f1f5f9;
-  --iv4-surface-3:     #e2e8f0;
-
-  /* Borders */
-  --iv4-border:        #e2e8f0;
-  --iv4-border-light:  #f1f5f9;
-
-  /* Text — Slate (أوضح من الأسود الصافي) */
-  --iv4-text:          #0f172a;
-  --iv4-text-2:        #475569;
-  --iv4-text-3:        #94a3b8;
-  --iv4-text-inv:      #ffffff;
-
-  /* Status Colors */
-  --iv4-green:         #10b981;
-  --iv4-green-light:   #d1fae5;
-  --iv4-red:           #ef4444;
-  --iv4-red-light:     #fee2e2;
-  --iv4-orange:        #f97316;
-  --iv4-orange-light:  #ffedd5;
-  --iv4-yellow:        #f59e0b;
-  --iv4-yellow-light:  #fef3c7;
-  --iv4-blue:          #3b82f6;
-  --iv4-blue-light:    #eff6ff;
-
-  /* Layout */
-  --iv4-sidebar-w:     240px;
-  --iv4-conv-w:        320px;
-  --iv4-ctx-w:         300px;
-
-  /* Radii */
-  --iv4-radius:        12px;
-  --iv4-radius-sm:     8px;
-  --iv4-radius-xs:     6px;
-  --iv4-radius-full:   9999px;
-
-  /* Shadows — خفيفة وناعمة (مثل Notion / Linear) */
-  --iv4-shadow:        0 1px 3px rgba(15,23,42,.06), 0 1px 2px rgba(15,23,42,.04);
-  --iv4-shadow-md:     0 4px 12px rgba(15,23,42,.08), 0 2px 4px rgba(15,23,42,.04);
-  --iv4-shadow-lg:     0 8px 24px rgba(15,23,42,.10), 0 4px 8px rgba(15,23,42,.06);
-  --iv4-shadow-accent: 0 4px 14px rgba(79,70,229,.25);
-
-  /* Typography — Cairo أولاً لدعم العربية */
-  --iv4-font:          'Cairo', 'Inter', system-ui, sans-serif;
-
-  /* Transitions */
-  --iv4-transition:    .15s cubic-bezier(.4,0,.2,1);
+  --iv4-sidebar-w:   220px;
+  --iv4-conv-w:      320px;
+  --iv4-ctx-w:       280px;
+  --iv4-radius:      10px;
+  --iv4-radius-sm:   6px;
+  --iv4-shadow:      0 1px 4px rgba(0,0,0,.08);
+  --iv4-shadow-md:   0 4px 16px rgba(0,0,0,.12);
+  --iv4-font:        'Segoe UI', 'Cairo', system-ui, sans-serif;
+  --iv4-transition:  .18s ease;
 }
 
 /* ─── Reset / Base ──────────────────────────────────────────────────────── */
@@ -85,20 +44,13 @@
   height: 100dvh;
   overflow: hidden;
   font-size: 14px;
-  line-height: 1.55;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* كل عناصر inbox تستخدم Cairo */
-.iv4-body *, .iv4-root * {
-  font-family: var(--iv4-font);
+  line-height: 1.5;
 }
 
 /* ─── Root Layout (3 columns) ───────────────────────────────────────────── */
 .iv4-root {
   display: grid;
-  grid-template-columns: var(--iv4-sidebar-w) var(--iv4-conv-w) 1fr 0; /* FIX-012: col4 = context panel (0 when hidden) */
+  grid-template-columns: var(--iv4-sidebar-w) var(--iv4-conv-w) 1fr;
   grid-template-rows: 100%;
   height: 100%;
   position: relative;
@@ -110,22 +62,18 @@
   border-left: 1px solid var(--iv4-border);
   display: flex;
   flex-direction: column;
-  padding: 12px 10px;
-  gap: 2px;
+  padding: 12px 8px;
+  gap: 4px;
   overflow-y: auto;
-  box-shadow: 1px 0 0 var(--iv4-border);
 }
 
 .iv4-sidebar-brand {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 10px 18px;
+  padding: 8px 12px 16px;
   font-weight: 700;
-  font-size: 15px;
-  color: var(--iv4-accent);
-  font-family: var(--iv4-font);
-  letter-spacing: -0.3px;
+  font-size: 16px;
 }
 
 .iv4-brand-icon { font-size: 20px; }
@@ -142,17 +90,15 @@
 .iv4-nav-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
-  padding: 9px 12px;
+  padding: 8px 12px;
   border: none;
   background: transparent;
   cursor: pointer;
   border-radius: var(--iv4-radius-sm);
   color: var(--iv4-text-2);
   font-size: 13px;
-  font-weight: 500;
-  font-family: var(--iv4-font);
   transition: background var(--iv4-transition), color var(--iv4-transition);
   text-align: right;
 }
@@ -318,14 +264,14 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 12px 16px;
+  padding: 10px 14px;
   cursor: pointer;
-  border-bottom: 1px solid var(--iv4-border-light, var(--iv4-border));
+  border-bottom: 1px solid var(--iv4-border);
   transition: background var(--iv4-transition);
   position: relative;
 }
 .iv4-conv-item:hover   { background: var(--iv4-surface-2); }
-.iv4-conv-item.active  { background: var(--iv4-accent-light); border-right: 3px solid var(--iv4-accent); }
+.iv4-conv-item.active  { background: var(--iv4-accent-light); }
 .iv4-conv-item.unread  { font-weight: 600; }
 
 /* Avatar */
@@ -486,7 +432,6 @@
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--iv4-shadow);
 }
 
 /* الصف الرئيسي: avatar + info + actions */
@@ -557,28 +502,23 @@
   flex-shrink: 0;
 }
 .iv4-header-btn {
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: var(--iv4-radius-sm);
-  border: none;
+  border: 1px solid var(--iv4-border);
   background: var(--iv4-surface-2);
-  color: var(--iv4-text-2);
+  color: var(--iv4-text);
   font-size: 12px;
-  font-weight: 600;
-  font-family: var(--iv4-font);
+  font-weight: 500;
   cursor: pointer;
-  transition: all var(--iv4-transition);
+  transition: background .15s, border-color .15s;
   white-space: nowrap;
-  height: 30px;
-  display: inline-flex; align-items: center;
 }
-.iv4-header-btn:hover:not(:disabled) { background: var(--iv4-surface-3, #e2e8f0); color: var(--iv4-text); }
+.iv4-header-btn:hover:not(:disabled) { background: var(--iv4-surface-3, #e2e8f0); }
 .iv4-header-btn:disabled { opacity: .5; cursor: default; }
 .iv4-header-btn--secondary {
   background: transparent;
   color: var(--iv4-text-2);
-  border: 1px solid var(--iv4-border);
 }
-.iv4-header-btn--secondary:hover { background: var(--iv4-surface-2); }
 
 /* Status badge داخل الـ header */
 .iv4-header-status {
@@ -648,10 +588,6 @@
 .iv4-msg.out { align-self: flex-start; align-items: flex-start; }
 .iv4-msg.in  { align-self: flex-end;   align-items: flex-end; }
 .iv4-msg.note { align-self: center; max-width: 90%; }
-/* BEM aliases (actual HTML uses double-dash) */
-.iv4-msg--out { align-self: flex-start; align-items: flex-start; }
-.iv4-msg--in  { align-self: flex-end;   align-items: flex-end; }
-.iv4-msg--note { align-self: center; max-width: 90%; }
 
 .iv4-msg-bubble {
   padding: 8px 12px;
@@ -661,9 +597,8 @@
   word-break: break-word;
   white-space: pre-wrap;
 }
-/* Bubble: out = accent (indigo) | in = white/surface */
-.iv4-msg.out  .iv4-msg-bubble { background: var(--iv4-accent); color: #fff; border: none; border-radius: 14px 2px 14px 14px; box-shadow: var(--iv4-shadow-accent); }
-.iv4-msg.in   .iv4-msg-bubble { background: var(--iv4-surface); color: var(--iv4-text); border: 1px solid var(--iv4-border); border-radius: 2px 14px 14px 14px; box-shadow: var(--iv4-shadow); }
+.iv4-msg.out  .iv4-msg-bubble { background: var(--iv4-surface); border: 1px solid var(--iv4-border); border-radius: 14px 2px 14px 14px; }
+.iv4-msg.in   .iv4-msg-bubble { background: var(--iv4-accent); color: #fff; border-radius: 2px 14px 14px 14px; }
 .iv4-msg.note .iv4-msg-bubble { background: #fffbeb; border: 1px dashed var(--iv4-yellow); color: #92400e; border-radius: 8px; font-size: 12px; }
 
 .iv4-msg-time {
@@ -694,112 +629,95 @@
 /* ─── Reply Box ─────────────────────────────────────────────────────────── */
 .iv4-reply-box {
   background: var(--iv4-surface);
-  border-top: 2px solid var(--iv4-border);
-  padding: 12px 16px;
+  border-top: 1px solid var(--iv4-border);
+  padding: 10px 14px;
   flex-shrink: 0;
-  box-shadow: 0 -2px 8px rgba(15,23,42,.04);
 }
 
 .iv4-reply-tabs {
   display: flex;
   gap: 4px;
-  margin-bottom: 10px;
-  border-bottom: 1px solid var(--iv4-border);
-  padding-bottom: 8px;
+  margin-bottom: 8px;
 }
 
 .iv4-reply-tab {
-  padding: 5px 14px;
-  border: none;
-  border-radius: var(--iv4-radius-sm);
+  padding: 4px 14px;
+  border: 1px solid var(--iv4-border);
+  border-radius: 14px;
   background: transparent;
   cursor: pointer;
   font-size: 12px;
-  font-weight: 600;
   color: var(--iv4-text-2);
-  font-family: var(--iv4-font);
   transition: all var(--iv4-transition);
 }
-.iv4-reply-tab:hover:not(.active) { background: var(--iv4-surface-2); color: var(--iv4-text); }
-.iv4-reply-tab.active { background: var(--iv4-accent-light); color: var(--iv4-accent); }
+.iv4-reply-tab.active { background: var(--iv4-accent); color: #fff; border-color: var(--iv4-accent); }
 
 .iv4-reply-textarea {
   width: 100%;
   resize: none;
-  border: 1.5px solid transparent;
+  border: 1px solid var(--iv4-border);
   border-radius: var(--iv4-radius-sm);
-  padding: 10px 14px;
-  font-size: 13.5px;
+  padding: 8px 12px;
+  font-size: 13px;
   font-family: var(--iv4-font);
   color: var(--iv4-text);
   background: var(--iv4-surface-2);
   direction: rtl;
   outline: none;
-  transition: all var(--iv4-transition);
-  min-height: 72px;
-  max-height: 160px;
-  line-height: 1.6;
+  transition: border-color var(--iv4-transition);
+  min-height: 60px;
+  max-height: 180px;
 }
-.iv4-reply-textarea:focus { border-color: var(--iv4-accent); background: var(--iv4-surface); box-shadow: 0 0 0 3px var(--iv4-accent-light); }
-.iv4-reply-textarea::placeholder { color: var(--iv4-text-3); }
+.iv4-reply-textarea:focus { border-color: var(--iv4-accent); background: var(--iv4-surface); }
 
 /* Reply Toolbar */
 .iv4-reply-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 10px;
-  gap: 6px;
+  margin-top: 8px;
+  gap: 8px;
 }
-.iv4-toolbar-left  { display: flex; align-items: center; gap: 3px; flex: 1; }
-.iv4-toolbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.iv4-toolbar-left  { display: flex; align-items: center; gap: 4px; }
+.iv4-toolbar-right { display: flex; align-items: center; gap: 8px; }
 .iv4-toolbar-sep   { width: 1px; height: 16px; background: var(--iv4-border); margin: 0 4px; }
 
 .iv4-fmt-btn {
-  width: 28px; height: 28px;
-  border: none;
-  border-radius: var(--iv4-radius-xs);
-  background: transparent;
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--iv4-text-2);
-  display: flex; align-items: center; justify-content: center;
-  transition: all var(--iv4-transition);
-}
-.iv4-fmt-btn:hover { background: var(--iv4-surface-2); color: var(--iv4-accent); }
-
-.iv4-channel-select {
   padding: 4px 8px;
   border: 1px solid var(--iv4-border);
-  border-radius: var(--iv4-radius-xs);
-  background: var(--iv4-surface-2);
-  font-size: 11px;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
   color: var(--iv4-text-2);
+  transition: all var(--iv4-transition);
+}
+.iv4-fmt-btn:hover { border-color: var(--iv4-accent); color: var(--iv4-accent); }
+
+.iv4-channel-select {
+  padding: 5px 8px;
+  border: 1px solid var(--iv4-border);
+  border-radius: var(--iv4-radius-sm);
+  background: var(--iv4-surface-2);
+  font-size: 12px;
+  color: var(--iv4-text);
   cursor: pointer;
   outline: none;
-  font-family: var(--iv4-font);
-  max-width: 90px;
 }
 
 .iv4-send-btn {
-  padding: 8px 22px;
+  padding: 7px 20px;
   background: var(--iv4-accent);
   color: #fff;
   border: none;
   border-radius: var(--iv4-radius-sm);
   cursor: pointer;
   font-size: 13px;
-  font-weight: 700;
-  font-family: var(--iv4-font);
-  letter-spacing: 0.2px;
-  transition: all var(--iv4-transition);
-  box-shadow: var(--iv4-shadow-accent);
-  white-space: nowrap;
-  height: 34px;
-  display: flex; align-items: center;
+  font-weight: 600;
+  transition: opacity var(--iv4-transition);
 }
-.iv4-send-btn:hover:not(:disabled) { background: var(--iv4-accent-hover); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(79,70,229,.35); }
-.iv4-send-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+.iv4-send-btn:hover    { opacity: .88; }
+.iv4-send-btn:disabled { opacity: .5; cursor: not-allowed; }
 
 /* ─── Context Panel ──────────────────────────────────────────────────────── */
 .iv4-context-panel {
@@ -811,11 +729,7 @@
   overflow: hidden;
   transition: width var(--iv4-transition);
 }
-.iv4-context-panel.hidden { width: 0; border: none; overflow: hidden; }
-/* FIX-012: expand col4 when context panel is visible */
-.iv4-root:has(.iv4-context-panel:not(.hidden)) {
-  grid-template-columns: var(--iv4-sidebar-w) var(--iv4-conv-w) 1fr var(--iv4-ctx-w);
-}
+.iv4-context-panel.hidden { width: 0; border: none; }
 
 .iv4-ctx-tabs {
   display: flex;
@@ -1158,14 +1072,12 @@
 /* ─── Reply Button (يظهر عند hover على الرسالة) ─────────────────────── */
 .iv4-msg {
   position: relative;
-  height: fit-content;
-  min-height: 0;
 }
 
 .iv4-msg-reply-btn {
   position: absolute;
-  top: 8px;
-  transform: none;
+  top: 50%;
+  transform: translateY(-50%);
   background: var(--iv4-bg);
   border: 1px solid var(--iv4-border);
   border-radius: 50%;

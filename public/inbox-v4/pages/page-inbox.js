@@ -470,6 +470,8 @@ const PageInbox = (() => {
       }
 
       _mounted = true;
+      // FIX-004c: أعلم shell.js إن الـ Inbox جاهز
+      document.dispatchEvent(new CustomEvent('inbox:mounted'));
     },
 
     unmount() {

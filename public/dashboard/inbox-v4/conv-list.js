@@ -1052,7 +1052,9 @@ const InboxConvList = (() => {
   function _formatTime(iso) {
     if (!iso) return '';
     try {
-      const d = new Date(iso);
+      // FIX-002: unix timestamp (seconds) → ms
+      const ts = (typeof iso === 'number' && iso < 1e12) ? iso * 1000 : iso;
+      const d = new Date(ts);
       const now = new Date();
       const diffMs = now - d;
       const diffMin = Math.floor(diffMs / 60000);
@@ -1134,6 +1136,16 @@ const InboxConvList = (() => {
    */
   function init() {
     // ربط الأحداث
+    // FIX-003: ربط counts:update بالـ DOM
+    InboxStore.on('counts:update', (counts) => {
+      const elOpen    = document.getElementById('iv4-count-open');
+      const elWaiting = document.getElementById('iv4-count-waiting');
+      const elSnoozed = document.getElementById('iv4-count-snoozed');
+      if (elOpen)    elOpen.textContent    = counts.open    || 0;
+      if (elWaiting) elWaiting.textContent = counts.waiting || 0;
+      if (elSnoozed) elSnoozed.textContent = counts.snoozed || 0;
+    });
+
     InboxStore.on('filters:change', _onFiltersChange);
     InboxStore.on('activeConvId:change', _onActiveConvChange);
     InboxStore.on('conversations:update', () => renderList());

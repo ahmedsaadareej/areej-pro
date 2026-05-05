@@ -13,10 +13,14 @@ const InboxShell = (() => {
     contacts : () => typeof PageContacts !== 'undefined' ? PageContacts : null,
     reports  : () => typeof PageReports  !== 'undefined' ? PageReports  : null,
     settings : () => typeof PageSettings !== 'undefined' ? PageSettings : null,
-    // sub-pages تُعالج داخل page-inbox.js
-    broadcast: () => typeof PageInbox    !== 'undefined' ? PageInbox    : null,
-    scheduled: () => typeof PageInbox    !== 'undefined' ? PageInbox    : null,
-    chatbot  : () => typeof PageInbox    !== 'undefined' ? PageInbox    : null,
+  };
+
+  // FIX-004: overlay sub-pages — تُفتح فوق Inbox مباشرة
+  // FIX-004d: API الصح: InboxScheduled.openDashboard(), InboxBroadcast.open(), InboxChatbot.open()
+  const _overlayOpeners = {
+    broadcast: () => typeof InboxBroadcast !== 'undefined' && typeof InboxBroadcast.open         === 'function' ? InboxBroadcast.open()         : null,
+    scheduled: () => typeof InboxScheduled !== 'undefined' && typeof InboxScheduled.openDashboard === 'function' ? InboxScheduled.openDashboard() : null,
+    chatbot  : () => typeof InboxChatbot   !== 'undefined' && typeof InboxChatbot.open            === 'function' ? InboxChatbot.open()            : null,
   };
 
   // الـ breadcrumb labels لكل page
@@ -70,6 +74,39 @@ const InboxShell = (() => {
     // أظهر loading مؤقت
     content.innerHTML = '<div class="shell-loading"><div class="shell-spinner"></div></div>';
 
+    // FIX-004: overlay pages (broadcast/scheduled/chatbot)
+    if (_overlayOpeners[page]) {
+      if (currentPageKey !== 'inbox') {
+        const inboxMod = pageModules['inbox']();
+        if (inboxMod) {
+          if (currentModule && typeof currentModule.unmount === 'function') currentModule.unmount();
+          currentModule  = inboxMod;
+          currentPageKey = 'inbox';
+          content.innerHTML = '';
+          requestAnimationFrame(() => {
+            inboxMod.mount(content, {});
+            // FIX-004c: انتظر inbox:mounted event ثم افتح الـ overlay
+            const _pendingOverlayPage = page;
+            const _onInboxMounted = () => {
+              document.removeEventListener('inbox:mounted', _onInboxMounted);
+              const opener = _overlayOpeners[_pendingOverlayPage];
+              if (opener) setTimeout(() => opener(), 50);
+            };
+            document.addEventListener('inbox:mounted', _onInboxMounted);
+            // fallback: لو الـ event فات، retry بعد 1.5s
+            setTimeout(() => {
+              document.removeEventListener('inbox:mounted', _onInboxMounted);
+              const opener = _overlayOpeners[_pendingOverlayPage];
+              if (opener) opener();
+            }, 1500);
+          });
+          return;
+        }
+      } else {
+        _overlayOpeners[page]();
+        return;
+      }
+    }
     const factory = pageModules[page];
     if (!factory) {
       content.innerHTML = `<div style="padding:40px;text-align:center;color:#9ca3af">الصفحة "${page}" غير معرّفة</div>`;
