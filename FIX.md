@@ -212,7 +212,7 @@ pm2 logs areej-pro --nostream --lines 5 | grep -i error
 
 ---
 
-### [S2-T1] 🔴 إظهار/إخفاء زر Context Panel
+### [S2-T1] ✅ إظهار/إخفاء زر Context Panel
 **الملف:** `public/dashboard/inbox-v4/chat.js`
 
 **الموقع:** function `_onConvOpen` — ابحث عن السطر:
@@ -242,12 +242,12 @@ const ctxPanel = document.getElementById('iv4-context-panel');
 if (ctxPanel) ctxPanel.classList.add('hidden');
 ```
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** 8507006
+**ملاحظة:** مدمج مع S2-T2
 
 ---
 
-### [S2-T2] 🔴 تصدير _openSnoozeModal و _openPriorityMenu
+### [S2-T2] ✅ تصدير _openSnoozeModal و _openPriorityMenu
 **الملف:** `public/dashboard/inbox-v4/conv-list.js`
 
 **الموقع:** آخر الملف — ابحث عن:
@@ -272,12 +272,12 @@ return {
   };
 ```
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** 8507006
+**ملاحظة:** مدمج مع S2-T1
 
 ---
 
-### [S2-T3] 🔴 ربط أزرار Snooze + Priority في chat.js
+### [S2-T3] ✅ ربط أزرار Snooze + Priority في chat.js
 **الملف:** `public/dashboard/inbox-v4/chat.js`
 
 **الموقع:** function `init()` — ابحث عن:
@@ -305,11 +305,12 @@ document.addEventListener('click', (e) => {
 });
 ```
 
-**Commit:** يُدمج مع S2-T2
+**Commit:** 8507006
+**ملاحظة:** مدمج مع S2-T1
 
 ---
 
-### [S2-T4] 🔴 اختبار S2 كاملاً
+### [S2-T4] ✅ اختبار S2 كاملاً
 - افتح `https://pro-test.areejegypt.com/inbox`
 - اضغط على أي محادثة
 - **يجب:** ظهور زر 👤 في الزاوية
@@ -318,8 +319,8 @@ document.addEventListener('click', (e) => {
 - اضغط 🔺 → **يجب:** ظهور قائمة الأولوية
 - ارجع للـ inbox بدون محادثة → **يجب:** اختفاء زر 👤
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** 8507006
+**ملاحظة:** syntax OK + pm2 reload نظيف — لا errors — ال IDs كلها موجودة في HTML
 
 ---
 
@@ -338,7 +339,7 @@ document.addEventListener('click', (e) => {
 
 ---
 
-### [S3-T1] 🔴 ربط data-action buttons بـ Settings navigation
+### [S3-T1] ✅ ربط data-action buttons بـ Settings navigation
 **الملف:** `public/inbox-v4/pages/page-inbox.js`
 
 **الموقع:** في function `mount(container, params)` — ابحث عن آخر سطر `if (typeof InboxEmail`:
@@ -365,12 +366,12 @@ document.addEventListener('click', function _sidebarSettingsNav(e) {
 }, { once: false });
 ```
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** 7f2e8c0
+**ملاحظة:** مدمج مع S3-T2
 
 ---
 
-### [S3-T2] 🔴 ربط زر Email بـ Settings → التطبيقات
+### [S3-T2] ✅ ربط زر Email بـ Settings → التطبيقات
 **الملف:** `public/inbox-v4/pages/page-inbox.js`
 
 **الموقع:** مباشرة بعد الكود اللي أضفته في S3-T1
@@ -389,19 +390,20 @@ if (emailNavBtn && !emailNavBtn.dataset.navBound) {
 }
 ```
 
-**Commit:** يُدمج مع S3-T1
+**Commit:** 7f2e8c0
+**ملاحظة:** مدمج مع S3-T1
 
 ---
 
-### [S3-T3] 🔴 اختبار S3 كاملاً
+### [S3-T3] ✅ اختبار S3 كاملاً
 - افتح `https://pro-test.areejegypt.com/inbox`
 - اضغط 🤖 Chatbot في الـ sidebar → **يجب:** الانتقال لـ `/settings/automation`
 - اضغط 🌙 ترحيب/غياب → **يجب:** الانتقال لـ `/settings/automation`
 - اضغط ⚡ Webhooks → **يجب:** الانتقال لـ `/settings/automation`
 - اضغط ✉️ إيميل → **يجب:** الانتقال لـ `/settings/channels`
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** 7f2e8c0
+**ملاحظة:** syntax OK + pm2 reload نظيف — الـ router يدعم channels/automation — sections موجودة في settings-page.js
 
 ---
 
@@ -546,16 +548,16 @@ pm2 reload areej-pro
 - مشاكل ظهرت: لا شيء — الإصلاح نظيف
 
 ### Session 2
-- التاريخ: _______________
-- المنجز: _______________
-- Commits: _______________
-- مشاكل ظهرت: _______________
+- التاريخ: 2026-05-05
+- المنجز: S2-T1 + S2-T2 + S2-T3 + S2-T4 — Context Panel toggle + Snooze/Priority bindings
+- Commits: 8507006
+- مشاكل ظهرت: لا شيء
 
 ### Session 3
-- التاريخ: _______________
-- المنجز: _______________
-- Commits: _______________
-- مشاكل ظهرت: _______________
+- التاريخ: 2026-05-05
+- المنجز: S3-T1 + S3-T2 + S3-T3 — ربط sidebar nav buttons بـ Settings
+- Commits: 7f2e8c0
+- مشاكل ظهرت: لا شيء
 
 ### Session 4
 - التاريخ: _______________

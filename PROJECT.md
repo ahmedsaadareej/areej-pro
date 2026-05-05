@@ -1,14 +1,23 @@
 # PROJECT.md — Areej Pro
-> آخر تحديث: 2026-05-03
+> آخر تحديث: 2026-05-05
 
 ## الحالة الحالية
-- **آخر commit:** `93caab8`
+- **آخر commit:** `7f2e8c0`
 - **السيرفر:** areej-server — Ubuntu 24.04 — port 3002
 - **PM2:** `pm2 reload areej-pro`
 
 ---
 
 ## ✅ المنجز (هذه الجلسة)
+
+### إصلاح Ground Truth Sync (2026-05-05)
+- **Schema Mismatch** — settings.js: تصحيح `channel_type`→`channel` و `is_active`→`active` ✅
+- **Context Panel** — زر بيانات العميل يظهر/يختفي عند فتح/إغلاق المحادثة ✅
+- **Header Buttons** — زر ⏰ Snooze + 🔺 Priority مربوطان بالـ modals ✅
+- **Sidebar Nav** — أزرار Chatbot/Webhooks/Welcome/Email تنتقل لـ Settings ✅
+
+---
+
 
 ### WhatsApp Business API — مكتمل بالكامل
 - **Webhook GET** `/api/webhook/whatsapp/:userId` — Meta Verification ✅
