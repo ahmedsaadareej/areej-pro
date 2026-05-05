@@ -431,6 +431,14 @@ router.post('/conversations/:id/messages', async (req, res) => {
     // ── جلب المحادثة ────────────────────────────────────────────────────
     const conv = await _getConv(db, convId);
     if (!conv) return res.status(404).json({ error: 'المحادثة غير موجودة' });
+
+    // Security H1: موظف عادي يرسل فقط في محادثات معيّنة له أو غير معيّنة
+    const user = req.inboxUser;
+    const isAdmin = user.role_name === 'owner' || user.role_name === 'admin' || user.permissions?.conversations_all;
+    if (!isAdmin && conv.assigned_to_id && conv.assigned_to_id !== user.id) {
+      return res.status(403).json({ error: 'غير مصرح — المحادثة معيّنة لموظف آخر' });
+    }
+
     if (conv.status === 'closed' && !isNote) {
       return res.status(400).json({ error: 'المحادثة مغلقة — افتحها أولاً' });
     }

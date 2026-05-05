@@ -395,15 +395,18 @@ async function autoRestoreAllSessions() {
         const fs = require('fs');
         if (!fs.existsSync(sessionDir)) continue;
 
-        // Check if wa_qr_active is set in tenant settings
+        // H6 Fix: فقط إذا wa_qr_active=1 صراحةً — لا restore تلقائي بدون موافقة
         let shouldRestore = false;
         try {
           const db = getTenantDb(user.id);
           const settings = db.prepare('SELECT wa_qr_active FROM inbox_settings WHERE id=1').get();
-          shouldRestore = settings && settings.wa_qr_active;
-        } catch(e) { shouldRestore = true; } // if no settings, restore anyway (session dir exists)
+          shouldRestore = !!(settings && settings.wa_qr_active);
+        } catch(e) { shouldRestore = false; } // conservative: لا restore عند الشك
 
-        if (!shouldRestore) continue;
+        if (!shouldRestore) {
+          console.log(`[WA-QR] autoRestore: user ${user.id} — wa_qr_active=0, skipping`);
+          continue;
+        }
 
         console.log(`[WA-QR] autoRestore: Starting session for user ${user.id}...`);
         // Start with delay to avoid overwhelming the server

@@ -60,12 +60,18 @@ function httpGet(url) {
 }
 
 // Helper: Ensure media columns exist in inbox_messages
+// H3 Fix: cache per-DB لمنع PRAGMA على كل request
+const _mediaColsChecked = new Set();
 function ensureMediaColumns(db) {
+  // استخدم db.name أو memory address كـ key — better-sqlite3 عنده filename
+  const dbKey = db.name || 'default';
+  if (_mediaColsChecked.has(dbKey)) return; // سبق وتحقّقنا لهذا الـ tenant
   try {
     const cols = db.prepare("PRAGMA table_info(inbox_messages)").all().map(c => c.name);
     if (!cols.includes('media_url'))  db.prepare("ALTER TABLE inbox_messages ADD COLUMN media_url TEXT").run();
     if (!cols.includes('media_type')) db.prepare("ALTER TABLE inbox_messages ADD COLUMN media_type TEXT").run();
     if (!cols.includes('file_id'))    db.prepare("ALTER TABLE inbox_messages ADD COLUMN file_id TEXT").run();
+    _mediaColsChecked.add(dbKey); // ✅ mark as checked
   } catch(e) { console.error('[routes-inbox-webhook.js]', e.message); }
 }
 
@@ -121,18 +127,28 @@ router.post('/telegram/:userId', express.json(), async (req, res) => {
   const userId = parseInt(req.params.userId);
   if (!userId || isNaN(userId)) return res.json({ ok: false });
 
-  // ── Security: تحقق إن userId موجود فعلاً في master DB ──────────────
+  // ── Security H2: X-Telegram-Bot-Api-Secret-Token Verification ──────
   const userExists = master.prepare('SELECT id FROM users WHERE id=? AND status IN (?,?,?)').get(userId, 'active', 'trial', 'grace');
   if (!userExists) return res.json({ ok: false });
-  
+
   try {
     const db = getTenantDb(userId);
-    
+
     // Ensure media columns exist
     ensureMediaColumns(db);
-    
+
     const settings = db.prepare('SELECT * FROM inbox_settings WHERE id=1').get();
     if (!settings || !settings.telegram_active) return res.json({ ok: false, error: 'telegram not active' });
+
+    // التحقق من الـ secret token لو مضبوط
+    // Telegram بيبعت X-Telegram-Bot-Api-Secret-Token في كل webhook request
+    if (settings.telegram_secret_token) {
+      const incomingToken = req.headers['x-telegram-bot-api-secret-token'] || '';
+      if (incomingToken !== settings.telegram_secret_token) {
+        console.warn('[Telegram Webhook] ❌ Secret token mismatch userId=' + userId);
+        return res.status(401).json({ ok: false });
+      }
+    }
 
     const update = req.body;
     const msg = update.message || update.edited_message;

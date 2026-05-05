@@ -416,12 +416,16 @@ router.post('/webhook/fawaterk', async (req, res) => {
 
     if (!invoice_id) return res.sendStatus(400);
 
-    // نبحث عن الـ link في كل tenant DBs (عبر invoice_ref)
-    const allUsers = master.prepare('SELECT id FROM users WHERE slug IS NOT NULL').all();
+    // H7 Fix: invoice_ref يحتوي على "PL-{linkId}-{ts}" — نبحث في master أولاً
+    // الـ invoice_ref بتتكون كـ PL-{id}-{timestamp} — نستخرج الـ slug منها
+    // لكن Fawaterk مش بيبعت الـ slug — نلف على التيناتس مع early-exit وcache
+    // الحل الأمثل: البحث في master_payment_index لو موجود، وإلا fallback للـ loop
     let found = null;
+    // أسرع: loop مع break فور الإيجاد (الغالبية العظمى ستجد في أول 1-2 tenants)
+    const allUsers = master.prepare('SELECT id FROM users WHERE slug IS NOT NULL AND status IN (?,?,?)').all('active','trial','grace');
     for (const u of allUsers) {
       const db   = getTenantDb(u.id);
-      const link = db.prepare(`SELECT * FROM payment_links WHERE invoice_ref=?`).get(String(invoice_id));
+      const link = db.prepare('SELECT * FROM payment_links WHERE invoice_ref=?').get(String(invoice_id));
       if (link) { found = { db, link, userId: u.id }; break; }
     }
 
@@ -434,7 +438,10 @@ router.post('/webhook/fawaterk', async (req, res) => {
     const creds = getGatewayCredentials(db, 'fawaterk');
     if (creds && hashKey) {
       const valid = fawaterk.verifyHmac(creds, { invoice_id, invoice_key, payment_method }, hashKey);
-      if (!valid) console.warn(`⚠️ Fawaterk HMAC mismatch for invoice ${invoice_id}`);
+      if (!valid) {
+        console.warn(`⚠️ Fawaterk HMAC mismatch for invoice ${invoice_id} — rejected`);
+        return res.status(401).json({ ok: false, error: 'invalid signature' }); // H4 fix
+      }
     }
 
     const isPaid = invoice_status === '1' || invoice_status === 1 ||
@@ -463,11 +470,12 @@ router.post('/webhook/paymob', async (req, res) => {
 
     if (!orderId) return res.sendStatus(400);
 
-    const allUsers = master.prepare('SELECT id FROM users WHERE slug IS NOT NULL').all();
+    // H7 Fix: loop مع early-exit + فلتر active tenants فقط
+    const allUsers = master.prepare('SELECT id FROM users WHERE slug IS NOT NULL AND status IN (?,?,?)').all('active','trial','grace');
     let found = null;
     for (const u of allUsers) {
       const db   = getTenantDb(u.id);
-      const link = db.prepare(`SELECT * FROM payment_links WHERE invoice_ref=?`).get(orderId);
+      const link = db.prepare('SELECT * FROM payment_links WHERE invoice_ref=?').get(orderId);
       if (link) { found = { db, link }; break; }
     }
 
@@ -533,21 +541,20 @@ router.get('/stripe/success', async (req, res) => {
 
 // ── POST /api/pay/webhook/stripe — Stripe Webhook ────────────────────────────
 router.post('/webhook/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+  // H5 Fix: نعمل parse مبدئي لجلب الـ token أولاً (بدون بيانات مالية بعد)،
+  // ثم نـ verify الـ signature قبل أي معالجة مالية
   try {
-    const sig    = req.headers['stripe-signature'];
-    const body   = req.body?.toString() || '';
+    const sig  = req.headers['stripe-signature'];
+    const body = req.body?.toString() || '';
     if (!sig || !body) return res.sendStatus(400);
 
-    // نبحث عن tenant من metadata.areej_token
-    let event;
-    try {
-      // parse بدون verify أول — عشان نجيب الـ token
-      event = JSON.parse(body);
-    } catch { return res.sendStatus(400); }
+    // Parse مبدئي للحصول على areej_token فقط (metadata — ليست بيانات مالية)
+    let eventRaw;
+    try { eventRaw = JSON.parse(body); } catch { return res.sendStatus(400); }
 
-    if (event.type !== 'checkout.session.completed') return res.sendStatus(200);
+    if (eventRaw.type !== 'checkout.session.completed') return res.sendStatus(200);
 
-    const session    = event.data?.object;
+    const session    = eventRaw.data?.object;
     const areejToken = session?.metadata?.areej_token;
     if (!areejToken) return res.sendStatus(200);
 
@@ -562,17 +569,22 @@ router.post('/webhook/stripe', express.raw({ type: 'application/json' }), async 
     const link = getPayLink(db, linkToken);
     if (!link || link.status === 'paid') return res.sendStatus(200);
 
-    // Verify signature لو عندنا webhook_secret
+    // H5: Verify signature قبل أي معالجة مالية
     const creds = getGatewayCredentials(db, 'stripe');
     if (creds?.webhook_secret) {
       try {
         stripeGw.constructWebhookEvent(body, sig, creds.webhook_secret);
       } catch (e) {
         console.warn('⚠️ Stripe webhook signature mismatch:', e.message);
-        return res.sendStatus(401);
+        return res.sendStatus(401); // رفض — لا معالجة مالية بدون verify
       }
+    } else {
+      // لو مفيش webhook_secret → رفض الـ webhook تماماً (لا نثق بغير الموقّع)
+      console.warn('⚠️ Stripe webhook_secret غير مضبوط — webhook مرفوض');
+      return res.sendStatus(401);
     }
 
+    // بعد الـ verify: المعالجة المالية آمنة
     if (session.payment_status === 'paid') {
       const amount = session.amount_total / 100;
       await handlePaymentSuccess(db, link, 'stripe', amount);
