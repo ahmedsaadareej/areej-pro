@@ -3778,8 +3778,9 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="/dashboard/js/invoices.js?v=e64c2ce1"></script>
 <script src="/dashboard/js/contracts.js?v=bb274c61"></script>
 <script src="/dashboard/js/treasury.js?v=a379cf29"></script>
-<!-- Inbox v3 scripts معطَّلة — v4 يعمل في iframe /dashboard/inbox-v4/ (2026-05-04) -->
-<!-- <script src="/dashboard/js/inbox.js?v=1777817456"></script> -->
+<!-- inbox.js: يحتوي على showPage + init + loadCRM + doLogout + كل core functions (لا يُعطَّل) -->
+<script src="/dashboard/js/inbox.js?v=1777817456"></script>
+<!-- inbox-v3 scripts معطَّلة — v4 مستقل على /inbox (2026-05-04) -->
 <!-- <script src="/dashboard/inbox-v3/inbox-state.js?v=1777820540"></script> -->
 <!-- <script src="/dashboard/inbox-v3/inbox-api.js?v=1777820540"></script> -->
 <!-- <script src="/dashboard/inbox-v3/inbox-conv.js?v=1777820540"></script> -->
@@ -3787,6 +3788,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- <script src="/dashboard/inbox-v3/inbox-reply.js?v=1777817456"></script> -->
 <!-- <script src="/dashboard/inbox-v3/inbox-context.js?v=1777817456"></script> -->
 <!-- <script src="/dashboard/inbox-v3/inbox-init.js?v=1777820854"></script> -->
+<!-- inbox-settings.js معطَّل — الإعدادات انتقلت لـ /settings في v4 (2026-05-05) -->
 <!-- <script src="/dashboard/js/inbox-settings.js?v=1777817456"></script> -->
 <script src="/dashboard/js/team-settings.js?v=4b6f9871"></script>
 <script src="/dashboard/js/ui.js?v=fdf2b683"></script>

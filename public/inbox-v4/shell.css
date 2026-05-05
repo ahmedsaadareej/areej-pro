@@ -208,9 +208,12 @@ html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, sa
 /* === Main Content === */
 .shell-content {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;   /* iv4-root manages its own scroll */
   background: #fff;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* === Loading State === */
@@ -293,4 +296,10 @@ html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, sa
   .shell-breadcrumb { color: #9ca3af; }
   .shell-nav-collapse-toggle { color: #6b7280; }
   #shell-bottombar { background: #1f2937; border-color: #374151; }
+}
+
+/* iv4-root داخل shell-content يملأ المساحة كاملاً */
+.shell-content .iv4-root {
+  height: 100%;
+  min-height: 0;
 }
