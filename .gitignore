@@ -5,3 +5,8 @@ node_modules/
 .env
 *.tar.gz
 *.log
+
+# WA Sessions — بيانات مؤقتة لا تُحفظ في git
+data/wa-sessions/
+data/*.db-shm
+data/*.db-wal
