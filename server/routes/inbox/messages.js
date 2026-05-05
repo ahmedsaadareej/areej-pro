@@ -30,6 +30,19 @@ const fs       = require('fs');
 const https    = require('https');
 const http     = require('http');
 const { v4: uuidv4 } = require('uuid');
+// M6 Fix: db.run wrapper لـ better-sqlite3 compatibility
+// better-sqlite3 لا يدعم db.run callback-style — نستخدم db.prepare().run()
+function dbRun(db, sql, params, cb) {
+  try {
+    db.prepare(sql).run(...(Array.isArray(params) ? params : [params]));
+    if (cb) cb(null);
+  } catch(err) {
+    console.error('[dbRun]', err.message);
+    if (cb) cb(err);
+  }
+}
+
+
 
 // ─── Whisper Config ───────────────────────────────────────────────────────────
 // يستخدم نفس الـ OPENAI_API_KEY الموجود في .env
@@ -113,7 +126,7 @@ async function _notifyMentions(db, tenantId, mentionIds, noteMsg, mentionerUser)
   // سجّل mention في timeline لكل موظف مذكور
   const now = Math.floor(Date.now() / 1000);
   mentionIds.forEach(uid => {
-    db.run(
+    dbRun(db, 
       `INSERT OR IGNORE INTO inbox_timeline_v4
          (conversation_id, event_type, actor_id, actor_name, meta, created_at)
        VALUES (?, 'note_mention', ?, ?, json(?), ?)`,
@@ -187,7 +200,7 @@ async function _saveMessage(db, {
   const now   = Math.floor(Date.now() / 1000);
 
   return new Promise((resolve, reject) => {
-    db.run(
+    dbRun(db, 
       `INSERT INTO inbox_messages_v4
          (id, conversation_id, direction, content_type, content,
           media_url, media_filename, media_size,
@@ -234,7 +247,7 @@ async function _touchConv(db, convId, content, contentType, status) {
     : '';
 
   return new Promise((resolve, reject) => {
-    db.run(
+    dbRun(db, 
       `UPDATE inbox_conversations_v4
        SET last_message      = ?,
            last_message_type = ?,
@@ -484,7 +497,7 @@ router.post('/conversations/:id/messages', async (req, res) => {
 
       if (dispatchErr) {
         // فشل الإرسال — حدّث status إلى failed
-        db.run(
+        dbRun(db, 
           `UPDATE inbox_messages_v4 SET status = 'failed', fail_reason = ? WHERE id = ?`,
           [dispatchErr, savedMsg.id]
         );
@@ -502,7 +515,7 @@ router.post('/conversations/:id/messages', async (req, res) => {
       } else {
         // نجح — حدّث status إلى sent + external_id
         const newStatus = externalId ? 'sent' : 'pending';
-        db.run(
+        dbRun(db, 
           `UPDATE inbox_messages_v4 SET status = ?, external_id = ? WHERE id = ?`,
           [newStatus, externalId, savedMsg.id]
         );
@@ -642,11 +655,11 @@ router.post(
       const { externalId, error: dispatchErr } = await _dispatch(conv, savedMsg, channelConfig, db);
 
       if (dispatchErr) {
-        db.run(`UPDATE inbox_messages_v4 SET status = 'failed', fail_reason = ? WHERE id = ?`, [dispatchErr, savedMsg.id]);
+        try { db.prepare(`UPDATE inbox_messages_v4 SET status = 'failed', fail_reason = ? WHERE id = ?`).run(dispatchErr, savedMsg.id); } catch(_) {}
         savedMsg.status = 'failed';
       } else {
         const newStatus = externalId ? 'sent' : 'pending';
-        db.run(`UPDATE inbox_messages_v4 SET status = ?, external_id = ? WHERE id = ?`, [newStatus, externalId, savedMsg.id]);
+        try { db.prepare(`UPDATE inbox_messages_v4 SET status = ?, external_id = ? WHERE id = ?`).run(newStatus, externalId, savedMsg.id); } catch(_) {}
         savedMsg.status = newStatus;
       }
 
@@ -715,7 +728,7 @@ router.post('/conversations/:id/messages/:msgId/transcript', async (req, res) =>
     // ── حفظ في metadata ──────────────────────────────────────────────────
     meta.transcript = transcript;
     await new Promise((resolve, reject) => {
-      db.run(
+      dbRun(db, 
         `UPDATE inbox_messages_v4 SET metadata = ? WHERE id = ?`,
         [JSON.stringify(meta), msgId],
         (err) => { if (err) return reject(err); resolve(); }
@@ -977,7 +990,7 @@ router.post('/conversations/:id/messages/interactive', async (req, res) => {
 
     // حفظ الـ interactive structure في metadata
     await new Promise((resolve, reject) => {
-      db.run(
+      dbRun(db, 
         `UPDATE inbox_messages_v4 SET metadata = ?, external_id = ? WHERE id = ?`,
         [JSON.stringify({ interactive: waInteractive }), externalId, savedMsg.id],
         (err) => { if (err) return reject(err); resolve(); }
@@ -1164,7 +1177,7 @@ router.post('/conversations/:id/messages/catalog', async (req, res) => {
     };
 
     await new Promise((resolve, reject) => {
-      db.run(
+      dbRun(db, 
         `UPDATE inbox_messages_v4 SET metadata = ?, external_id = ? WHERE id = ?`,
         [JSON.stringify(metaPayload), externalId, savedMsg.id],
         (err) => { if (err) return reject(err); resolve(); }

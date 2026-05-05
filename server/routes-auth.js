@@ -19,7 +19,16 @@ const logoStorage = multer.diskStorage({
     cb(null, 'logo-' + Date.now() + ext);
   }
 });
-const logoUpload = multer({ storage: logoStorage, limits: { fileSize: 2 * 1024 * 1024 } });
+// M5: MIME type validation — يمنع SVG بـ JS وملفات خطرة
+const ALLOWED_LOGO_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const logoUpload = multer({
+  storage: logoStorage,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_LOGO_MIMES.includes(file.mimetype)) return cb(null, true);
+    cb(new Error(`نوع الملف غير مسموح: ${file.mimetype} — المسموح: jpg/png/gif/webp`));
+  },
+});
 
 function makeToken(user) {
   return jwt.sign({ id: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: '30d' });

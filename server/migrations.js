@@ -871,6 +871,25 @@ const TENANT_MIGRATIONS = [
     `CREATE INDEX IF NOT EXISTS idx_inbox_labels_name ON inbox_labels(name)`,
   ]},
 
+  // M4: Missing indexes على الجداول القديمة — audit 2026-05-05
+  { version: 46, sqls: [
+    // inbox_conversations (v3) — platform+sender_id للبحث السريع
+    `CREATE INDEX IF NOT EXISTS idx_inbox_conv_platform_sender ON inbox_conversations(platform, sender_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_inbox_conv_last_msg ON inbox_conversations(last_message_at DESC)`,
+    // crm_contacts — البحث بالاسم
+    `CREATE INDEX IF NOT EXISTS idx_crm_contacts_name ON crm_contacts(name)`,
+    `CREATE INDEX IF NOT EXISTS idx_crm_contacts_status ON crm_contacts(status)`,
+    // sys_invoices — فلتر بالحالة والعميل
+    `CREATE INDEX IF NOT EXISTS idx_sys_invoices_status ON sys_invoices(status)`,
+    `CREATE INDEX IF NOT EXISTS idx_sys_invoices_contact ON sys_invoices(contact_id)`,
+    // sys_orders — فلتر بالحالة والهاتف
+    `CREATE INDEX IF NOT EXISTS idx_sys_orders_status ON sys_orders(status)`,
+    `CREATE INDEX IF NOT EXISTS idx_sys_orders_phone ON sys_orders(client_phone)`,
+    // hr_employees — البحث بالقسم والوظيفة
+    `CREATE INDEX IF NOT EXISTS idx_hr_emp_department ON hr_employees(department)`,
+    `CREATE INDEX IF NOT EXISTS idx_hr_emp_active ON hr_employees(active)`,
+  ]},
+
 ];
 
 // ══════════════════════════════════════════════════════════════

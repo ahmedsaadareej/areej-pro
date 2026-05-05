@@ -19,11 +19,31 @@ app.set('trust proxy', 1);
 app.use(compression({ threshold: 1024 }));
 
 // ── Security Headers (Helmet) ─────────────────────────────────────────────
+// M1: CSP مفعّل بـ report-only أولاً (لا يكسر الـ SPA — فقط يرصد الانتهاكات)
+// المرحلة التالية: نحوّل لـ enforce بعد مراجعة التقارير
 app.use(helmet({
-  contentSecurityPolicy: false,       // SPA inline scripts — تعطيل مؤقت حتى نهاجر الـ frontend
-  crossOriginEmbedderPolicy: false,   // نفس السبب
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      defaultSrc:    ["'self'"],
+      scriptSrc:     ["'self'", "'unsafe-inline'", "'unsafe-eval'",
+                      'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com'],
+      styleSrc:      ["'self'", "'unsafe-inline'",
+                      'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com'],
+      fontSrc:       ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      imgSrc:        ["'self'", 'data:', 'blob:', 'https:'],
+      connectSrc:    ["'self'", 'wss:', 'https:'],
+      mediaSrc:      ["'self'", 'blob:', 'https:'],
+      objectSrc:     ["'none'"],
+      frameAncestors:["'self'"],
+      // report-only: يسجّل الانتهاكات بدون حجب
+      reportTo:      '/api/csp-report',
+    },
+    reportOnly: true,  // ← تحوّل لـ false بعد مراجعة التقارير في production
+  },
+  crossOriginEmbedderPolicy: false,   // SPA iframes + media
   hsts: {
-    maxAge: 31536000,                 // سنة كاملة
+    maxAge: 31536000,
     includeSubDomains: true,
     preload: true
   },

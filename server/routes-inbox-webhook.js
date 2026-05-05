@@ -444,7 +444,7 @@ router.post('/whatsapp/:userId', express.raw({ type: 'application/json' }), asyn
           if (!exists) {
             db.prepare("INSERT INTO inbox_messages (conversation_id, platform, direction, content, media_type, is_read, platform_msg_id, sent_at, media_id) VALUES (?, 'whatsapp', 'in', ?, ?, 0, ?, datetime(?, 'unixepoch'), ?)").run(conv.id, content, mediaType, msgId, ts, mediaId || null);
           }
-          console.log('[WA Webhook POST] saved msg convId=' + (conv && conv.id) + ' from=' + senderId + ' content=' + content);
+          console.log('[WA Webhook POST] saved msg convId=' + (conv && conv.id) + ' from=' + senderId + ' len=' + (content||'').length);
 
           // P4-3 Welcome + Away Engine
           try {

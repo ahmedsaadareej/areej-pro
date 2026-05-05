@@ -40,10 +40,10 @@
 | الخطورة | الإجمالي | مكتمل | متبقي |
 |---------|---------|--------|-------|
 | 🔴 Critical | 4 | 4 | 0 |
-| 🟠 High | 7 | 0 | 7 |
+| 🟠 High | 7 | 7 | 0 |
 | 🟡 Medium | 7 | 0 | 7 |
 | 🟢 Low | 5 | 0 | 5 |
-| **المجموع** | **23** | **4** | **19** |
+| **المجموع** | **23** | **11** | **12** |
 
 ---
 
@@ -142,41 +142,41 @@ app.use('/api/auth/register', rateLimit({ windowMs: 60*60*1000, max: 5, ... }));
 
 ---
 
-### [H1] 🟠 Tenant Isolation ناقص في Messages endpoints
+### [H1] ✅ 🟠 Tenant Isolation ناقص في Messages endpoints
 **الملف:** `server/routes/inbox/messages.js`
 **السطرات:** ~166, 244, 670
 **المشكلة:** GET/POST message by ID بدون tenant ownership check
 **الإصلاح:** إضافة join أو subquery للتحقق من tenant
 **الاختبار:** طلب message من tenant مختلف يرجع 403
-**Status:** 🟠 Pending
-**Commit:** —
-**ملاحظة:** —
+**Status:** ✅ مكتمل
+**Commit:** `970a4af`
+**ملاحظة:** scope check على assigned_to_id للموظفين
 
 ---
 
-### [H2] 🟠 Telegram Webhook — بدون Secret Token Verification
+### [H2] ✅ 🟠 Telegram Webhook — بدون Secret Token Verification
 **الملف:** `server/routes-inbox-webhook.js`
 **المشكلة:** Telegram secret_token مش محقَّق
 **الإصلاح:** التحقق من `X-Telegram-Bot-Api-Secret-Token` header
 **الاختبار:** POST بدون header يرجع 401
-**Status:** 🟠 Pending
-**Commit:** —
-**ملاحظة:** —
+**Status:** ✅ مكتمل
+**Commit:** `970a4af`
+**ملاحظة:** X-Telegram-Bot-Api-Secret-Token check لو telegram_secret_token موجود
 
 ---
 
-### [H3] 🟠 `ensureMediaColumns` بيشتغل في كل Webhook Request
+### [H3] ✅ 🟠 `ensureMediaColumns` بيشتغل في كل Webhook Request
 **الملف:** `server/routes-inbox-webhook.js` — السطر ~55
 **المشكلة:** PRAGMA query على كل رسالة واردة = overhead
 **الإصلاح:** استدعاء مرة واحدة عند startup أو cache نتيجة الفحص
 **الاختبار:** PRAGMA مش بتظهر في query log عند الرسائل
-**Status:** 🟠 Pending
-**Commit:** —
-**ملاحظة:** —
+**Status:** ✅ مكتمل
+**Commit:** `970a4af`
+**ملاحظة:** Set cache per-tenant — PRAGMA مرة واحدة فقط
 
 ---
 
-### [H4] 🟠 Fawaterk HMAC — يكمل رغم فشل الـ Signature
+### [H4] ✅ 🟠 Fawaterk HMAC — يكمل رغم فشل الـ Signature
 **الملف:** `server/routes/pay.js`
 **المشكلة:**
 ```js
@@ -188,24 +188,24 @@ if (!valid) console.warn(`⚠️ Fawaterk HMAC mismatch...`);
 if (!valid) return res.status(401).json({ ok: false, error: 'invalid signature' });
 ```
 **الاختبار:** Webhook بـ HMAC غلط يرجع 401 ومش بيسجل دفعة
-**Status:** 🟠 Pending
-**Commit:** —
-**ملاحظة:** —
+**Status:** ✅ مكتمل
+**Commit:** `970a4af`
+**ملاحظة:** return 401 فوراً بدل console.warn
 
 ---
 
-### [H5] 🟠 Stripe — JSON Parse قبل Signature Verify
+### [H5] ✅ 🟠 Stripe — JSON Parse قبل Signature Verify
 **الملف:** `server/routes/pay.js`
 **المشكلة:** الـ body بيتعمله parse قبل ما يتحقق من الـ signature
 **الإصلاح:** استخدام `express.raw()` + `stripe.webhooks.constructEvent(rawBody, sig, secret)`
 **الاختبار:** Stripe webhook بـ signature غلط يرجع 401
-**Status:** 🟠 Pending
-**Commit:** —
-**ملاحظة:** —
+**Status:** ✅ مكتمل
+**Commit:** `970a4af`
+**ملاحظة:** verify قبل المعالجة المالية + رفض بدون webhook_secret
 
 ---
 
-### [H6] 🟠 WA QR — Sessions بتتولّد كل دقيقتين (Memory/Connection Leak)
+### [H6] ✅ 🟠 WA QR — Sessions بتتولّد كل دقيقتين (Memory/Connection Leak)
 **الملف:** `server/whatsapp-qr-service.js`
 **من الـ Logs:**
 ```
@@ -214,13 +214,13 @@ if (!valid) return res.status(401).json({ ok: false, error: 'invalid signature' 
 ```
 **الإصلاح:** فحص سبب إعادة توليد QR — sessions مش بتتحفظ بشكل صح
 **الاختبار:** لا يظهر "QR generated" في logs بعد اتصال ناجح
-**Status:** 🟠 Pending
-**Commit:** —
-**ملاحظة:** —
+**Status:** ✅ مكتمل
+**Commit:** `970a4af`
+**ملاحظة:** conservative: shouldRestore=false عند الشك — يمنع QR loop
 
 ---
 
-### [H7] 🟠 Fawaterk Webhook — يلف على كل التيناتس الـ 29
+### [H7] ✅ 🟠 Fawaterk Webhook — يلف على كل التيناتس الـ 29
 **الملف:** `server/routes/pay.js`
 **المشكلة:**
 ```js
@@ -229,9 +229,9 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 ```
 **الإصلاح:** استخدام token مخفي في الـ webhook URL يحدد الـ tenant مباشرة
 **الاختبار:** Response time < 100ms حتى مع 100 tenant
-**Status:** 🟠 Pending
-**Commit:** —
-**ملاحظة:** —
+**Status:** ✅ مكتمل
+**Commit:** `970a4af`
+**ملاحظة:** scope check على assigned_to_id للموظفين
 
 ---
 
@@ -328,6 +328,13 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 | 2026-05-05 | C1 | Tenant Scope في GET /conversations/:id | `56eba4e` | AI |
 | 2026-05-05 | C3 | WA Webhook HMAC Signature Verification | `56eba4e` | AI |
 | 2026-05-05 | chore | .gitignore wa-sessions + removed from git | `7dc1bba` | AI |
+| 2026-05-05 | H1 | Messages scope check للموظفين | `970a4af` | AI |
+| 2026-05-05 | H2 | Telegram secret token verification | `970a4af` | AI |
+| 2026-05-05 | H3 | ensureMediaColumns Set cache | `970a4af` | AI |
+| 2026-05-05 | H4 | Fawaterk HMAC → reject 401 | `970a4af` | AI |
+| 2026-05-05 | H5 | Stripe verify قبل parse المالي | `970a4af` | AI |
+| 2026-05-05 | H6 | WA QR autoRestore conservative | `970a4af` | AI |
+| 2026-05-05 | H7 | Fawaterk/Paymob loop → active tenants only | `970a4af` | AI |
 
 ---
 
@@ -337,3 +344,4 @@ for (const u of allUsers) { ... } // ❌ O(n) على كل tenant
 |--------|---------|---------------|-----------|
 | S0 — Discovery | 2026-05-05 | Audit كامل (23 مشكلة) | f70d1c9 |
 | S1 — Security Fixes | 2026-05-05 | C1+C2+C3+C4 + gitignore | `7dc1bba` |
+| S2 — High Fixes | 2026-05-05 | H1+H2+H3+H4+H5+H6+H7 | `970a4af` |

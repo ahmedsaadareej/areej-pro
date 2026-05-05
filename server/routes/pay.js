@@ -48,12 +48,21 @@ function ensurePaymentLinksColumns(db) {
   if (!cols.includes('gateway'))        db.prepare('ALTER TABLE payment_links ADD COLUMN gateway TEXT').run();
   if (!cols.includes('gateway_method')) db.prepare('ALTER TABLE payment_links ADD COLUMN gateway_method TEXT').run();
   if (!cols.includes('updated_at'))     db.prepare('ALTER TABLE payment_links ADD COLUMN updated_at TEXT').run();
+  if (!cols.includes('expires_at'))     db.prepare('ALTER TABLE payment_links ADD COLUMN expires_at TEXT').run(); // M3
 }
 
 // ── Helper: جلب payment_link من tenant DB ────────────────────────────────────
 function getPayLink(db, token) {
   ensurePaymentLinksColumns(db);
-  return db.prepare('SELECT * FROM payment_links WHERE token = ?').get(token);
+  const link = db.prepare('SELECT * FROM payment_links WHERE token = ?').get(token);
+  // M3: تحقق من انتهاء الصلاحية تلقائياً
+  if (link && link.expires_at && link.status === 'pending') {
+    if (new Date(link.expires_at) < new Date()) {
+      db.prepare("UPDATE payment_links SET status='expired' WHERE id=?").run(link.id);
+      link.status = 'expired';
+    }
+  }
+  return link;
 }
 
 // ── Helper: جلب tenant profile ───────────────────────────────────────────────
