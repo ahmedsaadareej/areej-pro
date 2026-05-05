@@ -179,18 +179,7 @@
   });
 
   // ─── Active Conv UI (show/hide chat area) ────────────────────────────────
-  InboxStore.on('activeConvId:change', ({ value }) => {
-    if (value) {
-      $('iv4-empty-state').classList.add('hidden');
-      $('iv4-chat-area').classList.remove('hidden');
-      $('iv4-ctx-toggle').classList.remove('hidden');
-    } else {
-      $('iv4-empty-state').classList.remove('hidden');
-      $('iv4-chat-area').classList.add('hidden');
-      $('iv4-ctx-toggle').classList.add('hidden');
-      $('iv4-context-panel').classList.add('hidden');
-    }
-  });
+  // show/hide chat area يتولاها chat.js عبر _showEmpty() و _onConvOpen()
 
   // ─── Keyboard Shortcuts ──────────────────────────────────────────────────
   document.addEventListener('keydown', e => {
