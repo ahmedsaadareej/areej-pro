@@ -2,13 +2,20 @@
 > آخر تحديث: 2026-05-05
 
 ## الحالة الحالية
-- **آخر commit:** `7f2e8c0`
+- **آخر commit:** `b314818`
 - **السيرفر:** areej-server — Ubuntu 24.04 — port 3002
 - **PM2:** `pm2 reload areej-pro`
 
 ---
 
 ## ✅ المنجز (هذه الجلسة)
+
+### Labels System — مكتمل (2026-05-05)
+- **Settings → Labels:** صفحة إدارة Labels كاملة (CRUD + ألوان) ✅
+- **migration v45:** `inbox_labels` في كل tenant ✅
+- **Sidebar filter:** فلتر بالـ Label في الـ Inbox ✅
+- **Label Picker:** إضافة/إزالة labels من داخل المحادثة ✅
+- **Label Chips:** chips ملونة على كل محادثة في القائمة ✅
 
 ### إصلاح Ground Truth Sync (2026-05-05)
 - **Schema Mismatch** — settings.js: تصحيح `channel_type`→`channel` و `is_active`→`active` ✅
@@ -73,10 +80,10 @@
 11. ~~تنسيق النص في Reply Box (Bold/Italic/Strike/Mono)~~ ✅
 12. ~~New Conversation Modal — Instagram/Meta/WA API + Smart Default~~ ✅
 
-### 🔴 أولوية عالية — Respond.io Style (Labels System)
-15. **[A] Backend:** إضافة `label_id` filter في `GET /conversations`
-16. **[B] Frontend:** Labels Panel في col 1 + Label Chips على المحادثات
-17. **[C] UX:** Label Manager من داخل المحادثة (dropdown + إنشاء label)
+### ✅ Labels System — مكتمل
+15. ~~**[A] Backend:** `label_id` filter في `GET /conversations`~~ ✅
+16. ~~**[B] Frontend:** Labels Panel في col 1 + Label Chips~~ ✅
+17. ~~**[C] UX:** Label Manager + Settings page~~ ✅
 
 ### 🟢 أولوية منخفضة
 13. Auto-refresh cleanup عند الخروج من صفحة الـ Inbox
