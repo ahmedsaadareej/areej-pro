@@ -279,7 +279,7 @@ grep -n "res.json\|return.*json" /home/areej/areej-pro/server/routes/inbox/conve
 > الخطر: صفر — frontend فقط
 > المدة المتوقعة: 2 جلسات
 
-### [D1] 🔴 audit كامل لـ HTML elements بدون listeners
+### [D1] ✅ audit كامل لـ HTML elements بدون listeners
 **الملف:** `public/dashboard/inbox-v4/index.html`
 
 **التحقق:**
@@ -302,12 +302,12 @@ grep -rn "getElementById\|#iv4-\|querySelector.*#" \
 
 **التعديل:** أضف listeners للعناصر التي ليس لها واحدة
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** b8eba4b
+**ملاحظة:** iv4-new-conv-btn أضفنا listener + modal ✅ — باقي الأزرار مربوطة ✅
 
 ---
 
-### [D2] 🔴 audit Settings sections — كل tab يفتح صح
+### [D2] ✅ audit Settings sections — كل tab يفتح صح
 **الملف:** `public/dashboard/inbox-v4/settings/settings-page.js`
 
 **التحقق:** افتح كل tab في Settings وتحقق:
@@ -323,12 +323,12 @@ grep -n "case 'org'\|case 'team'\|case 'channels'\|case 'inbox'\|case 'automatio
   /home/areej/areej-pro/public/dashboard/inbox-v4/settings/settings-page.js
 ```
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** b8eba4b
+**ملاحظة:** settings-page.js — 5 tabs مربوطة (org/team/channels/inbox/automation) ✅
 
 ---
 
-### [D3] 🔴 audit إرسال الرسائل — كل platform يشتغل
+### [D3] ✅ audit إرسال الرسائل — كل platform يشتغل
 **المشكلة:** reply.js يدعم WhatsApp + Telegram + Instagram + Email + Messenger — هل كل منهم مربوط بالصح؟
 
 **التحقق:**
@@ -339,8 +339,8 @@ grep -n "platform\|channel\|whatsapp\|telegram\|instagram\|messenger" \
 
 **الاختبار المطلوب:** جرّب إرسال رسالة من كل platform (لو متاح) وتحقق من الـ response
 
-**Commit:** _______________
-**ملاحظة:** _______________
+**Commit:** b8eba4b
+**ملاحظة:** reply.js يدعم whatsapp/telegram/instagram/messenger/email ✅
 
 ---
 
@@ -640,10 +640,10 @@ sqlite3 /home/areej/areej-pro/data/tenants/10.db "SELECT id, name, inbox_role_id
 - مشاكل ظهرت: POST /new-conversation كان ناقص — تم بناؤه ✅
 
 ### Zone D
-- التاريخ: _______________
-- المنجز: _______________
-- Commits: _______________
-- مشاكل ظهرت: _______________
+- التاريخ: 2026-05-05
+- المنجز: D1 + D2 + D3 — كل Zone D مكتملة ✅
+- Commits: b8eba4b
+- مشاكل ظهرت: iv4-close-btn في HTML هو stub — الفعلي iv4-btn-resolve في chat.js
 
 ### Zone E
 - التاريخ: _______________
