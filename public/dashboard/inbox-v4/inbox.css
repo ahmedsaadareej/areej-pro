@@ -425,16 +425,125 @@
 }
 
 /* Chat Header */
+/* ── Chat Header (wrapper) ── */
 .iv4-chat-header {
   background: var(--iv4-surface);
   border-bottom: 1px solid var(--iv4-border);
-  padding: 10px 14px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* الصف الرئيسي: avatar + info + actions */
+.iv4-header-main {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 10px 14px;
+  min-width: 0;
+}
+
+/* Avatar */
+.iv4-header-avatar {
+  position: relative;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 15px;
+  flex-shrink: 0;
+}
+.iv4-header-platform-icon {
+  position: absolute;
+  bottom: -3px; right: -3px;
+  font-size: 13px;
+  line-height: 1;
+  filter: drop-shadow(0 0 2px #fff);
+}
+
+/* Info block */
+.iv4-header-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.iv4-header-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.iv4-header-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--iv4-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+.iv4-header-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--iv4-text-3);
+}
+.iv4-header-platform { font-size: 11px; color: var(--iv4-text-3); }
+.iv4-header-phone    { font-size: 11px; color: var(--iv4-text-3); }
+
+/* Actions (إغلاق / تحويل) */
+.iv4-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.iv4-header-btn {
+  padding: 5px 12px;
+  border-radius: var(--iv4-radius-sm);
+  border: 1px solid var(--iv4-border);
+  background: var(--iv4-surface-2);
+  color: var(--iv4-text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  white-space: nowrap;
+}
+.iv4-header-btn:hover:not(:disabled) { background: var(--iv4-surface-3, #e2e8f0); }
+.iv4-header-btn:disabled { opacity: .5; cursor: default; }
+.iv4-header-btn--secondary {
+  background: transparent;
+  color: var(--iv4-text-2);
+}
+
+/* Status badge داخل الـ header */
+.iv4-header-status {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-weight: 600;
   flex-shrink: 0;
 }
 
+/* Label Picker — صف منفصل أسفل الـ header */
+.iv4-label-picker-mount {
+  border-top: 1px solid var(--iv4-border);
+  padding: 4px 14px 5px;
+  background: var(--iv4-surface);
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+/* مخفي لو فارغ */
+.iv4-label-picker-mount:empty { display: none; }
+
+/* Legacy classes — تحافظ على التوافق مع أي كود قديم */
 .iv4-chat-header-avatar {
   width: 36px; height: 36px;
   border-radius: 50%;
@@ -442,11 +551,9 @@
   display: flex; align-items: center; justify-content: center;
   color: #fff; font-weight: 700; font-size: 13px;
 }
-
 .iv4-chat-header-info { flex: 1; min-width: 0; }
 .iv4-chat-sender-name { font-size: 14px; font-weight: 700; }
 .iv4-chat-meta       { font-size: 11px; color: var(--iv4-text-3); }
-
 .iv4-chat-header-actions { display: flex; align-items: center; gap: 6px; }
 
 /* Messages */
@@ -1810,12 +1917,13 @@
    ══════════════════════════════════════════════════════════════════════════════ */
 
 /* ── Label Picker Mount (في chat header) ─────────────────────────────────── */
+/* iv4-label-picker-mount مُعرَّف مع الـ header أعلاه — هذا السطر للـ overrides فقط */
 .iv4-label-picker-mount {
-  width: 100%;
+  width: auto;
   border-top: 1px solid var(--iv4-border);
-  padding: 4px 12px 6px;
+  padding: 4px 14px 5px;
   background: var(--iv4-surface);
-  min-height: 32px;
+  min-height: 30px;
   display: flex;
   align-items: center;
 }
