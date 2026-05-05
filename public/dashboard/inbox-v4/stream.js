@@ -350,12 +350,36 @@ const InboxStream = (() => {
   let _pollTimer  = null;
   let _pollSince  = Date.now();
 
+  // L3 Fix: tab leader election — فقط tab واحد يعمل poll في نفس الوقت
+  const _POLL_LEADER_KEY = 'iv4_poll_leader';
+  const _POLL_LEADER_TTL = 5000; // 5 ثواني
+  let _isLeader = false;
+
+  function _claimLeadership() {
+    const now = Date.now();
+    const existing = parseInt(localStorage.getItem(_POLL_LEADER_KEY) || '0');
+    if (now - existing < _POLL_LEADER_TTL) return false; // يوجد leader حالياً
+    localStorage.setItem(_POLL_LEADER_KEY, String(now));
+    _isLeader = true;
+    return true;
+  }
+
+  function _renewLeadership() {
+    if (_isLeader) localStorage.setItem(_POLL_LEADER_KEY, String(Date.now()));
+  }
+
   function _startPoll() {
     if (_pollActive) return;
+    // تحقق من leader election — فقط tab واحد يعمل poll
+    if (!_claimLeadership()) {
+      // ليس leader — نحاول مرة أخرى بعد 5 ثواني
+      setTimeout(_startPoll, _POLL_LEADER_TTL + 500);
+      return;
+    }
     _pollActive = true;
-    InboxStore.set('sseConnected', true); // أظهر للـ UI أن هناك اتصال
+    InboxStore.set('sseConnected', true);
     InboxStore.emit('sse:connected');
-    console.log('[InboxStream] SSE فشل — تحوَّل لـ Long Polling ⇄');
+    console.log('[InboxStream] SSE فشل — تحوَّل لـ Long Polling ⇄ (leader tab)');
     _doPoll();
   }
 
@@ -363,6 +387,13 @@ const InboxStream = (() => {
     _pollActive = false;
     if (_pollTimer) { clearTimeout(_pollTimer); _pollTimer = null; }
   }
+
+  // L2 Fix: cleanup عند إغلاق الـ tab أو الصفحة
+  window.addEventListener('pagehide', () => {
+    _stopPoll();
+    if (_es) { try { _es.close(); } catch(_) {} _es = null; }
+  });
+  window.addEventListener('beforeunload', () => { _stopPoll(); });
 
   async function _doPoll() {
     if (!_pollActive) return;

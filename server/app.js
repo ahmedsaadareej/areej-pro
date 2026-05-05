@@ -204,21 +204,29 @@ setTimeout(() => {
   } catch(e) { console.error('[Startup] WA QR module error:', e.message); }
 }, 10000);
 
-// ── Health Check (internal watchdog only — no sensitive data exposed) ────
+// ── Health Check — L4: محمي بـ secret header أو local-only ─────────────
+// للـ public: رد بسيط (ok/not ok) بدون معلومات حساسة
+// للـ internal watchdog: يبعت X-Health-Token للحصول على تفاصيل
+const HEALTH_TOKEN = process.env.HEALTH_TOKEN || '';
 app.get('/health', (req, res) => {
   const master = require('./db-master');
+  const isInternal = req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1';
+  const hasToken   = HEALTH_TOKEN && req.headers['x-health-token'] === HEALTH_TOKEN;
   try {
-    master.prepare('SELECT 1').get(); // DB connectivity check
-    const uptime = process.uptime();
-    const mem = process.memoryUsage();
-    res.json({
-      ok: true,
-      status: 'healthy',
-      uptime_human: formatUptime(uptime),
-      memory_mb: Math.round(mem.rss / 1024 / 1024),
-      timestamp: new Date().toISOString()
-      // ⚠️ لا نكشف عدد المستخدمين للعالم
-    });
+    master.prepare('SELECT 1').get();
+    if (isInternal || hasToken) {
+      // تفاصيل للـ internal watchdog فقط
+      const uptime = process.uptime();
+      const mem    = process.memoryUsage();
+      return res.json({
+        ok: true, status: 'healthy',
+        uptime_human: formatUptime(uptime),
+        memory_mb: Math.round(mem.rss / 1024 / 1024),
+        timestamp: new Date().toISOString(),
+      });
+    }
+    // عام: ok فقط
+    res.json({ ok: true, status: 'healthy' });
   } catch(e) {
     res.status(500).json({ ok: false, status: 'unhealthy' });
   }
