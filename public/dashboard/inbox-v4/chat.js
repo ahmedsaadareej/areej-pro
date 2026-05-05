@@ -1192,16 +1192,19 @@ ${transcriptHtml}`.trim();
   // ─── UI Helpers ───────────────────────────────────────────────────────────
 
   function _showEmpty(show) {
-    const empty   = $emptyState();
-    const msgs    = $messages();
-    const header  = $header();
-    // iv4-chat-area يظهر عند فتح أي محادثة أو عرض empty state
+    const empty    = $emptyState();
+    const msgs     = $messages();
+    const header   = $header();
+    const replyBox = document.getElementById('iv4-reply-box');
     const chatArea = document.getElementById('iv4-chat-area');
+
+    // iv4-chat-area يظهر دائماً
     if (chatArea) chatArea.classList.remove('hidden');
 
-    if (empty)  empty.classList.toggle('hidden', !show);
-    if (msgs)   msgs.classList.toggle('hidden', show);
-    if (header) header.classList.toggle('hidden', show);
+    if (empty)    empty.classList.toggle('hidden', !show);
+    if (msgs)     msgs.classList.toggle('hidden', show);
+    if (header)   header.classList.toggle('hidden', show);
+    if (replyBox) replyBox.classList.toggle('hidden', show); // ‏✅ مخفي في الـ empty state
   }
 
   function _clearMessages() {
