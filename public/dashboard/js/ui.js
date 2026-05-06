@@ -932,16 +932,71 @@ function toggleSidebarCollapse() {
   const isRtl = document.documentElement.dir !== 'ltr';
   const isCollapsed = sb.classList.toggle('collapsed');
   if (isCollapsed) {
-    if (mc) mc.classList.add('full');
+    if (mc) mc.classList.add('collapsed');
+    btn.classList.add('collapsed');
     btn.textContent = isRtl ? '\u25b6' : '\u25c0';
-    btn.style.right = isRtl ? '0' : 'auto';
-    btn.style.left = isRtl ? 'auto' : '0';
   } else {
-    if (mc) mc.classList.remove('full');
+    if (mc) mc.classList.remove('collapsed');
+    btn.classList.remove('collapsed');
     btn.textContent = isRtl ? '\u25c0' : '\u25b6';
-    btn.style.right = isRtl ? '190px' : 'auto';
-    btn.style.left = isRtl ? 'auto' : '190px';
   }
+  // Remember preference
+  localStorage.setItem('sidebarCollapsed', isCollapsed ? '1' : '');
+}
+
+// Restore sidebar state on load
+function initSidebarState() {
+  const saved = localStorage.getItem('sidebarCollapsed');
+  if (saved === '1') {
+    const sb = document.getElementById('main-sidebar');
+    const mc = document.getElementById('main-content');
+    const btn = document.getElementById('sidebar-toggle-btn');
+    const isRtl = document.documentElement.dir !== 'ltr';
+    if (sb) {
+      sb.classList.add('collapsed');
+      if (mc) mc.classList.add('collapsed');
+      if (btn) {
+        btn.classList.add('collapsed');
+        btn.textContent = isRtl ? '\u25b6' : '\u25c0';
+      }
+    }
+  }
+}
+
+// Add tooltips to sidebar items for collapsed mode
+function initSidebarTooltips() {
+  const items = document.querySelectorAll('.sidebar-item');
+  items.forEach(item => {
+    // Extract text (skip icon and badge)
+    let text = '';
+    item.childNodes.forEach(node => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        text += node.textContent.trim();
+      }
+    });
+    if (!text) {
+      // Fallback: get all text and remove badge text
+      text = item.textContent.replace(/\d+/, '').trim();
+    }
+    // Create tooltip span if not exists
+    if (text && !item.querySelector('.sb-tooltip')) {
+      const tooltip = document.createElement('span');
+      tooltip.className = 'sb-tooltip';
+      tooltip.textContent = text;
+      item.appendChild(tooltip);
+    }
+  });
+}
+
+// Initialize sidebar on DOM ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    initSidebarState();
+    initSidebarTooltips();
+  });
+} else {
+  initSidebarState();
+  initSidebarTooltips();
 }
 
 function sbShowPage(name, btn, _skipHistory) {

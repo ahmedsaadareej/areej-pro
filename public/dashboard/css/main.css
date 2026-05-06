@@ -25,11 +25,33 @@ body{font-family:'Cairo',sans-serif;background:#f4f6f9;color:#1a1a1a}
 .app-layout{display:flex;min-height:100vh;padding-top:52px}
 .sidebar{width:190px;background:var(--brand,#1B5E30);color:#fff;display:flex;flex-direction:column;position:fixed;top:52px;right:0;height:calc(100vh - 52px);z-index:500;transition:width .25s,transform .25s;overflow:hidden;border-left:1px solid rgba(255,255,255,.08)}
 [dir=ltr] .sidebar{right:auto;left:0;border-left:none;border-right:1px solid rgba(255,255,255,.08)}
-.sidebar.collapsed{width:0;overflow:hidden}
-.sidebar-toggle{position:fixed;top:64px;right:190px;z-index:510;background:var(--brand,#1B5E30);border:1px solid rgba(255,255,255,.2);border-right:none;color:rgba(255,255,255,.8);width:18px;height:36px;border-radius:6px 0 0 6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;transition:right .25s;box-shadow:-3px 0 10px rgba(0,0,0,.15)}
+.sidebar.collapsed{width:56px;overflow:visible}
+.sidebar.collapsed .sidebar-logo{justify-content:center;padding:14px 8px}
+.sidebar.collapsed .sidebar-logo .logo-text,
+.sidebar.collapsed .sidebar-logo .logo-sub,
+.sidebar.collapsed #sb-logo-default + div{display:none}
+.sidebar.collapsed .sidebar-section{display:none}
+.sidebar.collapsed .sidebar-item{justify-content:center;padding:10px 8px;margin:2px 6px;position:relative;font-size:0;overflow:hidden}
+.sidebar.collapsed .sidebar-item .icon,
+.sidebar.collapsed .sidebar-item > svg,
+.sidebar.collapsed .sidebar-item > img{width:20px;height:20px;margin:0;flex-shrink:0}
+.sidebar.collapsed .sidebar-item > *:not(.icon):not(svg):not(img):not(.badge):not(.sb-tooltip){display:none}
+.sidebar.collapsed .sidebar-item .badge{position:absolute;top:4px;left:4px;right:auto}
+[dir=ltr] .sidebar.collapsed .sidebar-item .badge{left:auto;right:4px}
+.sidebar.collapsed .sidebar-nav{padding:4px 0}
+.sidebar.collapsed [style*="padding:8px 6px"]{padding:8px 4px!important}
+.sidebar.collapsed [style*="padding:8px 6px"] > div{justify-content:center}
+.sidebar.collapsed [style*="padding:8px 6px"] > div > div:last-child{display:none}
+/* Sidebar tooltip */
+.sb-tooltip{position:absolute;right:100%;top:50%;transform:translateY(-50%);background:#1a1a1a;color:#fff;font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s,visibility .15s;z-index:1000;margin-right:8px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+[dir=ltr] .sb-tooltip{right:auto;left:100%;margin-right:0;margin-left:8px}
+.sb-tooltip::after{content:'';position:absolute;top:50%;right:-4px;transform:translateY(-50%);border:4px solid transparent;border-right-color:#1a1a1a}
+[dir=ltr] .sb-tooltip::after{right:auto;left:-4px;border-right-color:transparent;border-left-color:#1a1a1a}
+.sidebar.collapsed .sidebar-item:hover .sb-tooltip{opacity:1;visibility:visible}
+.sidebar-toggle{position:fixed;top:64px;right:190px;z-index:510;background:var(--brand,#1B5E30);border:1px solid rgba(255,255,255,.2);border-right:none;color:rgba(255,255,255,.8);width:18px;height:36px;border-radius:6px 0 0 6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;transition:right .25s,left .25s;box-shadow:-3px 0 10px rgba(0,0,0,.15)}
 [dir=ltr] .sidebar-toggle{right:auto;left:190px;border-radius:0 6px 6px 0;border-right:1px solid rgba(255,255,255,.2);border-left:none;box-shadow:3px 0 10px rgba(0,0,0,.15)}
-.sidebar.collapsed ~ .sidebar-toggle,.sidebar-toggle.collapsed{right:0}
-[dir=ltr] .sidebar.collapsed ~ .sidebar-toggle,[dir=ltr] .sidebar-toggle.collapsed{left:0;right:auto}
+.sidebar.collapsed ~ .sidebar-toggle,.sidebar-toggle.collapsed{right:56px}
+[dir=ltr] .sidebar.collapsed ~ .sidebar-toggle,[dir=ltr] .sidebar-toggle.collapsed{left:56px;right:auto}
 .sidebar-logo{padding:14px 12px 10px;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:8px;flex-shrink:0}
 .sidebar-logo .logo-text{font-size:13.5px;font-weight:900;color:#fff;white-space:nowrap;letter-spacing:-.2px}
 .sidebar-logo .logo-sub{font-size:9.5px;color:rgba(255,255,255,.5);margin-top:1px}
@@ -52,6 +74,8 @@ body{font-family:'Cairo',sans-serif;background:#f4f6f9;color:#1a1a1a}
 .main-content > .page.active{min-height:100%}
 [dir=ltr] .main-content{margin-right:0;margin-left:190px}
 .main-content.full{margin-right:0!important;margin-left:0!important}
+.main-content.collapsed{margin-right:56px}
+[dir=ltr] .main-content.collapsed{margin-right:0;margin-left:56px}
 .page{padding:16px}
 #page-inbox{padding:0!important}
 .hamburger{display:none;position:fixed;top:14px;left:14px;z-index:700;background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:7px;padding:6px 9px;cursor:pointer;font-size:15px}
