@@ -101,6 +101,15 @@ const InboxChat = (() => {
           InboxConvList.openPriorityMenu(btn, conv.id, conv.priority || 'normal');
         }
       }
+      // S3-3: Retry button handler
+      const retryBtn = e.target.closest('.iv4-msg-retry-btn');
+      if (retryBtn) {
+        const msgId = retryBtn.dataset.msgId;
+        const convId = InboxStore.state.activeConvId;
+        if (msgId && convId) {
+          _retryMessage(convId, msgId);
+        }
+      }
     });
 
     // عرض الـ empty state في البداية
@@ -319,6 +328,10 @@ const InboxChat = (() => {
     const time    = _formatTime(msg.sent_at || msg.created_at);
     const status  = isOut ? _renderStatus(msg.status) : '';
     const sender  = isIn  ? `<div class="iv4-msg-sender">${_escHtml(msg.sender_name || msg.contact_name || '')}</div>` : '';
+    // S3-3: Retry button للرسايل الفاشلة
+    const retryBtn = (isOut && msg.status === 'failed')
+      ? `<button class="iv4-msg-retry-btn" data-msg-id="${msg.id}" title="إعادة الإرسال">🔄</button>`
+      : '';
     const content = _renderContent(msg);
 
     // Quoted message
@@ -337,6 +350,7 @@ const InboxChat = (() => {
     return `
 <div class="${msgClass}" data-msg-id="${msg.id}" data-direction="${dirClass}">
   ${replyBtn}
+  ${retryBtn}
   <div class="iv4-msg-bubble">
     ${noteTag}
     ${sender}
@@ -1464,6 +1478,22 @@ ${transcriptHtml}`.trim();
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  // ─── S3-3: Retry failed message ─────────────────────────────────────────
+  async function _retryMessage(convId, msgId) {
+    try {
+      const res = await fetch(`/api/inbox/conversations/${convId}/messages/${msgId}/retry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error('Retry failed');
+      // الـ SSE هيحدث الحالة تلقائياً
+    } catch (err) {
+      console.error('[InboxChat] retry error:', err);
+      alert('حدث خطأ أثناء إعادة الإرسال');
+    }
   }
 
   // ─── Public API ───────────────────────────────────────────────────────────

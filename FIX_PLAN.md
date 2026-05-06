@@ -66,9 +66,9 @@
 
 | # | المهمة | الملفات | الحالة | ملاحظات |
 |---|--------|---------|--------|---------|
-| S2-1 | تفعيل Labels Section في الـ Sidebar | `public/dashboard/inbox-v4/conv-list.js` أو `labels.js` | ⏳ | |
-| S2-2 | ربط Snooze modal بـ Header button ⏰ | `public/dashboard/inbox-v4/chat.js` | ⏳ | |
-| S2-3 | ربط Priority modal بـ Header button 🔺 | `public/dashboard/inbox-v4/chat.js` | ⏳ | |
+| S2-1 | تفعيل Labels Section في الـ Sidebar | `public/inbox-v4/pages/page-inbox.js` | ✅ | |
+| S2-2 | ربط Snooze modal بـ Header button ⏰ | `public/inbox-v4/pages/page-inbox.js` | ✅ | |
+| S2-3 | ربط Priority modal بـ Header button 🔺 | `public/inbox-v4/pages/page-inbox.js` | ✅ | |
 | S2-4 | إصلاح Active state للـ Settings tabs | `public/inbox-v4/pages/page-settings.js` أو CSS | ⏳ | |
 | S2-5 | إضافة صفوف الأيام في جدول ساعات العمل | `public/dashboard/inbox-v4/settings/org.js` | ⏳ | |
 | S2-6 | تفعيل Agent Status Widget | `public/dashboard/inbox-v4/team.js` أو `app.js` | ⏳ | |

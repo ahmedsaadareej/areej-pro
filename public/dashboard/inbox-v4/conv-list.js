@@ -1069,10 +1069,12 @@ const InboxConvList = (() => {
       const diffHr  = Math.floor(diffMs / 3600000);
       const diffDay = Math.floor(diffMs / 86400000);
 
+      // S3-2: تحسين الوقت النسبي (أوضح)
       if (diffMin < 1)  return 'الآن';
-      if (diffMin < 60) return `${diffMin}د`;
-      if (diffHr  < 24) return `${diffHr}س`;
-      if (diffDay < 7)  return `${diffDay}ي`;
+      if (diffMin < 60) return `منذ ${diffMin} د`;
+      if (diffHr  < 24) return `منذ ${diffHr} س`;
+      if (diffDay === 1) return 'أمس';
+      if (diffDay < 7)  return `منذ ${diffDay} أيام`;
 
       // نفس السنة: اعرض يوم/شهر
       if (d.getFullYear() === now.getFullYear()) {

@@ -7023,3 +7023,29 @@
 .iv4-chat-col:has(#iv4-chat-area:not(.hidden)) #iv4-empty-state {
   display: none !important;
 }
+
+/* S3-3: Retry button for failed messages */
+.iv4-msg-retry-btn {
+  position: absolute;
+  top: 8px;
+  left: -72px;
+  background: #fef2f2;
+  border: 1px solid #ef4444;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  box-shadow: 0 1px 4px rgba(0,0,0,.15);
+  line-height: 1;
+  transition: background .15s, transform .15s;
+}
+.iv4-msg-retry-btn:hover {
+  background: #fee2e2;
+  transform: rotate(180deg);
+}
