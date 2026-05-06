@@ -84,13 +84,13 @@
 
 | # | المهمة | الملفات | الحالة | ملاحظات |
 |---|--------|---------|--------|---------|
-| S3-1 | تحسين Platform badge في Conv List | `public/dashboard/inbox-v4/conv-list.js` + CSS | ⏳ | |
-| S3-2 | تحسين الوقت النسبي (منذ يوم بدل 1ي) | `public/dashboard/inbox-v4/conv-list.js` | ⏳ | |
-| S3-3 | إضافة Retry button للرسائل pending | `public/dashboard/inbox-v4/chat.js` + CSS | ⏳ | |
-| S3-4 | تنظيف التكرارات في الـ Sidebar | `public/inbox-v4/pages/page-inbox.js` | ⏳ | |
-| S3-5 | تحسين Active state للـ Platform filter | CSS | ⏳ | |
-| S3-6 | Test: كل التحسينات | Browser | ⏳ | |
-| S3-7 | Commit + Push | Git | ⏳ | |
+| S3-1 | تحسين Platform badge في Conv List | `public/dashboard/inbox-v4/inbox.css` | ✅ | إضافة .iv4-conv-avatar + .iv4-conv-platform |
+| S3-2 | تحسين الوقت النسبي (منذ يوم بدل 1ي) | `public/dashboard/inbox-v4/conv-list.js` | ✅ | موجود مسبقاً |
+| S3-3 | إضافة Retry button للرسائل pending | `public/dashboard/inbox-v4/chat.js` | ✅ | pending > 2 min → retry |
+| S3-4 | تنظيف التكرارات في الـ Sidebar | `public/inbox-v4/pages/page-inbox.js` | ✅ | لا تكرارات |
+| S3-5 | تحسين Active state للـ Platform filter | `page-inbox.js` | ✅ | event binding + active toggle |
+| S3-6 | Test: كل التحسينات | Browser | ✅ | |
+| S3-7 | Commit + Push | Git | ✅ | commit 06c408a |
 
 **الـ commit message:** `style(inbox-v4): S3 — Visual improvements (Platform badges, Time, Retry button)`
 
