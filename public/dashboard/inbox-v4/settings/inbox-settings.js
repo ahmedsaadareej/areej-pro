@@ -79,7 +79,7 @@ const SettingsInbox = (() => {
   async function _loadCanned(el) {
     try {
       const res = await InboxAPI.settings.getCanned();
-      _renderCanned(el, res.canned || []);
+      _renderCanned(el, res.data?.canned || []);
     } catch (err) { el.innerHTML = `<div class="iv4-set-error">خطأ: ${err.message}</div>`; }
   }
 
@@ -172,7 +172,7 @@ const SettingsInbox = (() => {
   async function _loadSLA(el) {
     try {
       const res = await InboxAPI.settings.getSLA();
-      _renderSLA(el, res.policies || []);
+      _renderSLA(el, res.data?.policies || []);
     } catch (err) { el.innerHTML = `<div class="iv4-set-error">خطأ: ${err.message}</div>`; }
   }
 
@@ -277,7 +277,7 @@ const SettingsInbox = (() => {
         InboxAPI.settings.getAttrs('conversation'),
         InboxAPI.settings.getAttrs('contact'),
       ]);
-      _renderAttrs(el, convRes.attrs || [], contactRes.attrs || []);
+      _renderAttrs(el, convRes.data?.attrs || [], contactRes.data?.attrs || []);
     } catch (err) { el.innerHTML = `<div class="iv4-set-error">خطأ: ${err.message}</div>`; }
   }
 
@@ -379,7 +379,7 @@ const SettingsInbox = (() => {
   async function _loadCSAT(el) {
     try {
       const res = await InboxAPI.settings.getCSAT();
-      _renderCSAT(el, res.csat || {});
+      _renderCSAT(el, res.data?.csat || {});
     } catch (err) { el.innerHTML = `<div class="iv4-set-error">خطأ: ${err.message}</div>`; }
   }
 
@@ -446,7 +446,7 @@ const SettingsInbox = (() => {
   async function _loadAppearance(el) {
     try {
       const res = await InboxAPI.settings.getAppearance();
-      _renderAppearance(el, res.appearance || {});
+      _renderAppearance(el, res.data?.appearance || {});
     } catch (err) { el.innerHTML = `<div class="iv4-set-error">خطأ: ${err.message}</div>`; }
   }
 

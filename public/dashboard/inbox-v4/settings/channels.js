@@ -30,9 +30,9 @@ const SettingsChannels = (() => {
     _container.innerHTML = '<div class="iv4-set-loading">جارٍ التحميل…</div>';
     try {
       const res = await InboxAPI.settings.getChannels();
-      // نبني map بالبيانات الموجودة
+      // InboxAPI يرجع { data, error } — نستخرج من .data
       const map = {};
-      (res.channels || []).forEach(c => { map[c.channel_type] = c; });
+      (res.data?.channels || []).forEach(c => { map[c.channel_type] = c; });
       _channels = Object.keys(CHANNEL_META).map(k => ({
         channel_type: k,
         is_active: map[k]?.is_active || 0,

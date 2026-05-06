@@ -23,7 +23,11 @@ const SettingsOrg = (() => {
         InboxAPI.settings.getOrg(),
         InboxAPI.settings.getHours(),
       ]);
-      _render(orgRes.org || {}, hoursRes.config || {}, hoursRes.days || []);
+      // InboxAPI يرجع { data, error } — نستخرج من .data
+      const org   = orgRes.data?.org   || {};
+      const hours = hoursRes.data?.config || {};
+      const days  = hoursRes.data?.days   || [];
+      _render(org, hours, days);
     } catch (err) {
       _container.innerHTML = `<div class="iv4-set-error">خطأ في التحميل: ${err.message}</div>`;
     }
