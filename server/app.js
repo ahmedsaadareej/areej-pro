@@ -244,8 +244,13 @@ app.get('/track/:waybill',    (req, res) => res.sendFile(path.join(__dirname, '.
 app.get('/order-form/:token', (req, res) => res.sendFile(path.join(__dirname, '../public/order-form/index.html')));
 app.get('/landing*', (req, res) => res.sendFile(path.join(__dirname, '../public/landing/index.html')));
 // P12-A: Inbox v4 رسمياً — v3 متاح على /inbox-legacy للطوارئ فقط (2026-05-05)
-// /inbox* → v4 (الرسمي)
-app.get('/inbox*',    (req, res) => res.sendFile(path.join(__dirname, '../public/inbox-v4/index.html')));
+// /inbox-v4/* static files يتخدموا من express.static (لا fallback هنا)
+// /inbox* → v4 SPA (الرسمي) — بس لو مش ملف static
+app.get('/inbox*', (req, res, next) => {
+  // لو الـ path فيه extension (ملف static) → اسمح للـ static middleware يخدمه
+  if (/\.[a-z0-9]+$/i.test(req.path)) return next();
+  res.sendFile(path.join(__dirname, '../public/inbox-v4/index.html'));
+});
 // /inbox-legacy → dashboard v3 embed (fallback طوارئ)
 app.get('/inbox-legacy*', (req, res) => res.sendFile(path.join(__dirname, '../public/dashboard/index.html')));
 app.get(['/contacts*', '/reports*', '/settings*'], (req, res) => res.sendFile(path.join(__dirname, '../public/inbox-v4/index.html')));

@@ -1,7 +1,8 @@
 /* ============================================================
    Inbox v4 — App Shell CSS
    Prefix حصري: shell-* (D-030 — لا تعارض مع iv4-*)
-   آخر تحديث: 2026-05-04
+   S4-1: icon-only sidebar (56px) + tooltips
+   آخر تحديث: 2026-05-06
    ============================================================ */
 
 /* === Reset / Base === */
@@ -72,16 +73,16 @@ html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, sa
   overflow: hidden;
 }
 
-/* === Sidebar === */
+/* === Sidebar (دايماً icon-only 56px — S4-1) === */
 .shell-sidebar {
-  width: 220px;
+  width: 56px;
   background: #fff;
   border-inline-end: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overflow-x: hidden;
   flex-shrink: 0;
-  transition: width 0.2s ease;
 }
 
 /* === Nav Items === */
@@ -96,12 +97,12 @@ html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, sa
 .shell-nav-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 14px;
+  justify-content: center;
+  padding: 10px;
   text-decoration: none;
   color: #374151;
   border-radius: 7px;
-  margin: 2px 8px;
+  margin: 2px 4px;
   font-size: 13.5px;
   transition: background 0.15s, color 0.15s;
   position: relative;
@@ -112,86 +113,135 @@ html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, sa
   color: #2563eb;
   font-weight: 600;
 }
-.shell-nav-icon { font-size: 15px; flex-shrink: 0; }
-.shell-nav-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shell-nav-icon { font-size: 18px; flex-shrink: 0; }
 
-/* Unread badge */
+/* الـ label مخفي دايماً — tooltip يظهره */
+.shell-nav-label { display: none; }
+
+/* Tooltip on hover (S4-1b) */
+.shell-nav-item::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1f2937;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s, visibility 0.15s;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+/* Tooltip arrow */
+.shell-nav-item::before {
+  content: '';
+  position: absolute;
+  right: calc(100% + 4px);
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-right: none;
+  border-left-color: #1f2937;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s, visibility 0.15s;
+  z-index: 1000;
+}
+.shell-nav-item:hover::after,
+.shell-nav-item:hover::before {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Unread badge (فوق الأيقونة في icon-only mode) */
 .shell-badge {
+  position: absolute;
+  top: 2px;
+  left: 2px;
   background: #ef4444;
   color: #fff;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  min-width: 18px;
-  height: 18px;
-  border-radius: 9px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 4px;
+  padding: 0 3px;
 }
 
-/* Sub-items (تحت أدوات الـ Inbox) */
+/* Sub-items (في icon-only mode — نفس الستايل) */
 .shell-nav-sub {
-  padding-right: 28px;
   font-size: 13px;
   color: #6b7280;
 }
 .shell-nav-sub.active { color: #2563eb; }
 
-/* Collapse toggle */
+/* Collapse toggle — مخفي في icon-only mode */
 .shell-nav-collapse-toggle {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  color: #9ca3af;
-  padding: 8px 16px 4px;
-  text-align: right;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
+  display: none;
 }
-.shell-nav-collapse-toggle:hover { color: #6b7280; }
-.shell-toggle-arrow { transition: transform 0.2s; }
-.shell-nav-tools.collapsed .shell-toggle-arrow { transform: rotate(-90deg); }
-.shell-nav-tools.collapsed .shell-nav-tools-items { display: none; }
 
-/* === Agent Status (أسفل الـ sidebar) === */
+/* === Agent Status (أسفل الـ sidebar — icon-only: dots فقط) === */
 .shell-agent-status {
   margin-top: auto;
-  padding: 12px 14px;
+  padding: 8px;
   border-top: 1px solid #f3f4f6;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  position: relative;
 }
 .shell-status-dot {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   flex-shrink: 0;
   transition: background 0.2s;
+  cursor: pointer;
 }
 .shell-status-dot.online  { background: #22c55e; }
 .shell-status-dot.busy    { background: #ef4444; }
 .shell-status-dot.away    { background: #f59e0b; }
 .shell-status-dot.offline { background: #9ca3af; }
 
+/* الـ select مخفي — الـ dot يتحكم */
 .shell-status-select {
-  flex: 1;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 12px;
-  color: #374151;
-  background: #f9fafb;
-  cursor: pointer;
-  outline: none;
+  display: none;
 }
-.shell-status-select:focus { border-color: #93c5fd; }
+
+/* Tooltip للـ status dot */
+.shell-agent-status::after {
+  content: attr(data-status-label);
+  position: absolute;
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1f2937;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s, visibility 0.15s;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.shell-agent-status:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
 
 /* SSE Connection dot */
 .shell-sse-dot {
@@ -239,18 +289,9 @@ html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, sa
 
 /* === Responsive === */
 
-/* Tablet (769px–1024px): sidebar ضيقة (أيقونات فقط) */
+/* Tablet (769px–1024px): الـ sidebar هو نفسه 56px — لا تغيير */
 @media (max-width: 1024px) and (min-width: 769px) {
-  .shell-sidebar { width: 56px; }
-  .shell-nav-label,
-  .shell-badge,
-  .shell-nav-collapse-toggle,
-  .shell-nav-tools-items,
-  .shell-status-select,
-  .shell-user-name { display: none; }
-  .shell-nav-item { justify-content: center; padding: 10px; margin: 2px 4px; }
-  .shell-nav-icon { font-size: 18px; }
-  .shell-agent-status { flex-direction: column; padding: 8px 4px; }
+  /* لا تغيير — الـ sidebar دايماً 56px */
 }
 
 /* Mobile (<768px): bottom tab bar */

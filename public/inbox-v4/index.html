@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Inbox v4 — App Shell | آخر تحديث: 2026-05-04 -->
+<!-- Inbox v4 — App Shell | S4-1: icon-only sidebar | آخر تحديث: 2026-05-06 -->
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
@@ -7,7 +7,7 @@
   <title>Inbox — أريج</title>
   <link rel="stylesheet" href="/dashboard/inbox-v4/inbox.css?v=9">
   <link rel="stylesheet" href="/dashboard/inbox-v4/design-system.css?v=18">
-  <link rel="stylesheet" href="/inbox-v4/shell.css?v=5">
+  <link rel="stylesheet" href="/inbox-v4/shell.css?v=6">
 </head>
 <body>
   <div id="shell-root">
@@ -29,42 +29,42 @@
       <!-- Sidebar -->
       <nav id="shell-sidebar" class="shell-sidebar">
 
-        <!-- التنقل الرئيسي -->
+        <!-- التنقل الرئيسي (S4-1: icon-only + tooltips) -->
         <div class="shell-nav-main">
-          <a href="/inbox" class="shell-nav-item" data-page="inbox">
+          <a href="/inbox" class="shell-nav-item" data-page="inbox" data-tooltip="الـ Inbox">
             <span class="shell-nav-icon">📥</span>
             <span class="shell-nav-label">الـ Inbox</span>
             <span class="shell-badge" id="shellUnreadBadge" style="display:none"></span>
           </a>
-          <a href="/contacts" class="shell-nav-item" data-page="contacts">
+          <a href="/contacts" class="shell-nav-item" data-page="contacts" data-tooltip="جهات الاتصال">
             <span class="shell-nav-icon">👥</span>
             <span class="shell-nav-label">جهات الاتصال</span>
           </a>
-          <a href="/reports" class="shell-nav-item" data-page="reports">
+          <a href="/reports" class="shell-nav-item" data-page="reports" data-tooltip="التقارير">
             <span class="shell-nav-icon">📊</span>
             <span class="shell-nav-label">التقارير</span>
           </a>
-          <a href="/settings" class="shell-nav-item" data-page="settings">
+          <a href="/settings" class="shell-nav-item" data-page="settings" data-tooltip="الإعدادات">
             <span class="shell-nav-icon">⚙️</span>
             <span class="shell-nav-label">الإعدادات</span>
           </a>
         </div>
 
-        <!-- أدوات الـ Inbox -->
+        <!-- أدوات الـ Inbox (S4-1: icon-only + tooltips) -->
         <div class="shell-nav-tools">
           <button class="shell-nav-collapse-toggle" id="shellToolsToggle">
             أدوات الـ Inbox <span class="shell-toggle-arrow">▾</span>
           </button>
           <div class="shell-nav-tools-items" id="shellToolsItems">
-            <a href="/inbox/broadcast" class="shell-nav-item shell-nav-sub" data-page="broadcast">
+            <a href="/inbox/broadcast" class="shell-nav-item shell-nav-sub" data-page="broadcast" data-tooltip="البث الجماعي">
               <span class="shell-nav-icon">📢</span>
               <span class="shell-nav-label">البث الجماعي</span>
             </a>
-            <a href="/inbox/scheduled" class="shell-nav-item shell-nav-sub" data-page="scheduled">
+            <a href="/inbox/scheduled" class="shell-nav-item shell-nav-sub" data-page="scheduled" data-tooltip="المجدولة">
               <span class="shell-nav-icon">🕐</span>
               <span class="shell-nav-label">المجدولة</span>
             </a>
-            <a href="/inbox/chatbot" class="shell-nav-item shell-nav-sub" data-page="chatbot">
+            <a href="/inbox/chatbot" class="shell-nav-item shell-nav-sub" data-page="chatbot" data-tooltip="Chatbot">
               <span class="shell-nav-icon">🤖</span>
               <span class="shell-nav-label">Chatbot</span>
             </a>
@@ -142,6 +142,6 @@
   <script src="/inbox-v4/pages/page-contacts.js?v=3"></script>
   <script src="/inbox-v4/pages/page-reports.js?v=4"></script>
   <script src="/inbox-v4/pages/page-settings.js?v=3"></script>
-  <script src="/inbox-v4/shell.js?v=6"></script>
+  <script src="/inbox-v4/shell.js?v=7"></script>
 </body>
 </html>

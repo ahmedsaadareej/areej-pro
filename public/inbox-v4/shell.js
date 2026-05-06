@@ -2,7 +2,8 @@
    Inbox v4 — App Shell Controller
    يتحكم في: Auth → SSE → Router → Page Modules → Sidebar
    الترتيب: loadUserInfo → InboxStream.init → InboxRouter.init
-   آخر تحديث: 2026-05-04
+   S4-1d: agent status dot click-cycle + tooltip
+   آخر تحديث: 2026-05-06
    ============================================================ */
 
 const InboxShell = (() => {
@@ -159,26 +160,54 @@ const InboxShell = (() => {
     }
   }
 
-  // ── تهيئة حالة الموظف ─────────────────────────────────────────────────
+  // ── تهيئة حالة الموظف (S4-1d: dot فقط + tooltip + click cycle) ─────────
   function _initAgentStatus() {
-    const select = document.getElementById('shellAgentStatusSelect');
-    const dot    = document.getElementById('shellAgentStatusDot');
-    if (!select || !dot) return;
+    const wrapper = document.getElementById('shellAgentStatus');
+    const select  = document.getElementById('shellAgentStatusSelect');
+    const dot     = document.getElementById('shellAgentStatusDot');
+    if (!dot) return;
+
+    // خريطة الـ labels للـ tooltip
+    const statusLabels = {
+      online : 'متاح',
+      busy   : 'مشغول',
+      away   : 'غائب',
+      offline: 'غير متاح'
+    };
 
     // حدد الـ initial status (online افتراضي)
     const initialStatus = InboxStore.state.currentUser?.agentStatus || 'online';
-    select.value = initialStatus;
+    if (select) select.value = initialStatus;
     dot.className = 'shell-status-dot ' + initialStatus;
+    if (wrapper) wrapper.dataset.statusLabel = statusLabels[initialStatus] || 'متاح';
 
-    select.addEventListener('change', async () => {
-      const status = select.value;
+    // S4-1d: الـ dot يقدر يتضغط لتغيير الحالة (cycle)
+    const statusOrder = ['online', 'busy', 'away', 'offline'];
+    dot.addEventListener('click', async () => {
+      const currentIdx = statusOrder.indexOf(dot.className.split(' ').pop());
+      const nextIdx = (currentIdx + 1) % statusOrder.length;
+      const status = statusOrder[nextIdx];
       dot.className = 'shell-status-dot ' + status;
-      // استخدام PUT /api/inbox/me/status
+      if (select) select.value = status;
+      if (wrapper) wrapper.dataset.statusLabel = statusLabels[status];
       await InboxAPI._fetch('/inbox/me/status', {
         method: 'PUT',
         body: JSON.stringify({ status })
       }).catch(() => {});
     });
+
+    // لو الـ select موجود (ممكن يتشال في مكان تاني)
+    if (select) {
+      select.addEventListener('change', async () => {
+        const status = select.value;
+        dot.className = 'shell-status-dot ' + status;
+        if (wrapper) wrapper.dataset.statusLabel = statusLabels[status];
+        await InboxAPI._fetch('/inbox/me/status', {
+          method: 'PUT',
+          body: JSON.stringify({ status })
+        }).catch(() => {});
+      });
+    }
   }
 
   // ── إخفاء روابط بدون صلاحية (D-012: Backend + Frontend double-check) ───
