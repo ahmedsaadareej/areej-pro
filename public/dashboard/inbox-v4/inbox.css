@@ -520,17 +520,12 @@
   text-overflow: ellipsis;
   max-width: 180px;  /* S5: مصغر */
 }
-/* S5: الـ sub-info (مفتوحة + واتساب) بجانب الاسم */
+/* S5: الـ sub-info (مخفي للتوفير) — الاسم + status كافيين */
 .iv4-header-sub {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: nowrap;  /* S5: لا يلتف */
-  font-size: 11px;
-  color: var(--iv4-text-3);
+  display: none !important;  /* S5: مخفي */
 }
-.iv4-header-platform { font-size: 10px; color: var(--iv4-text-3); }
-.iv4-header-phone    { font-size: 10px; color: var(--iv4-text-3); display: none; }  /* S5: مخفي للتوفير */
+.iv4-header-platform { display: none; }
+.iv4-header-phone    { display: none; }
 
 /* Actions (إغلاق / تحويل) — S5: مضغوطة */
 .iv4-header-actions {
@@ -642,6 +637,23 @@
 .iv4-msg.out  .iv4-msg-bubble { background: var(--iv4-surface); border: 1px solid var(--iv4-border); border-radius: 14px 2px 14px 14px; }
 .iv4-msg.in   .iv4-msg-bubble { background: var(--iv4-accent); color: #fff; border-radius: 2px 14px 14px 14px; }
 .iv4-msg.note .iv4-msg-bubble { background: #fffbeb; border: 1px dashed var(--iv4-yellow); color: #92400e; border-radius: 8px; font-size: 12px; }
+
+/* Media messages */
+.iv4-msg-media { max-width: 280px; }
+.iv4-msg-media img, .iv4-msg-media video { max-width: 100%; border-radius: 8px; }
+.iv4-msg-media--missing {
+  background: var(--iv4-surface-2);
+  border: 1px dashed var(--iv4-border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  text-align: center;
+  color: var(--iv4-text-3);
+}
+.iv4-media-placeholder {
+  font-size: 13px;
+  display: block;
+}
+.iv4-msg-caption { font-size: 12px; margin-top: 4px; opacity: 0.9; }
 
 .iv4-msg-time {
   font-size: 10px;

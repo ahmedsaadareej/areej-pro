@@ -167,6 +167,8 @@ function insertMsgV4(db, { convV4Id, platform, direction, content, platformMsgId
   try {
     if (!convV4Id) return;
     const now = Math.floor(Date.now() / 1000);
+    // S5-fix: content_type يكون mediaType نفسه (image/video/audio/file) مش 'media'
+    const contentType = mediaType || 'text';
     db.prepare(`
       INSERT OR IGNORE INTO inbox_messages_v4
         (conversation_id, platform, direction, content, content_type,
@@ -175,7 +177,7 @@ function insertMsgV4(db, { convV4Id, platform, direction, content, platformMsgId
     `).run(
       convV4Id, platform, direction,
       content || null,
-      mediaType ? 'media' : 'text',
+      contentType,
       mediaType || null,
       mediaUrl  || null,
       platformMsgId || null,

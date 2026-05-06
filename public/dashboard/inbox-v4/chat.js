@@ -410,8 +410,13 @@ const InboxChat = (() => {
   /** صورة */
   function _renderImage(msg) {
     const url     = _escHtml(msg.media_url || '');
-    const caption = msg.content ? `<div class="iv4-msg-caption">${_escHtml(msg.content)}</div>` : '';
-    if (!url) return _renderText(msg);
+    const caption = msg.content && !msg.content.startsWith('[') 
+      ? `<div class="iv4-msg-caption">${_escHtml(msg.content)}</div>` 
+      : '';
+    if (!url) return `<div class="iv4-msg-media iv4-msg-media--missing">
+      <span class="iv4-media-placeholder">🖼️ صورة غير متاحة</span>
+      ${caption}
+    </div>`;
     return `
 <div class="iv4-msg-media">
   <img
@@ -428,8 +433,13 @@ const InboxChat = (() => {
   /** فيديو */
   function _renderVideo(msg) {
     const url     = _escHtml(msg.media_url || '');
-    const caption = msg.content ? `<div class="iv4-msg-caption">${_escHtml(msg.content)}</div>` : '';
-    if (!url) return _renderText(msg);
+    const caption = msg.content && !msg.content.startsWith('[') 
+      ? `<div class="iv4-msg-caption">${_escHtml(msg.content)}</div>` 
+      : '';
+    if (!url) return `<div class="iv4-msg-media iv4-msg-media--missing">
+      <span class="iv4-media-placeholder">🎬 فيديو غير متاح</span>
+      ${caption}
+    </div>`;
     return `
 <div class="iv4-msg-media">
   <video class="iv4-msg-video" controls preload="metadata">
@@ -443,7 +453,9 @@ const InboxChat = (() => {
   /** صوت / voice note */
   function _renderAudio(msg) {
     const url = _escHtml(msg.media_url || '');
-    if (!url) return _renderText(msg);
+    if (!url) return `<div class="iv4-msg-media iv4-msg-media--missing">
+      <span class="iv4-media-placeholder">🎙️ رسالة صوتية غير متاحة</span>
+    </div>`;
 
     // فحص metadata لو كان فيه transcript محفوظ
     let cachedTranscript = '';
