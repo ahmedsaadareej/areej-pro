@@ -101,3 +101,35 @@
 - `wa_active=1` شرط أساسي عشان الاستقبال يشتغل
 - App Secret: موجود في SECRETS.md (لا يُكتب هنا)
 - كل عميل جديد: لازم يعمل نفس خطوات الربط على حسابه
+
+---
+
+## 🚧 المهام القادمة — S4: Icon-Only Sidebars
+
+### S4-1: الـ Inbox Shell Sidebar (الداخلي)
+**الملفات:** `/public/inbox-v4/shell.css` + `index.html`
+
+| # | المطلوب |
+|---|---------|
+| 1 | الـ sidebar يكون **دايماً icon-only** (56px بدل 220px) |
+| 2 | لما توقف على أي icon → يظهر **tooltip** بالاسم |
+| 3 | الـ icons: 📥 Inbox, 👥 جهات الاتصال, 📊 التقارير, ⚙️ الإعدادات, 📢 البث, 🕐 المجدولة, 🤖 Chatbot |
+| 4 | الـ status في الأسفل يبقى dot فقط |
+
+---
+
+### S4-2: الـ Dashboard Sidebar الأخضر (الكبير)
+**الملفات:** `/public/dashboard/css/main.css` + `index.html`
+
+| # | المطلوب |
+|---|---------|
+| 1 | لما تدوس على **سهم الـ collapse** → الـ sidebar يصغر لـ **56px icon-only** (مش يختفي) |
+| 2 | في الـ collapsed mode → لما توقف على أي icon → يظهر **tooltip** بالاسم |
+| 3 | لما تدوس على السهم تاني → يرجع **190px** كامل زي ما كان |
+
+---
+
+### 📌 للبدء في الجلسة القادمة:
+```
+اقرأ /home/areej/areej-pro/PROJECT.md وابدأ من S4-1 (Inbox Shell Sidebar)
+```
