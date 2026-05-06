@@ -1,7 +1,7 @@
 # FIX_PLAN.md — خطة إصلاح Inbox v4
 > تاريخ الإنشاء: 2026-05-06
 > آخر تحديث: 2026-05-06
-> الحالة: ⏳ جارية
+> الحالة: ✅ مكتملة
 
 ---
 
@@ -55,13 +55,13 @@
 | S1-3d | Fix `_touchConv()`: `last_message_text` + `last_message_dir` | `server/routes/inbox/messages.js` | ✅ | |
 | S1-4 | Test: تشغيل الـ migrations | CLI | ✅ | v47, v48, v49 applied |
 | S1-5 | Test: إرسال رسالة جديدة | Browser | ✅ | رسالة id=469 اتحفظت بنجاح |
-| S1-6 | Commit + Push | Git | ⏳ | |
+| S1-6 | Commit + Push | Git | ✅ | تم في S2 commit | |
 
 **الـ commit message:** `fix(inbox-v4): S1 — Database + API fixes for message sending`
 
 ---
 
-### الجلسة S2: إصلاحات UI الوظيفية ⏳
+### الجلسة S2: إصلاحات UI الوظيفية ✅
 **الهدف:** تشغيل العناصر المعطّلة في الـ UI
 
 | # | المهمة | الملفات | الحالة | ملاحظات |
@@ -79,7 +79,7 @@
 
 ---
 
-### الجلسة S3: تحسينات Visual ⏳
+### الجلسة S3: تحسينات Visual ✅
 **الهدف:** تحسين المظهر والـ UX
 
 | # | المهمة | الملفات | الحالة | ملاحظات |
@@ -98,7 +98,7 @@
 
 ---
 
-### الجلسة S4: Icon-Only Sidebars ⏳
+### الجلسة S4: Icon-Only Sidebars ✅
 **الهدف:** تحويل الـ sidebars لـ icon-only مع tooltips
 
 #### S4-1: الـ Inbox Shell Sidebar (الداخلي) ✅
