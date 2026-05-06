@@ -180,3 +180,21 @@
 - `/home/areej/areej-pro/inbox-v4/GROUND_TRUTH.md` — الحقائق الثابتة
 - `/home/areej/areej-pro/inbox-v4/DECISIONS.md` — القرارات المعمارية
 - `/home/areej/areej-pro/MEMORY.md` (في workspace) — ذاكرة طويلة الأمد
+
+---
+
+### الجلسة S6: Polish Fixes ✅
+**الهدف:** إصلاح المشاكل المتبقية للـ production-ready look
+
+| # | المهمة | الملفات | الحالة |
+|---|--------|---------|--------|
+| S6-1 | Media rendering + missing placeholders | chat.js, webhook.js | ✅ |
+| S6-2 | Ultra-compact header (140px → 70px) | chat.js, design-system.css | ✅ |
+| S6-3 | Audio duration auto-load | chat.js | ✅ |
+| S6-4 | Wider messages (72% → 80%, media 320px) | inbox.css | ✅ |
+| S6-5 | Compact composer (textarea 50px min) | inbox.css, design-system.css | ✅ |
+
+**Commits:**
+- `e879481` — Media rendering fixes
+- `04dfc0e` — Ultra-compact single-row header
+- `b067de0` — Polish fixes (audio, messages, composer)
