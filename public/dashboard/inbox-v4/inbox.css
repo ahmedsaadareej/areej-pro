@@ -469,14 +469,24 @@
   flex-direction: column;
 }
 
-/* الصف الرئيسي: avatar + info + actions (كله في صف واحد) */
+/* S6: Single-row header (avatar + info + actions) */
+.iv4-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  min-width: 0;
+  min-height: 40px;
+}
+
+/* Legacy - keep for compatibility */
 .iv4-header-main {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;  /* S5: مصغر من 10px 14px */
+  padding: 6px 12px;
   min-width: 0;
-  min-height: 44px;
+  min-height: 40px;
 }
 
 /* Avatar (صغير 32px) */
@@ -496,20 +506,22 @@
   filter: drop-shadow(0 0 2px #fff);
 }
 
-/* Info block (في صف واحد أفقي) */
+/* Info block (name + status badge) */
 .iv4-header-info {
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-direction: row;  /* S5: أفقي بدل عمودي */
+  flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  overflow: hidden;
 }
+/* Legacy */
 .iv4-header-name-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: nowrap;  /* S5: لا يلتف */
+  flex-wrap: nowrap;
 }
 .iv4-header-name {
   font-size: 13px;  /* S5: مصغر */

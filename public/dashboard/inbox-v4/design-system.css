@@ -266,29 +266,29 @@
   flex-direction: column !important;
 }
 
-/* Chat Header */
+/* Chat Header — S5 Compact */
 .iv4-chat-header {
   background: var(--iv4-surface) !important;
   border-bottom: 1px solid var(--iv4-border) !important;
-  padding: 10px 18px !important;
-  min-height: 58px !important;
-  box-shadow: var(--iv4-shadow) !important;
-  gap: 12px !important;
+  padding: 0 !important;  /* S5: no wrapper padding */
+  min-height: auto !important;  /* S5: auto height */
+  box-shadow: none !important;  /* S5: cleaner look */
+  gap: 0 !important;  /* S5: children handle their own spacing */
 }
 
 .iv4-header-avatar {
-  width: 38px !important;
-  height: 38px !important;
+  width: 32px !important;  /* S5: مصغر */
+  height: 32px !important;
   border-radius: var(--iv4-radius-full) !important;
-  font-size: 15px !important;
+  font-size: 13px !important;  /* S5: مصغر */
   font-weight: 700 !important;
   flex-shrink: 0 !important;
   cursor: pointer !important;
 }
 
 .iv4-header-name {
-  font-size: 15px !important;
-  font-weight: 700 !important;
+  font-size: 13px !important;  /* S5: مصغر */
+  font-weight: 600 !important;
   color: var(--iv4-text) !important;
   letter-spacing: -0.2px !important;
   font-family: var(--iv4-font) !important;
@@ -931,23 +931,45 @@ html.iv4-embed-mode #shell-logout-btn { display: none !important; }
    header: ~160px | messages: flex-1 | reply: ~150px = workable layout
    ─────────────────────────────────────────────────────────────────────── */
 
-/* Compact header */
+/* Compact header — S5 */
 #iv4-chat-header,
 .iv4-chat-header {
   flex-shrink: 0 !important;
   overflow: hidden !important;
+  padding: 0 !important;
+  gap: 0 !important;
 }
 
-/* Header main row — tighter */
+/* S6: Single-row header */
+.iv4-header-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 6px 12px !important;
+  min-height: 40px !important;
+}
+
+/* Header main row — legacy */
 .iv4-header-main {
-  padding: 0 !important;
-  min-height: 0 !important;
+  padding: 6px 12px !important;
+  min-height: 40px !important;
+  gap: 8px !important;
 }
 
-/* Labels mount — compact */
-.iv4-label-picker-mount {
-  min-height: 0 !important;
+/* Header actions — S6: inline with row */
+.iv4-header-actions {
   padding: 0 !important;
+  gap: 4px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Labels mount — S5 compact */
+.iv4-label-picker-mount {
+  min-height: 24px !important;
+  padding: 4px 12px !important;
+}
+.iv4-label-picker-mount:empty {
+  display: none !important;
 }
 
 /* Compact reply box — smaller textarea */
@@ -991,12 +1013,14 @@ div#iv4-chat-area.iv4-chat-area {
   min-height: 0 !important;
 }
 
-/* Header: max 160px */
+/* Header: max 70px — S6 compact */
 div#iv4-chat-header.iv4-chat-header {
   flex-shrink: 0 !important;
   flex-grow: 0 !important;
-  max-height: 160px !important;
+  max-height: 70px !important;  /* S6: single row + labels */
   overflow: hidden !important;
+  padding: 0 !important;
+  gap: 0 !important;
 }
 
 /* Messages: grow to fill everything between header and reply */

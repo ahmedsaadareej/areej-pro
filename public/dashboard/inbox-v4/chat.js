@@ -697,37 +697,23 @@ ${transcriptHtml}`.trim();
            👤 تعيين
          </button>`;
 
+    // S6: Compact single-row header
     header.innerHTML = `
-<div class="iv4-header-main">
+<div class="iv4-header-row">
   <div class="iv4-header-avatar" style="background:${_nameToColor(conv.contact_name || conv.sender_name || '')}">
     ${(conv.contact_name || conv.sender_name || '?')[0].toUpperCase()}
     <span class="iv4-header-platform-icon">${icon}</span>
   </div>
   <div class="iv4-header-info">
-    <div class="iv4-header-name-row">
-      <span class="iv4-header-name">${name}</span>
-      <span class="iv4-header-status iv4-status-badge iv4-status-badge--${status}">${statusLabel}</span>
-    </div>
-    <div class="iv4-header-sub">
-      <span class="iv4-header-platform">${icon} ${platformName}</span>
-      ${phone}
-      ${assigned}
-    </div>
+    <span class="iv4-header-name">${name}</span>
+    <span class="iv4-header-status iv4-status-badge iv4-status-badge--${status}">${statusLabel}</span>
   </div>
-</div>
-<div class="iv4-header-actions">
-  <button class="iv4-header-btn iv4-header-btn--transfer" id="iv4-btn-transfer" title="تحويل لموظف آخر" ${status === 'closed' ? 'hidden' : ''}>
-    ↩️ تحويل
-  </button>
-  <button class="iv4-header-btn" id="iv4-btn-resolve" title="إغلاق المحادثة" ${status === 'closed' ? 'disabled' : ''}>
-    ${status === 'closed' ? '✅ مغلقة' : '✅ إغلاق'}
-  </button>
-  <button class="iv4-header-btn iv4-header-btn--secondary" id="iv4-btn-reopen" title="إعادة فتح" ${status !== 'closed' ? 'hidden' : ''}>
-    🔄 إعادة فتح
-  </button>
-  ${platform === 'email' ? `<button class="iv4-header-btn iv4-header-btn--secondary" id="iv4-btn-email-thread" title="عرض Thread الإيميل">
-    📧 Thread
-  </button>` : ''}
+  <div class="iv4-header-actions">
+    <button class="iv4-header-btn iv4-header-btn--transfer" id="iv4-btn-transfer" title="تحويل" ${status === 'closed' ? 'hidden' : ''}>↩️</button>
+    <button class="iv4-header-btn" id="iv4-btn-resolve" title="إغلاق" ${status === 'closed' ? 'disabled' : ''}>✅</button>
+    <button class="iv4-header-btn iv4-header-btn--secondary" id="iv4-btn-reopen" title="إعادة فتح" ${status !== 'closed' ? 'hidden' : ''}>🔄</button>
+    ${platform === 'email' ? `<button class="iv4-header-btn iv4-header-btn--secondary" id="iv4-btn-email-thread" title="Thread">📧</button>` : ''}
+  </div>
 </div>
 <div id="iv4-label-picker-mount" class="iv4-label-picker-mount"></div>`.trim();
 
