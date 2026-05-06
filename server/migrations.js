@@ -890,6 +890,44 @@ const TENANT_MIGRATIONS = [
     `CREATE INDEX IF NOT EXISTS idx_hr_emp_active ON hr_employees(active)`,
   ]},
 
+  // ══════════════════════════════════════════════════════════════
+  // v47 — S1 Fix: WhatsApp API settings (2026-05-06)
+  // ══════════════════════════════════════════════════════════════
+  { version: 47, sqls: [
+    // S1-1: إضافة wa_app_secret column لـ inbox_settings
+    `ALTER TABLE inbox_settings ADD COLUMN wa_app_secret TEXT`,
+  ]},
+
+  { version: 48, sqls: [
+    // S1-2: Sync WhatsApp API settings من inbox_settings لـ inbox_channel_settings_v4
+    // نحدّث config و active لـ whatsapp_api channel
+    `UPDATE inbox_channel_settings_v4
+     SET config = (
+       SELECT json_object(
+         'phone_number_id', COALESCE(s.wa_phone_id, ''),
+         'access_token', COALESCE(s.wa_token, ''),
+         'business_account_id', COALESCE(s.wa_account_id, ''),
+         'verify_token', COALESCE(s.wa_verify_token, ''),
+         'app_secret', COALESCE(s.wa_app_secret, '')
+       )
+       FROM inbox_settings s WHERE s.id = 1
+     ),
+     active = (
+       SELECT COALESCE(s.wa_active, 0)
+       FROM inbox_settings s WHERE s.id = 1
+     ),
+     updated_at = unixepoch()
+     WHERE channel = 'whatsapp_api'`,
+  ]},
+
+  // S1 Fix: إضافة columns ناقصة في inbox_messages_v4
+  { version: 49, sqls: [
+    // agent_name - اسم الموظف اللي بعت الرسالة
+    `ALTER TABLE inbox_messages_v4 ADD COLUMN agent_name TEXT`,
+    // external_id - الـ ID من المنصة الخارجية (بديل لـ platform_msg_id)
+    `ALTER TABLE inbox_messages_v4 ADD COLUMN external_id TEXT`,
+  ]},
+
 ];
 
 // ══════════════════════════════════════════════════════════════

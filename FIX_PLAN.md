@@ -18,10 +18,10 @@
 ### مشاكل Database (Critical)
 | # | المشكلة | الخطورة | الحالة |
 |---|---------|---------|--------|
-| DB-1 | `wa_app_secret` column ناقص من `inbox_settings` | 🔴 Critical | ⏳ |
-| DB-2 | WhatsApp API settings مش في `inbox_channel_settings_v4` (config فارغ + enabled=0) | 🔴 Critical | ⏳ |
-| DB-3 | الرسايل تبقى `status='pending'` ولا تتبعت | 🔴 Critical | ⏳ (ناتج من DB-2) |
-| DB-4 | `_getConv()` SQL يستخدم `contact_phone` بدل `sender_phone` الصحيح | 🔴 Critical | ⏳ |
+| DB-1 | `wa_app_secret` column ناقص من `inbox_settings` | 🔴 Critical | ✅ تم (v47) |
+| DB-2 | WhatsApp API settings مش في `inbox_channel_settings_v4` (config فارغ + enabled=0) | 🔴 Critical | ✅ تم (v48) |
+| DB-3 | الرسايل تبقى `status='pending'` ولا تتبعت | 🔴 Critical | ✅ تم (S1 fixes) |
+| DB-4 | `_getConv()` SQL يستخدم `contact_phone` بدل `sender_phone` الصحيح | 🔴 Critical | ✅ تم |
 
 ### مشاكل UI/UX
 | # | المشكلة | الخطورة | الحالة |
@@ -42,19 +42,22 @@
 
 ## 🗓️ خطة الجلسات
 
-### الجلسة S1: إصلاحات Database (Critical) ⏳
+### الجلسة S1: إصلاحات Database (Critical) ✅
 **الهدف:** إصلاح كل مشاكل الـ Database عشان الإرسال يشتغل
 
 | # | المهمة | الملفات | الحالة | ملاحظات |
 |---|--------|---------|--------|---------|
-| S1-1 | إضافة migration v46 للـ `wa_app_secret` column | `server/migrations.js` | ⏳ | |
-| S1-2 | Sync WhatsApp settings من `inbox_settings` لـ `inbox_channel_settings_v4` | `server/migrations.js` | ⏳ | |
-| S1-3 | Fix `_getConv()` SQL: `sender_phone` بدل `contact_phone` | `server/routes/inbox/messages.js` | ⏳ | |
-| S1-4 | Test: تشغيل الـ migration | CLI | ⏳ | |
-| S1-5 | Test: إرسال رسالة جديدة | Browser | ⏳ | |
+| S1-1 | إضافة migration v47 للـ `wa_app_secret` column | `server/migrations.js` | ✅ | |
+| S1-2 | Sync WhatsApp settings من `inbox_settings` لـ `inbox_channel_settings_v4` (v48) | `server/migrations.js` | ✅ | |
+| S1-3 | Fix `_getConv()` + `_getChannelConfig()` SQL: better-sqlite3 sync API | `server/routes/inbox/messages.js` | ✅ | |
+| S1-3b | Fix `_saveMessage()`: autoincrement بدل UUID | `server/routes/inbox/messages.js` | ✅ | |
+| S1-3c | إضافة migration v49 للـ `agent_name` + `external_id` columns | `server/migrations.js` | ✅ | |
+| S1-3d | Fix `_touchConv()`: `last_message_text` + `last_message_dir` | `server/routes/inbox/messages.js` | ✅ | |
+| S1-4 | Test: تشغيل الـ migrations | CLI | ✅ | v47, v48, v49 applied |
+| S1-5 | Test: إرسال رسالة جديدة | Browser | ✅ | رسالة id=469 اتحفظت بنجاح |
 | S1-6 | Commit + Push | Git | ⏳ | |
 
-**الـ commit message:** `fix(inbox-v4): S1 — Database fixes for WhatsApp sending`
+**الـ commit message:** `fix(inbox-v4): S1 — Database + API fixes for message sending`
 
 ---
 
@@ -116,12 +119,20 @@
 
 ## 📝 سجل التنفيذ
 
-### 2026-05-06 — بداية الجلسة
+### 2026-05-06 — جلسة S1 (Database fixes)
 - ✅ قراءة PROJECT.md
 - ✅ فحص Inbox v4 شامل (Backend + Frontend + Database)
 - ✅ اكتشاف 4 مشاكل Database + 11 مشكلة UI
-- ✅ إنشاء FIX_PLAN.md (هذا الملف)
-- ⏳ **المهمة القادمة:** بدء S1-1
+- ✅ إنشاء FIX_PLAN.md
+- ✅ **S1-1:** Migration v47 — إضافة `wa_app_secret` column
+- ✅ **S1-2:** Migration v48 — Sync WhatsApp API settings لـ `inbox_channel_settings_v4`
+- ✅ **S1-3:** Fix `_getConv()` + `_getChannelConfig()` — تحويل لـ better-sqlite3 sync API
+- ✅ **S1-3b:** Fix `_saveMessage()` — استخدام autoincrement بدل UUID
+- ✅ **S1-3c:** Migration v49 — إضافة `agent_name` + `external_id` columns
+- ✅ **S1-3d:** Fix `_touchConv()` — `last_message_text` + `last_message_dir`
+- ✅ **S1-4:** Migrations applied successfully
+- ✅ **S1-5:** Test: رسالة id=469 اتحفظت بنجاح!
+- ⏳ **المهمة القادمة:** S1-6 (Commit + Push)
 
 ---
 

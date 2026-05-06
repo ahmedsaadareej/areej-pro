@@ -32,13 +32,16 @@ const http     = require('http');
 const { v4: uuidv4 } = require('uuid');
 // M6 Fix: db.run wrapper لـ better-sqlite3 compatibility
 // better-sqlite3 لا يدعم db.run callback-style — نستخدم db.prepare().run()
+// S1 Fix: يرجع lastInsertRowid للـ INSERT operations
 function dbRun(db, sql, params, cb) {
   try {
-    db.prepare(sql).run(...(Array.isArray(params) ? params : [params]));
-    if (cb) cb(null);
+    const result = db.prepare(sql).run(...(Array.isArray(params) ? params : [params]));
+    if (cb) cb(null, result);  // result فيه lastInsertRowid و changes
+    return result;
   } catch(err) {
     console.error('[dbRun]', err.message);
     if (cb) cb(err);
+    return null;
   }
 }
 
@@ -155,116 +158,122 @@ function _mimeToContentType(mime = '') {
 /**
  * جلب إعدادات القناة للـ tenant
  */
-async function _getChannelConfig(db, platform) {
-  return new Promise((resolve) => {
-    db.get(
-      `SELECT config FROM inbox_channel_settings_v4 WHERE platform = ? AND enabled = 1`,
-      [platform],
-      (err, row) => {
-        if (err || !row) return resolve(null);
-        try   { resolve(JSON.parse(row.config)); }
-        catch { resolve(null); }
-      }
-    );
-  });
+// S1-3 Fix: تحويل لـ better-sqlite3 sync API + الـ column اسمه active مش enabled
+function _getChannelConfig(db, platform) {
+  try {
+    const row = db.prepare(
+      `SELECT config FROM inbox_channel_settings_v4 WHERE channel = ? AND active = 1`
+    ).get(platform);
+    if (!row) return null;
+    return JSON.parse(row.config);
+  } catch (err) {
+    console.error('[_getChannelConfig] error:', err.message);
+    return null;
+  }
 }
 
 /**
- * جلب بيانات المحادثة للتحقق + الحصول على platform + contact_phone
+ * جلب بيانات المحادثة للتحقق + الحصول على platform + sender_phone
+ * S1-3 Fix: استخدام sender_phone/sender_name (الـ columns الفعلية) بدل contact_phone/contact_name
+ * S1-3 Fix: تحويل لـ better-sqlite3 sync API (مش callback API)
  */
-async function _getConv(db, convId) {
-  return new Promise((resolve, reject) => {
-    db.get(
-      `SELECT id, contact_phone, contact_name, platform, status, tenant_id
-       FROM inbox_conversations_v4 WHERE id = ?`,
-      [convId],
-      (err, row) => {
-        if (err) return reject(err);
-        resolve(row || null);
-      }
-    );
-  });
+function _getConv(db, convId) {
+  try {
+    const row = db.prepare(
+      `SELECT id, sender_phone AS contact_phone, sender_name AS contact_name, platform, status
+       FROM inbox_conversations_v4 WHERE id = ?`
+    ).get(convId);
+    return row || null;
+  } catch (err) {
+    console.error('[_getConv] error:', err.message);
+    return null;
+  }
 }
 
 /**
  * حفظ رسالة في قاعدة البيانات
  * يرجع الرسالة المحفوظة
+ * S1 Fix: استخدام autoincrement للـ id بدل UUID
  */
-async function _saveMessage(db, {
+function _saveMessage(db, {
   convId, direction, contentType, content,
   mediaUrl, mediaFilename, mediaSize,
   quotedMsgId, agentId, agentName,
   externalId, platform, status = 'pending',
 }) {
-  const msgId = uuidv4();
-  const now   = Math.floor(Date.now() / 1000);
+  const now = Math.floor(Date.now() / 1000);
 
-  return new Promise((resolve, reject) => {
-    dbRun(db, 
+  try {
+    // لا نحدد id — نخلي SQLite يعمله autoincrement
+    const result = db.prepare(
       `INSERT INTO inbox_messages_v4
-         (id, conversation_id, direction, content_type, content,
+         (conversation_id, direction, content_type, content,
           media_url, media_filename, media_size,
           quoted_msg_id, agent_id, agent_name,
           external_id, platform, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        msgId, convId, direction, contentType, content || '',
-        mediaUrl || null, mediaFilename || null, mediaSize || null,
-        quotedMsgId || null, agentId || null, agentName || null,
-        externalId || null, platform || null, status, now,
-      ],
-      function (err) {
-        if (err) return reject(err);
-        resolve({
-          id:             msgId,
-          conversation_id: convId,
-          direction,
-          content_type:   contentType,
-          content:        content || '',
-          media_url:      mediaUrl || null,
-          media_filename: mediaFilename || null,
-          media_size:     mediaSize || null,
-          quoted_msg_id:  quotedMsgId || null,
-          agent_id:       agentId || null,
-          agent_name:     agentName || null,
-          external_id:    externalId || null,
-          platform:       platform || null,
-          status,
-          created_at:     now,
-        });
-      }
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      convId, direction, contentType, content || '',
+      mediaUrl || null, mediaFilename || null, mediaSize || null,
+      quotedMsgId || null, agentId || null, agentName || null,
+      externalId || null, platform || null, status, now
     );
-  });
+
+    const msgId = result.lastInsertRowid;  // الـ ID الفعلي من SQLite
+
+    return {
+      id:             msgId,
+      conversation_id: convId,
+      direction,
+      content_type:   contentType,
+      content:        content || '',
+      media_url:      mediaUrl || null,
+      media_filename: mediaFilename || null,
+      media_size:     mediaSize || null,
+      quoted_msg_id:  quotedMsgId || null,
+      agent_id:       agentId || null,
+      agent_name:     agentName || null,
+      external_id:    externalId || null,
+      platform:       platform || null,
+      status,
+      created_at:     now,
+    };
+  } catch (err) {
+    console.error('[_saveMessage] error:', err.message);
+    throw err;
+  }
 }
 
 /**
  * تحديث last_message في المحادثة وتحديث updated_at
+ * S1 Fix: استخدام last_message_text و last_message_dir (الـ columns الفعلية)
  */
-async function _touchConv(db, convId, content, contentType, status) {
-  // لو المحادثة كانت waiting → نرجعها open عند الرد
-  const statusUpdate = status === 'waiting'
-    ? ', status = \'open\''
+function _touchConv(db, convId, content, contentType, direction) {
+  // لو المحادثة كانت waiting → نرجعها open عند الرد (لو outbound)
+  const statusUpdate = direction === 'outbound'
+    ? ", status = 'open'"
     : '';
 
-  return new Promise((resolve, reject) => {
-    dbRun(db, 
+  const now = Math.floor(Date.now() / 1000);
+  try {
+    db.prepare(
       `UPDATE inbox_conversations_v4
-       SET last_message      = ?,
-           last_message_type = ?,
+       SET last_message_text = ?,
+           last_message_dir  = ?,
            last_message_at   = ?,
            updated_at        = ?
            ${statusUpdate}
-       WHERE id = ?`,
-      [
-        content || '',
-        contentType || 'text',
-        Math.floor(Date.now() / 1000),
-        Math.floor(Date.now() / 1000),
-        convId,
-      ],
-      (err) => { if (err) reject(err); else resolve(); }
+       WHERE id = ?`
+    ).run(
+      content || '',
+      direction || 'outbound',
+      now,
+      now,
+      convId
     );
-  });
+  } catch (err) {
+    console.error('[_touchConv] error:', err.message);
+  }
 }
 
 /**
@@ -488,7 +497,7 @@ router.post('/conversations/:id/messages', async (req, res) => {
 
     // ── تحديث المحادثة ──────────────────────────────────────────────────
     if (!isNote) {
-      await _touchConv(db, convId, content.trim() || '[ميديا]', content_type, conv.status);
+      _touchConv(db, convId, content.trim() || '[ميديا]', content_type, 'outbound');
     }
 
     // ── إرسال عبر المنصة ────────────────────────────────────────────────
@@ -649,7 +658,7 @@ router.post(
         sseBroadcast(req.inboxUser.id, { type: 'message_new', data: { ...savedMsg, conversation_id: convId } });
       } catch (_) {}
 
-      await _touchConv(db, convId, `[${contentType}]`, contentType, conv.status);
+      _touchConv(db, convId, `[${contentType}]`, contentType, 'outbound');
 
       // إرسال عبر المنصة
       const { externalId, error: dispatchErr } = await _dispatch(conv, savedMsg, channelConfig, db);
@@ -1005,7 +1014,7 @@ router.post('/conversations/:id/messages/interactive', async (req, res) => {
       sseBroadcast(req.inboxUser.id, { type: 'message_new', data: { ...savedMsg, conversation_id: convId } });
     } catch (_) {}
 
-    await _touchConv(db, convId, `[رسالة تفاعلية]`, 'interactive', conv.status);
+    _touchConv(db, convId, `[رسالة تفاعلية]`, 'interactive', 'outbound');
 
     return res.json({ success: true, message: savedMsg });
 
@@ -1192,7 +1201,7 @@ router.post('/conversations/:id/messages/catalog', async (req, res) => {
       sseBroadcast(req.inboxUser.id, { type: 'message_new', data: { ...savedMsg, conversation_id: convId } });
     } catch (_) {}
 
-    await _touchConv(db, convId, contentSummary, 'catalog', conv.status);
+    _touchConv(db, convId, contentSummary, 'catalog', 'outbound');
 
     return res.json({ success: true, message: savedMsg });
 
