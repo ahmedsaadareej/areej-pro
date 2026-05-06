@@ -128,6 +128,25 @@
 - `feat(inbox-v4): S4-1 — Icon-only shell sidebar with tooltips`
 - `feat(dashboard): S4-2 — Collapsed sidebar shows icons with tooltips`
 
+---
+
+### الجلسة S5: Compact Chat Header ⏳
+**الهدف:** تصغير الـ Chat Header من ~120px لـ ~48px
+
+**الملفات:** `/public/inbox-v4/inbox.css` + `inbox.js` أو `chat.js`
+
+| # | المهمة | الحالة |
+|---|--------|--------|
+| S5-1 | تصغير الـ Avatar من 48-56px لـ 32px | ⏳ |
+| S5-2 | جمع كل العناصر في صف واحد أفقي (الاسم + status + buttons) | ⏳ |
+| S5-3 | تصغير الـ action buttons (icon-only أو compact) | ⏳ |
+| S5-4 | نقل الـ "open" badge بجانب الاسم | ⏳ |
+| S5-5 | Test + Commit | ⏳ |
+
+**التوفير المتوقع:** ~70px مساحة عمودية إضافية للرسائل
+
+**Commit message:** `style(inbox-v4): S5 — Compact chat header (120px → 48px)`
+
 
 ### 2026-05-06 — جلسة S1 (Database fixes)
 - ✅ قراءة PROJECT.md
