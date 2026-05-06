@@ -96,28 +96,38 @@
 
 ---
 
-### الجلسة S4: اختبار شامل + QA ⏳
-**الهدف:** التأكد إن كل حاجة شغالة
+---
 
-| # | المهمة | الحالة | ملاحظات |
-|---|--------|--------|---------|
-| S4-1 | اختبار إرسال/استقبال WhatsApp API | ⏳ | |
-| S4-2 | اختبار كل الـ Settings tabs | ⏳ | |
-| S4-3 | اختبار Labels CRUD + filter | ⏳ | |
-| S4-4 | اختبار Snooze + Priority | ⏳ | |
-| S4-5 | اختبار Context Panel كامل | ⏳ | |
-| S4-6 | اختبار Reports page | ⏳ | |
-| S4-7 | اختبار Contacts page | ⏳ | |
-| S4-8 | فحص Responsive (Mobile view) | ⏳ | |
-| S4-9 | فحص Console errors | ⏳ | |
-| S4-10 | تحديث PROJECT.md | ⏳ | |
-| S4-11 | Final Commit + Push | ⏳ | |
+### الجلسة S4: Icon-Only Sidebars ⏳
+**الهدف:** تحويل الـ sidebars لـ icon-only مع tooltips
 
-**الـ commit message:** `chore(inbox-v4): S4 — QA complete, update PROJECT.md`
+#### S4-1: الـ Inbox Shell Sidebar (الداخلي)
+**الملفات:** `/public/inbox-v4/shell.css` + `index.html`
+
+| # | المهمة | الحالة |
+|---|--------|--------|
+| S4-1a | الـ sidebar يكون **دايماً icon-only** (56px بدل 220px) | ⏳ |
+| S4-1b | لما توقف على أي icon → يظهر **tooltip** بالاسم | ⏳ |
+| S4-1c | الـ icons: 📥 Inbox, 👥 جهات الاتصال, 📊 التقارير, ⚙️ الإعدادات, 📢 البث, 🕐 المجدولة, 🤖 Chatbot | ⏳ |
+| S4-1d | الـ status في الأسفل يبقى dot فقط | ⏳ |
+| S4-1e | Test + Commit | ⏳ |
 
 ---
 
-## 📝 سجل التنفيذ
+#### S4-2: الـ Dashboard Sidebar الأخضر (الكبير)
+**الملفات:** `/public/dashboard/css/main.css` + `index.html`
+
+| # | المهمة | الحالة |
+|---|--------|--------|
+| S4-2a | لما تدوس على **سهم الـ collapse** → الـ sidebar يصغر لـ **56px icon-only** (مش يختفي) | ⏳ |
+| S4-2b | في الـ collapsed mode → لما توقف على أي icon → يظهر **tooltip** بالاسم | ⏳ |
+| S4-2c | لما تدوس على السهم تاني → يرجع **190px** كامل زي ما كان | ⏳ |
+| S4-2d | Test + Commit | ⏳ |
+
+**Commit messages:**
+- `feat(inbox-v4): S4-1 — Icon-only shell sidebar with tooltips`
+- `feat(dashboard): S4-2 — Collapsed sidebar shows icons with tooltips`
+
 
 ### 2026-05-06 — جلسة S1 (Database fixes)
 - ✅ قراءة PROJECT.md
