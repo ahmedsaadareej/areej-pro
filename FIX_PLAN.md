@@ -122,7 +122,7 @@
 | S4-2a | لما تدوس على **سهم الـ collapse** → الـ sidebar يصغر لـ **56px icon-only** (مش يختفي) | ✅ |
 | S4-2b | في الـ collapsed mode → لما توقف على أي icon → يظهر **tooltip** بالاسم | ✅ |
 | S4-2c | لما تدوس على السهم تاني → يرجع **190px** كامل زي ما كان | ✅ |
-| S4-2d | Test + Commit | ✅ | commit: 0e41be1 |
+| S4-2d | Test + Commit | ✅ | commits: 0e41be1, 8436227, e1777c3 |
 
 **Commit messages:**
 - `feat(inbox-v4): S4-1 — Icon-only shell sidebar with tooltips`
