@@ -712,6 +712,24 @@ const PageInbox = (() => {
         });
       }
 
+      // S3-5: Platform filter active state + event binding
+      const platFilter = document.getElementById('iv4-platform-filter');
+      if (platFilter && !platFilter.dataset.bound) {
+        platFilter.dataset.bound = '1';
+        platFilter.querySelectorAll('.iv4-plat-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            // تحديث active state
+            platFilter.querySelectorAll('.iv4-plat-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            // تحديث الـ filter في InboxStore
+            const platform = btn.dataset.platform || null;
+            if (typeof InboxStore !== 'undefined') {
+              InboxStore.set('filters', { ...InboxStore.state.filters, platform });
+            }
+          });
+        });
+      }
+
       // FIX-004c: أعلم shell.js إن الـ Inbox جاهز
       document.dispatchEvent(new CustomEvent('inbox:mounted'));
     },

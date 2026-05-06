@@ -328,8 +328,13 @@ const InboxChat = (() => {
     const time    = _formatTime(msg.sent_at || msg.created_at);
     const status  = isOut ? _renderStatus(msg.status) : '';
     const sender  = isIn  ? `<div class="iv4-msg-sender">${_escHtml(msg.sender_name || msg.contact_name || '')}</div>` : '';
-    // S3-3: Retry button للرسايل الفاشلة
-    const retryBtn = (isOut && msg.status === 'failed')
+    // S3-3: Retry button للرسايل الفاشلة أو المعلقة (pending > 2 min)
+    const isPending = msg.status === 'pending';
+    const isFailed  = msg.status === 'failed';
+    // Pending > 2 دقائق → عرض retry
+    const pendingTooLong = isPending && msg.created_at && (Date.now() - new Date(msg.created_at).getTime() > 2 * 60 * 1000);
+    const showRetry = isOut && (isFailed || pendingTooLong);
+    const retryBtn = showRetry
       ? `<button class="iv4-msg-retry-btn" data-msg-id="${msg.id}" title="إعادة الإرسال">🔄</button>`
       : '';
     const content = _renderContent(msg);

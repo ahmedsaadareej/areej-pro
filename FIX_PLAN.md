@@ -69,11 +69,11 @@
 | S2-1 | تفعيل Labels Section في الـ Sidebar | `public/inbox-v4/pages/page-inbox.js` | ✅ | |
 | S2-2 | ربط Snooze modal بـ Header button ⏰ | `public/inbox-v4/pages/page-inbox.js` | ✅ | |
 | S2-3 | ربط Priority modal بـ Header button 🔺 | `public/inbox-v4/pages/page-inbox.js` | ✅ | |
-| S2-4 | إصلاح Active state للـ Settings tabs | `public/inbox-v4/pages/page-settings.js` أو CSS | ⏳ | |
-| S2-5 | إضافة صفوف الأيام في جدول ساعات العمل | `public/dashboard/inbox-v4/settings/org.js` | ⏳ | |
-| S2-6 | تفعيل Agent Status Widget | `public/dashboard/inbox-v4/team.js` أو `app.js` | ⏳ | |
-| S2-7 | Test: كل العناصر المُصلَحة | Browser | ⏳ | |
-| S2-8 | Commit + Push | Git | ⏳ | |
+| S2-4 | إصلاح Active state للـ Settings tabs | `public/inbox-v4/pages/page-settings.js` أو CSS | ✅ | كان شغال — الـ CSS موجود |
+| S2-5 | إضافة صفوف الأيام في جدول ساعات العمل | `public/dashboard/inbox-v4/settings/org.js` | ✅ | Fix: InboxAPI .data pattern |
+| S2-6 | تفعيل Agent Status Widget | `public/dashboard/inbox-v4/team.js` أو `app.js` | ✅ | شغال — متاح/مشغول/بعيد/غير متاح |
+| S2-7 | Test: كل العناصر المُصلَحة | Browser | ✅ | ساعات العمل + Status Widget |
+| S2-8 | Commit + Push | Git | ✅ | commit 5c463f3 |
 
 **الـ commit message:** `fix(inbox-v4): S2 — UI functional fixes (Labels, Snooze, Priority, Settings)`
 
