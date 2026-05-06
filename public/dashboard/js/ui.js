@@ -984,6 +984,19 @@ function initSidebarTooltips() {
       tooltip.className = 'sb-tooltip';
       tooltip.textContent = text;
       item.appendChild(tooltip);
+      
+      // Position tooltip on hover
+      item.addEventListener('mouseenter', () => {
+        const rect = item.getBoundingClientRect();
+        const isRtl = document.documentElement.dir === 'rtl';
+        // Position to the left of sidebar (inside main content)
+        if (isRtl) {
+          tooltip.style.left = (rect.left - tooltip.offsetWidth - 8) + 'px';
+        } else {
+          tooltip.style.left = (rect.right + 8) + 'px';
+        }
+        tooltip.style.top = (rect.top + rect.height / 2 - tooltip.offsetHeight / 2) + 'px';
+      });
     }
   });
 }
