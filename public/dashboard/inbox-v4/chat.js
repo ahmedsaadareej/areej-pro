@@ -1020,10 +1020,25 @@ ${transcriptHtml}`.trim();
       img.addEventListener('click', () => _openLightbox(img.dataset.lightboxSrc));
     });
 
-    // Audio player
+    // Audio player — S6: تحميل المدة مباشرة
     container.querySelectorAll('.iv4-audio-play-btn').forEach(btn => {
-      const audioEl = btn.closest('.iv4-msg-audio')?.querySelector('.iv4-audio-el');
+      const wrapper  = btn.closest('.iv4-msg-audio');
+      const audioEl  = wrapper?.querySelector('.iv4-audio-el');
+      const durEl    = wrapper?.querySelector('.iv4-audio-duration');
       if (!audioEl) return;
+      
+      // تحميل المدة مباشرة (preload metadata)
+      if (durEl && audioEl.src) {
+        audioEl.preload = 'metadata';
+        audioEl.addEventListener('loadedmetadata', () => {
+          if (audioEl.duration && isFinite(audioEl.duration)) {
+            durEl.textContent = _formatAudioTime(audioEl.duration);
+          }
+        }, { once: true });
+        // Trigger load
+        audioEl.load();
+      }
+      
       btn.addEventListener('click', () => _toggleAudio(btn, audioEl));
     });
 
