@@ -1,14 +1,23 @@
 # PROJECT.md — Areej Pro
-> آخر تحديث: 2026-05-05
+> آخر تحديث: 2026-05-06
 
 ## الحالة الحالية
-- **آخر commit:** `0db96ab`
+- **آخر commit:** `6cff12d`
 - **السيرفر:** areej-server — Ubuntu 24.04 — port 3002
 - **PM2:** `pm2 reload areej-pro`
 
 ---
 
 ## ✅ المنجز (هذه الجلسة)
+
+### FIX_PLAN S1-S5 — مكتمل (2026-05-06)
+- **S1:** Database fixes (migrations v47-v49, better-sqlite3 sync API) ✅
+- **S2:** UI functional fixes (Labels, Snooze, Priority, Settings API .data pattern) ✅
+- **S3:** Visual improvements (Platform badge, Retry button, Platform filter) ✅
+- **S4:** Icon-only sidebars with tooltips ✅
+- **S5:** Compact chat header (100px → 48px) ✅
+
+**الخطة الكاملة:** `/home/areej/areej-pro/FIX_PLAN.md`
 
 ### Labels System — مكتمل (2026-05-05)
 - **Settings → Labels:** صفحة إدارة Labels كاملة (CRUD + ألوان) ✅
