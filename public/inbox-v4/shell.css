@@ -118,11 +118,12 @@ html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, sa
 /* الـ label مخفي دايماً — tooltip يظهره */
 .shell-nav-label { display: none; }
 
-/* Tooltip on hover (S4-1b) */
+/* Tooltip on hover (S4-1b) — RTL: يظهر على اليسار */
 .shell-nav-item::after {
   content: attr(data-tooltip);
   position: absolute;
-  right: calc(100% + 8px);
+  left: calc(100% + 8px);
+  right: auto;
   top: 50%;
   transform: translateY(-50%);
   background: #1f2937;
@@ -138,16 +139,17 @@ html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, sa
   z-index: 1000;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
-/* Tooltip arrow */
+/* Tooltip arrow — RTL: السهم على اليسار */
 .shell-nav-item::before {
   content: '';
   position: absolute;
-  right: calc(100% + 4px);
+  left: calc(100% + 4px);
+  right: auto;
   top: 50%;
   transform: translateY(-50%);
   border: 5px solid transparent;
-  border-right: none;
-  border-left-color: #1f2937;
+  border-left: none;
+  border-right-color: #1f2937;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.15s, visibility 0.15s;
@@ -218,11 +220,12 @@ html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, sa
   display: none;
 }
 
-/* Tooltip للـ status dot */
+/* Tooltip للـ status dot — RTL: يظهر على اليسار */
 .shell-agent-status::after {
   content: attr(data-status-label);
   position: absolute;
-  right: calc(100% + 8px);
+  left: calc(100% + 8px);
+  right: auto;
   top: 50%;
   transform: translateY(-50%);
   background: #1f2937;
