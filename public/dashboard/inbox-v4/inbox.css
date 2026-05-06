@@ -456,8 +456,11 @@
   overflow: hidden;
 }
 
-/* Chat Header */
-/* ── Chat Header (wrapper) ── */
+/* ═══════════════════════════════════════════════════════════════════
+   S5: Compact Chat Header (تصغير الـ Header من ~100px إلى ~48px)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Chat Header Wrapper */
 .iv4-chat-header {
   background: var(--iv4-surface);
   border-bottom: 1px solid var(--iv4-border);
@@ -466,80 +469,83 @@
   flex-direction: column;
 }
 
-/* الصف الرئيسي: avatar + info + actions */
+/* الصف الرئيسي: avatar + info + actions (كله في صف واحد) */
 .iv4-header-main {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 8px;
+  padding: 6px 12px;  /* S5: مصغر من 10px 14px */
   min-width: 0;
+  min-height: 44px;
 }
 
-/* Avatar */
+/* Avatar (صغير 32px) */
 .iv4-header-avatar {
   position: relative;
-  width: 38px; height: 38px;
+  width: 32px; height: 32px;  /* S5: مصغر من 38px */
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  color: #fff; font-weight: 700; font-size: 15px;
+  color: #fff; font-weight: 700; font-size: 13px;  /* S5: مصغر */
   flex-shrink: 0;
 }
 .iv4-header-platform-icon {
   position: absolute;
-  bottom: -3px; right: -3px;
-  font-size: 13px;
+  bottom: -2px; right: -2px;
+  font-size: 11px;  /* S5: مصغر */
   line-height: 1;
   filter: drop-shadow(0 0 2px #fff);
 }
 
-/* Info block */
+/* Info block (في صف واحد أفقي) */
 .iv4-header-info {
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;  /* S5: أفقي بدل عمودي */
+  align-items: center;
+  gap: 8px;
 }
 .iv4-header-name-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;  /* S5: لا يلتف */
 }
 .iv4-header-name {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;  /* S5: مصغر */
+  font-weight: 600;
   color: var(--iv4-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 220px;
+  max-width: 180px;  /* S5: مصغر */
 }
+/* S5: الـ sub-info (مفتوحة + واتساب) بجانب الاسم */
 .iv4-header-sub {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 6px;
+  flex-wrap: nowrap;  /* S5: لا يلتف */
   font-size: 11px;
   color: var(--iv4-text-3);
 }
-.iv4-header-platform { font-size: 11px; color: var(--iv4-text-3); }
-.iv4-header-phone    { font-size: 11px; color: var(--iv4-text-3); }
+.iv4-header-platform { font-size: 10px; color: var(--iv4-text-3); }
+.iv4-header-phone    { font-size: 10px; color: var(--iv4-text-3); display: none; }  /* S5: مخفي للتوفير */
 
-/* Actions (إغلاق / تحويل) */
+/* Actions (إغلاق / تحويل) — S5: مضغوطة */
 .iv4-header-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;  /* S5: مصغر */
   flex-shrink: 0;
 }
 .iv4-header-btn {
-  padding: 5px 12px;
+  padding: 4px 8px;  /* S5: مصغر من 5px 12px */
   border-radius: var(--iv4-radius-sm);
   border: 1px solid var(--iv4-border);
   background: var(--iv4-surface-2);
   color: var(--iv4-text);
-  font-size: 12px;
+  font-size: 11px;  /* S5: مصغر */
   font-weight: 500;
   cursor: pointer;
   transition: background .15s, border-color .15s;
@@ -552,25 +558,25 @@
   color: var(--iv4-text-2);
 }
 
-/* Status badge داخل الـ header */
+/* Status badge داخل الـ header — S5: أصغر */
 .iv4-header-status {
-  font-size: 10px;
-  padding: 2px 7px;
-  border-radius: 10px;
+  font-size: 9px;  /* S5 */
+  padding: 2px 6px;
+  border-radius: 8px;
   font-weight: 600;
   flex-shrink: 0;
 }
 
-/* Label Picker — صف منفصل أسفل الـ header */
+/* Label Picker — صف منفصل أسفل الـ header — S5: مضغوط */
 .iv4-label-picker-mount {
   border-top: 1px solid var(--iv4-border);
-  padding: 4px 14px 5px;
+  padding: 3px 12px 4px;  /* S5: مصغر */
   background: var(--iv4-surface);
-  min-height: 30px;
+  min-height: 26px;  /* S5: مصغر */
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 3px;
 }
 /* مخفي لو فارغ */
 .iv4-label-picker-mount:empty { display: none; }
