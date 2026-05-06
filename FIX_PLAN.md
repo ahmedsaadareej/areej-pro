@@ -130,22 +130,22 @@
 
 ---
 
-### الجلسة S5: Compact Chat Header ⏳
-**الهدف:** تصغير الـ Chat Header من ~120px لـ ~48px
+### الجلسة S5: Compact Chat Header ✅
+**الهدف:** تصغير الـ Chat Header من ~100px لـ ~48px
 
-**الملفات:** `/public/inbox-v4/inbox.css` + `inbox.js` أو `chat.js`
+**الملفات:** `/public/dashboard/inbox-v4/inbox.css`
 
 | # | المهمة | الحالة |
 |---|--------|--------|
-| S5-1 | تصغير الـ Avatar من 48-56px لـ 32px | ⏳ |
-| S5-2 | جمع كل العناصر في صف واحد أفقي (الاسم + status + buttons) | ⏳ |
-| S5-3 | تصغير الـ action buttons (icon-only أو compact) | ⏳ |
-| S5-4 | نقل الـ "open" badge بجانب الاسم | ⏳ |
-| S5-5 | Test + Commit | ⏳ |
+| S5-1 | تصغير الـ Avatar من 38px لـ 32px | ✅ |
+| S5-2 | جمع كل العناصر في صف واحد أفقي (الاسم + status) | ✅ |
+| S5-3 | تصغير الـ action buttons (compact padding) | ✅ |
+| S5-4 | Status badge بجانب الاسم | ✅ |
+| S5-5 | Test + Commit | ✅ | commit a60d1d3 |
 
-**التوفير المتوقع:** ~70px مساحة عمودية إضافية للرسائل
+**التوفير:** ~50px مساحة عمودية إضافية للرسائل
 
-**Commit message:** `style(inbox-v4): S5 — Compact chat header (120px → 48px)`
+**Commit message:** `style(inbox-v4): S5 — Compact chat header (100px → 48px)`
 
 
 ### 2026-05-06 — جلسة S1 (Database fixes)
