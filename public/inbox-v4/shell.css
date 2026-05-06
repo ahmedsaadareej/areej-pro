@@ -14,7 +14,7 @@ html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, sa
   display: flex;
   flex-direction: column;
   height: 100vh;
-  overflow: hidden;
+  overflow: visible; /* لازم visible عشان الـ tooltips */
 }
 
 /* === Topbar === */
