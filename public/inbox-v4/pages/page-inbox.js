@@ -8,6 +8,220 @@ const PageInbox = (() => {
 
   let _mounted = false;
 
+  let _labels = [];  // S2: cache للـ labels
+
+  // ── S2-1: Labels Section ─────────────────────────────────────────────────
+  async function _loadLabels() {
+    try {
+      const res = await fetch('/api/inbox/labels', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to load labels');
+      const data = await res.json();
+      _labels = data.labels || [];
+      _renderLabels();
+    } catch (err) {
+      console.warn('[PageInbox] _loadLabels error:', err.message);
+    }
+  }
+
+  function _renderLabels() {
+    const container = document.getElementById('iv4-labels-list');
+    if (!container) return;
+
+    if (_labels.length === 0) {
+      container.innerHTML = '<div class="iv4-labels-empty">لا توجد تصنيفات بعد</div>';
+      return;
+    }
+
+    container.innerHTML = _labels.map(lbl => `
+      <button class="iv4-label-btn" data-label-id="${lbl.id}" style="--label-color: ${lbl.color || '#6b7280'}">\n        <span class="iv4-label-dot"></span>\n        <span class="iv4-label-name">${lbl.name}</span>\n        <span class="iv4-label-count">${lbl.count || 0}</span>\n      </button>
+    `).join('');
+  }
+
+  async function _createLabel(name, color = '#6b7280') {
+    try {
+      const res = await fetch('/api/inbox/labels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name, color })
+      });
+      if (!res.ok) throw new Error('Failed to create label');
+      await _loadLabels();  // إعادة تحميل القائمة
+    } catch (err) {
+      console.error('[PageInbox] _createLabel error:', err.message);
+      alert('حدث خطأ أثناء إنشاء التصنيف');
+    }
+  }
+
+  function _openAddLabelModal() {
+    const existing = document.getElementById('iv4-add-label-modal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'iv4-add-label-modal';
+    overlay.style.cssText = `
+      position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;
+      display:flex;align-items:center;justify-content:center;
+      font-family:Cairo,sans-serif;direction:rtl;
+    `;
+
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:12px;padding:24px;width:320px;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,.2)">
+        <h3 style="margin:0 0 16px;font-size:16px;font-weight:700;color:#111">🏷️ تصنيف جديد</h3>
+        <input id="iv4-new-label-name" type="text" placeholder="اسم التصنيف" style="width:100%;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:Cairo,sans-serif;font-size:14px;margin-bottom:12px;box-sizing:border-box">
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap" id="iv4-label-colors">
+          <button data-color="#ef4444" style="width:28px;height:28px;border-radius:50%;border:2px solid transparent;background:#ef4444;cursor:pointer" title="أحمر"></button>
+          <button data-color="#f97316" style="width:28px;height:28px;border-radius:50%;border:2px solid transparent;background:#f97316;cursor:pointer" title="برتقالي"></button>
+          <button data-color="#eab308" style="width:28px;height:28px;border-radius:50%;border:2px solid transparent;background:#eab308;cursor:pointer" title="أصفر"></button>
+          <button data-color="#22c55e" style="width:28px;height:28px;border-radius:50%;border:2px solid transparent;background:#22c55e;cursor:pointer" title="أخضر"></button>
+          <button data-color="#3b82f6" style="width:28px;height:28px;border-radius:50%;border:2px solid transparent;background:#3b82f6;cursor:pointer" title="أزرق"></button>
+          <button data-color="#8b5cf6" style="width:28px;height:28px;border-radius:50%;border:2px solid transparent;background:#8b5cf6;cursor:pointer" title="بنفسجي"></button>
+          <button data-color="#6b7280" style="width:28px;height:28px;border-radius:50%;border:2px solid #111;background:#6b7280;cursor:pointer" title="رمادي"></button>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button id="iv4-label-save" style="flex:1;background:#2563eb;color:#fff;border:none;padding:10px;border-radius:8px;font-family:Cairo,sans-serif;font-size:14px;font-weight:600;cursor:pointer">حفظ</button>
+          <button id="iv4-label-cancel" style="padding:10px 16px;border:1.5px solid #e5e7eb;background:#f9fafb;border-radius:8px;font-family:Cairo,sans-serif;font-size:14px;cursor:pointer;color:#374151">إلغاء</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    let selectedColor = '#6b7280';
+    const colorBtns = overlay.querySelectorAll('[data-color]');
+    colorBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        colorBtns.forEach(b => b.style.borderColor = 'transparent');
+        btn.style.borderColor = '#111';
+        selectedColor = btn.dataset.color;
+      });
+    });
+
+    const close = () => overlay.remove();
+    document.getElementById('iv4-label-cancel').onclick = close;
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+    setTimeout(() => document.getElementById('iv4-new-label-name')?.focus(), 50);
+
+    document.getElementById('iv4-label-save').onclick = async () => {
+      const name = document.getElementById('iv4-new-label-name').value.trim();
+      if (!name) { alert('أدخل اسم التصنيف'); return; }
+      await _createLabel(name, selectedColor);
+      close();
+    };
+  }
+
+  // ── S2-2: Snooze Modal ──────────────────────────────────────────────────
+  function _openSnoozeModal(convId) {
+    if (!convId) { alert('اختر محادثة أولاً'); return; }
+
+    const existing = document.getElementById('iv4-snooze-modal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'iv4-snooze-modal';
+    overlay.style.cssText = `
+      position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;
+      display:flex;align-items:center;justify-content:center;
+      font-family:Cairo,sans-serif;direction:rtl;
+    `;
+
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:12px;padding:24px;width:300px;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,.2)">
+        <h3 style="margin:0 0 16px;font-size:16px;font-weight:700;color:#111">⏰ تأجيل المحادثة</h3>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="iv4-snooze-opt" data-hours="1" style="padding:10px;border:1.5px solid #e5e7eb;background:#f9fafb;border-radius:8px;cursor:pointer;font-family:Cairo;font-size:14px">بعد ساعة</button>
+          <button class="iv4-snooze-opt" data-hours="3" style="padding:10px;border:1.5px solid #e5e7eb;background:#f9fafb;border-radius:8px;cursor:pointer;font-family:Cairo;font-size:14px">بعد 3 ساعات</button>
+          <button class="iv4-snooze-opt" data-hours="24" style="padding:10px;border:1.5px solid #e5e7eb;background:#f9fafb;border-radius:8px;cursor:pointer;font-family:Cairo;font-size:14px">غداً</button>
+          <button class="iv4-snooze-opt" data-hours="72" style="padding:10px;border:1.5px solid #e5e7eb;background:#f9fafb;border-radius:8px;cursor:pointer;font-family:Cairo;font-size:14px">بعد 3 أيام</button>
+        </div>
+        <button id="iv4-snooze-cancel" style="width:100%;margin-top:12px;padding:10px;border:none;background:#f3f4f6;border-radius:8px;cursor:pointer;font-family:Cairo;font-size:14px;color:#374151">إلغاء</button>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const close = () => overlay.remove();
+    document.getElementById('iv4-snooze-cancel').onclick = close;
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+    overlay.querySelectorAll('.iv4-snooze-opt').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const hours = parseInt(btn.dataset.hours, 10);
+        const wakeAt = new Date(Date.now() + hours * 3600 * 1000).toISOString();
+        try {
+          const res = await fetch(`/api/inbox/conversations/${convId}/snooze`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ wake_at: wakeAt })
+          });
+          if (!res.ok) throw new Error('Snooze failed');
+          close();
+          if (typeof InboxStore !== 'undefined') InboxStore.refreshConversations?.();
+        } catch (err) {
+          console.error('[snooze]', err);
+          alert('حدث خطأ أثناء التأجيل');
+        }
+      });
+    });
+  }
+
+  // ── S2-3: Priority Modal ────────────────────────────────────────────────
+  function _openPriorityModal(convId) {
+    if (!convId) { alert('اختر محادثة أولاً'); return; }
+
+    const existing = document.getElementById('iv4-priority-modal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'iv4-priority-modal';
+    overlay.style.cssText = `
+      position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;
+      display:flex;align-items:center;justify-content:center;
+      font-family:Cairo,sans-serif;direction:rtl;
+    `;
+
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:12px;padding:24px;width:280px;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,.2)">
+        <h3 style="margin:0 0 16px;font-size:16px;font-weight:700;color:#111">🔺 تحديد الأولوية</h3>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="iv4-priority-opt" data-priority="urgent" style="padding:10px;border:2px solid #ef4444;background:#fef2f2;border-radius:8px;cursor:pointer;font-family:Cairo;font-size:14px;color:#dc2626">🔴 عاجلة</button>
+          <button class="iv4-priority-opt" data-priority="high" style="padding:10px;border:2px solid #f97316;background:#fff7ed;border-radius:8px;cursor:pointer;font-family:Cairo;font-size:14px;color:#ea580c">🟠 عالية</button>
+          <button class="iv4-priority-opt" data-priority="normal" style="padding:10px;border:2px solid #3b82f6;background:#eff6ff;border-radius:8px;cursor:pointer;font-family:Cairo;font-size:14px;color:#2563eb">🔵 عادية</button>
+          <button class="iv4-priority-opt" data-priority="low" style="padding:10px;border:2px solid #9ca3af;background:#f9fafb;border-radius:8px;cursor:pointer;font-family:Cairo;font-size:14px;color:#6b7280">⚪ منخفضة</button>
+        </div>
+        <button id="iv4-priority-cancel" style="width:100%;margin-top:12px;padding:10px;border:none;background:#f3f4f6;border-radius:8px;cursor:pointer;font-family:Cairo;font-size:14px;color:#374151">إلغاء</button>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const close = () => overlay.remove();
+    document.getElementById('iv4-priority-cancel').onclick = close;
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+    overlay.querySelectorAll('.iv4-priority-opt').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const priority = btn.dataset.priority;
+        try {
+          const res = await fetch(`/api/inbox/conversations/${convId}/priority`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ priority })
+          });
+          if (!res.ok) throw new Error('Priority update failed');
+          close();
+          if (typeof InboxStore !== 'undefined') InboxStore.refreshConversations?.();
+        } catch (err) {
+          console.error('[priority]', err);
+          alert('حدث خطأ أثناء تحديث الأولوية');
+        }
+      });
+    });
+  }
+
   // ── New Conversation Modal ──────────────────────────────────────────────
   function _openNewConvModal() {
     // نتحقق من الـ active channels لتحديد الـ Smart Default
@@ -470,6 +684,34 @@ const PageInbox = (() => {
       }
 
       _mounted = true;
+
+      // S2-1: تحميل Labels وربط زر الإضافة
+      _loadLabels();
+      const addLabelBtn = document.getElementById('iv4-add-label-btn');
+      if (addLabelBtn && !addLabelBtn.dataset.bound) {
+        addLabelBtn.dataset.bound = '1';
+        addLabelBtn.addEventListener('click', () => _openAddLabelModal());
+      }
+
+      // S2-2/S2-3: ربط أزرار Snooze و Priority
+      const snoozeBtn = document.getElementById('iv4-snooze-btn');
+      if (snoozeBtn && !snoozeBtn.dataset.bound) {
+        snoozeBtn.dataset.bound = '1';
+        snoozeBtn.addEventListener('click', () => {
+          const convId = InboxStore?.state?.activeConvId;
+          _openSnoozeModal(convId);
+        });
+      }
+
+      const priorityBtn = document.getElementById('iv4-priority-btn');
+      if (priorityBtn && !priorityBtn.dataset.bound) {
+        priorityBtn.dataset.bound = '1';
+        priorityBtn.addEventListener('click', () => {
+          const convId = InboxStore?.state?.activeConvId;
+          _openPriorityModal(convId);
+        });
+      }
+
       // FIX-004c: أعلم shell.js إن الـ Inbox جاهز
       document.dispatchEvent(new CustomEvent('inbox:mounted'));
     },
