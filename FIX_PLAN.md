@@ -101,7 +101,7 @@
 ### الجلسة S4: Icon-Only Sidebars ⏳
 **الهدف:** تحويل الـ sidebars لـ icon-only مع tooltips
 
-#### S4-1: الـ Inbox Shell Sidebar (الداخلي)
+#### S4-1: الـ Inbox Shell Sidebar (الداخلي) ✅
 **الملفات:** `/public/inbox-v4/shell.css` + `index.html`
 
 | # | المهمة | الحالة |
@@ -110,7 +110,7 @@
 | S4-1b | لما توقف على أي icon → يظهر **tooltip** بالاسم | ✅ |
 | S4-1c | الـ icons: 📥 Inbox, 👥 جهات الاتصال, 📊 التقارير, ⚙️ الإعدادات, 📢 البث, 🕐 المجدولة, 🤖 Chatbot | ✅ |
 | S4-1d | الـ status في الأسفل يبقى dot فقط + tooltip + click-cycle | ✅ |
-| S4-1e | Test + Commit | ✅ | commit 107c682 |
+| S4-1e | Test + Commit | ✅ | commits: 107c682 → 6b79528 |
 
 ---
 
