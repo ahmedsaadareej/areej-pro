@@ -70,7 +70,8 @@ html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, sa
 .shell-body {
   display: flex;
   flex: 1;
-  overflow: hidden;
+  overflow: visible; /* لازم visible عشان الـ tooltips */
+  min-height: 0; /* flex shrink fix */
 }
 
 /* === Sidebar (دايماً icon-only 56px — S4-1) === */
@@ -80,8 +81,7 @@ html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, sa
   border-inline-end: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: visible; /* لازم visible عشان الـ tooltips تظهر */
   flex-shrink: 0;
 }
 
