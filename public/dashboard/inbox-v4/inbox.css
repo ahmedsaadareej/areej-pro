@@ -7111,3 +7111,192 @@
   background: #fee2e2;
   transform: rotate(180deg);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYOUT-RESCUE-20260506 — Inbox v4 embedded layout polish
+   Fixes narrow iframe/sidebar/list/context/reply-toolbar visual issues.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --iv4-sidebar-w: clamp(64px, 17vw, 220px);
+  --iv4-conv-w: clamp(240px, 29vw, 320px);
+}
+
+.iv4-root {
+  grid-template-columns: var(--iv4-sidebar-w) var(--iv4-conv-w) minmax(0, 1fr) !important;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.iv4-body,
+.iv4-root,
+.iv4-sidebar,
+.iv4-conv-col,
+.iv4-chat-col,
+.iv4-chat-area,
+.iv4-messages,
+.iv4-conv-list {
+  min-height: 0;
+}
+
+.iv4-sidebar {
+  padding: 10px 6px;
+  gap: 3px;
+  overflow-x: hidden;
+  min-width: 0;
+}
+
+.iv4-sidebar-brand { padding: 8px 10px 12px; }
+.iv4-sidebar-divider { margin: 4px 8px; }
+
+.iv4-nav-btn,
+.iv4-label-btn {
+  min-width: 0;
+  padding: 7px 10px;
+  gap: 7px;
+}
+
+.iv4-nav-label,
+.iv4-label-btn span:not(.iv4-label-dot) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iv4-labels-list {
+  max-height: 180px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.iv4-conv-col,
+.iv4-chat-col { min-width: 0; }
+
+.iv4-conv-header { padding: 10px 10px 7px; }
+.iv4-conv-list {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.iv4-platform-filter {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 1px;
+  scrollbar-width: none;
+}
+.iv4-platform-filter::-webkit-scrollbar { display: none; }
+.iv4-plat-btn { flex: 0 0 auto; padding-inline: 9px; }
+
+.iv4-conv-item { padding: 9px 12px; gap: 9px; }
+.iv4-conv-name,
+.iv4-conv-preview { min-width: 0; }
+
+.iv4-chat-header {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 10px;
+}
+
+.iv4-chat-header-avatar {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+}
+
+.iv4-chat-header-info {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.iv4-chat-sender-name,
+.iv4-chat-meta {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.iv4-chat-header-actions {
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.iv4-icon-btn {
+  min-width: 30px;
+  border: 1px solid transparent;
+}
+.iv4-action-btn { padding-inline: 12px; }
+
+.iv4-reply-toolbar {
+  min-width: 0;
+  gap: 6px;
+}
+.iv4-toolbar-left {
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.iv4-toolbar-left::-webkit-scrollbar { display: none; }
+.iv4-toolbar-right {
+  flex-shrink: 0;
+  gap: 6px;
+}
+.iv4-channel-select { max-width: 120px; }
+.iv4-send-btn { padding-inline: 16px; }
+
+/* Context panel should overlay instead of stealing a full grid column. */
+.iv4-context-panel {
+  position: absolute !important;
+  inset: 0 0 0 auto;
+  width: min(var(--iv4-ctx-w), 88vw) !important;
+  z-index: 40;
+  box-shadow: -8px 0 24px rgba(15, 23, 42, .12);
+  transform: translateX(0);
+  transition: transform var(--iv4-transition), opacity var(--iv4-transition);
+}
+.iv4-context-panel.hidden {
+  width: min(var(--iv4-ctx-w), 88vw) !important;
+  border-left: 1px solid var(--iv4-border) !important;
+  transform: translateX(105%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 1100px) {
+  :root { --iv4-sidebar-w: 64px; --iv4-conv-w: 280px; }
+  .iv4-root { grid-template-columns: var(--iv4-sidebar-w) var(--iv4-conv-w) minmax(0, 1fr) !important; }
+  .iv4-brand-text,
+  .iv4-nav-label,
+  .iv4-nav-count,
+  .iv4-section-header span,
+  .iv4-label-btn span:not(.iv4-label-dot),
+  .iv4-sse-label { display: none !important; }
+  .iv4-sidebar { padding-inline: 6px; }
+  .iv4-nav-btn,
+  .iv4-label-btn { justify-content: center; padding: 8px; }
+  .iv4-section-header { justify-content: center; padding-inline: 0; }
+}
+
+@media (max-height: 620px) {
+  .iv4-sidebar-brand { padding: 4px 10px 8px; }
+  .iv4-sidebar-divider { margin: 3px 8px; }
+  .iv4-nav-btn { padding-block: 5px; }
+  .iv4-labels-list { max-height: 90px; }
+  .iv4-conv-header { padding-block: 7px 5px; }
+  .iv4-reply-box { padding: 6px 10px; }
+  .iv4-reply-textarea { min-height: 42px; max-height: 100px; }
+}
+
+@media (max-width: 760px) {
+  :root { --iv4-sidebar-w: 54px; }
+  .iv4-root { grid-template-columns: var(--iv4-sidebar-w) minmax(210px, 42vw) minmax(0, 1fr) !important; }
+  .iv4-sidebar,
+  .iv4-conv-col,
+  .iv4-chat-col { display: flex !important; }
+  .iv4-chat-header-actions .iv4-icon-btn { width: 28px; min-width: 28px; }
+  .iv4-action-btn { padding-inline: 9px; }
+  .iv4-reply-toolbar { flex-wrap: wrap; }
+  .iv4-toolbar-left,
+  .iv4-toolbar-right { width: 100%; }
+  .iv4-toolbar-right { justify-content: flex-end; }
+}
