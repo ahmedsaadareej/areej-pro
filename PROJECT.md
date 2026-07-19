@@ -2,13 +2,22 @@
 > آخر تحديث: 2026-05-06
 
 ## الحالة الحالية
-- **آخر commit:** `6cff12d`
+- **آخر commit:** `7c2ae3a`
 - **السيرفر:** areej-server — Ubuntu 24.04 — port 3002
 - **PM2:** `pm2 reload areej-pro`
 
 ---
 
 ## ✅ المنجز (هذه الجلسة)
+
+### LAYOUT-RESCUE-20260506 — Inbox v4 Layout Stabilization ✅
+- إصلاح عرض الـ Inbox v4 داخل iframe الضيق في dashboard
+- تحويل الـ sidebar لـ responsive icon rail عند الضيق
+- منع اختفاء قائمة المحادثات عبر `min-height:0` و scroll مضبوط
+- ضبط Header/Toolbar/Reply Box لمنع تكسير الأزرار والنصوص
+- تحويل Context Panel إلى overlay بدل ما يزاحم الأعمدة
+- Cache bust: `inbox.css?v=20260506-layout1`
+- Commit: `7c2ae3a`
 
 ### FIX_PLAN S1-S5 — مكتمل (2026-05-06)
 - **S1:** Database fixes (migrations v47-v49, better-sqlite3 sync API) ✅
