@@ -2,7 +2,7 @@
 > آخر تحديث: 2026-05-06
 
 ## الحالة الحالية
-- **آخر commit:** `7c2ae3a`
+- **آخر commit:** `6f0c7f8`
 - **السيرفر:** areej-server — Ubuntu 24.04 — port 3002
 - **PM2:** `pm2 reload areej-pro`
 
